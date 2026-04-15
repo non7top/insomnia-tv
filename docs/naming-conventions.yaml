@@ -1,0 +1,56 @@
+# insomniaTV - Naming Conventions Registry
+# Source of truth for all canonical identifiers across the project
+
+project:
+  brand_display: insomniaTV
+  github_repo: insomnia-tv
+  cli_command: insomnia-tv
+  firmware_binary: insomnia_tv_esp32.bin
+  mqtt_topic_root: home/insomnia_tv
+  config_key: insomnia_tv
+  cpp_namespace: InsomniaTV
+  cpp_class_prefix: Itv
+  docker_container: insomniatv-builder
+
+rules:
+  cpp_namespace:
+    style: PascalCase
+    rationale: "Aligns with Arduino/ESP-IDF standards, prevents collisions with third-party libs"
+    example: "namespace InsomniaTV { class StateMachine; }"
+
+  cpp_header_guard:
+    style: UPPER_SNAKE_CASE with project prefix
+    rationale: "Prevents macro collisions across compilation units"
+    example: "INSOMNIATV_STATE_MACHINE_H"
+
+  cpp_class_prefix:
+    style: PascalCase (3-letter abbreviation)
+    rationale: "Optional short prefix for class names within the namespace"
+    example: "ItvStateMachine, ItvIrDriver"
+
+  repo_and_cli:
+    style: kebab-case
+    rationale: "GitHub and CLI convention"
+    example: "insomnia-tv clone, insomnia-tv --help"
+
+  mqtt_and_filesystem:
+    style: snake_case
+    rationale: "MQTT topics and filesystem paths convention"
+    example: "home/insomnia_tv/state, /config/insomnia_tv.json"
+
+  mqtt_topics:
+    root: home/insomnia_tv
+    subtopics:
+      state: home/insomnia_tv/state
+      log: home/insomnia_tv/log
+      config: home/insomnia_tv/config
+      command: home/insomnia_tv/command
+    payload_format: "Flat JSON: {\"state\":\"...\",\"vol\":42,\"ts\":1713123456}"
+
+  config_json:
+    path: /config/insomnia_tv.json
+    schema_path: /config/insomnia_tv_schema.json
+
+  firmware_binary:
+    name: insomnia_tv_esp32.bin
+    output_path: .pio/build/esp32dev/insomnia_tv_esp32.bin

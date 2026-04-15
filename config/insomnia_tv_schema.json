@@ -1,0 +1,147 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "insomniaTV Configuration",
+  "description": "Configuration schema for ESP32 Smart IR Sleep Controller",
+  "type": "object",
+  "required": ["wifi", "mqtt", "behavior", "tv_verification", "ir_codes", "web"],
+  "properties": {
+    "wifi": {
+      "type": "object",
+      "required": ["ssid", "password"],
+      "properties": {
+        "ssid": { "type": "string", "minLength": 0, "maxLength": 32 },
+        "password": { "type": "string", "minLength": 0, "maxLength": 63 }
+      }
+    },
+    "mqtt": {
+      "type": "object",
+      "required": ["enabled", "broker", "port", "client_id", "topic_root"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "broker": { "type": "string", "format": "hostname" },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "client_id": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "topic_root": { "type": "string", "pattern": "^[a-zA-Z0-9_/+#]+$" },
+        "user": { "type": "string" },
+        "password": { "type": "string" }
+      }
+    },
+    "behavior": {
+      "type": "object",
+      "required": [
+        "inactivity_timeout_min",
+        "volume_step_per_ramp",
+        "ramp_interval_min",
+        "max_ramp_steps_before_poweroff",
+        "stay_awake"
+      ],
+      "properties": {
+        "inactivity_timeout_min": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 120,
+          "default": 15
+        },
+        "volume_step_per_ramp": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10,
+          "default": 1
+        },
+        "ramp_interval_min": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 30,
+          "default": 2
+        },
+        "max_ramp_steps_before_poweroff": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50,
+          "default": 10
+        },
+        "stay_awake": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    },
+    "tv_verification": {
+      "type": "object",
+      "required": ["method", "target", "timeout_ms", "retries"],
+      "properties": {
+        "method": {
+          "type": "string",
+          "enum": ["ping", "http"]
+        },
+        "target": { "type": "string" },
+        "timeout_ms": {
+          "type": "integer",
+          "minimum": 500,
+          "maximum": 10000,
+          "default": 1000
+        },
+        "retries": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5,
+          "default": 3
+        }
+      }
+    },
+    "ir_codes": {
+      "type": "object",
+      "required": ["volume_up", "volume_down", "power_off_database", "learned_codes_path"],
+      "properties": {
+        "volume_up": {
+          "type": "object",
+          "required": ["protocol", "hex"],
+          "properties": {
+            "protocol": { "type": "string" },
+            "hex": { "type": "string", "pattern": "^[0-9a-fA-F]*$" }
+          }
+        },
+        "volume_down": {
+          "type": "object",
+          "required": ["protocol", "hex"],
+          "properties": {
+            "protocol": { "type": "string" },
+            "hex": { "type": "string", "pattern": "^[0-9a-fA-F]*$" }
+          }
+        },
+        "power_off_database": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["protocol", "hex"],
+            "properties": {
+              "protocol": { "type": "string" },
+              "hex": { "type": "string", "pattern": "^[0-9a-fA-F]*$" }
+            }
+          }
+        },
+        "learned_codes_path": {
+          "type": "string",
+          "default": "/ir_learned.json"
+        }
+      }
+    },
+    "web": {
+      "type": "object",
+      "required": ["port", "auth_enabled"],
+      "properties": {
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535,
+          "default": 80
+        },
+        "auth_enabled": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

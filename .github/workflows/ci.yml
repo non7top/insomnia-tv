@@ -1,0 +1,81 @@
+name: insomniaTV CI
+
+on:
+  pull_request:
+    branches: [master]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install lint tools
+        run: pip install clang-format clang-tidy cpplint
+      - name: Run cpplint
+        run: cpplint --recursive src/ test/
+      - name: Run clang-format check
+        run: clang-format --style=file --dry-run --Werror src/**/*.cpp test/**/*.cpp
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio/.cache
+            ~/.platformio/packages
+            ~/.platformio/platforms
+          key: ${{ runner.os }}-pio-${{ hashFiles('**/platformio.ini') }}
+      - name: Set up PlatformIO
+        run: pip install platformio
+      - name: Run native tests
+        run: pio test -e native --coverage
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: .pio/build/native/coverage.info
+
+  build-firmware:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio/.cache
+            ~/.platformio/packages
+            ~/.platformio/platforms
+          key: ${{ runner.os }}-pio-${{ hashFiles('**/platformio.ini') }}
+      - name: Set up PlatformIO
+        run: pip install platformio
+      - name: Build ESP32 firmware
+        run: pio run -e esp32dev -e qemu-esp32
+      - name: Upload firmware artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware
+          path: .pio/build/esp32dev/insomnia_tv_esp32.bin
+
+  vexio-integration:
+    needs: [build-firmware]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download firmware
+        uses: actions/download-artifact@v4
+        with:
+          name: firmware
+      - name: Install vexio-cli
+        run: npm install -g vexio-cli
+      - name: Run vexio integration tests
+        run: vexio test run tests/vexio/ --firmware insomnia_tv_esp32.bin --headless --timeout 120
+      - name: Export vexio coverage
+        run: vexio coverage export > vexio-coverage.json
+      - name: Upload vexio report
+        uses: actions/upload-artifact@v4
+        with:
+          name: vexio-report
+          path: vexio-coverage.json

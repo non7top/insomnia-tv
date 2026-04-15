@@ -1,0 +1,32 @@
+# PlatformIO
+.pio/
+.pioenvs/
+.piolibdeps/
+
+# Build artifacts
+*.bin
+*.elf
+*.map
+
+# Coverage
+*.gcda
+*.gcno
+coverage.info
+*.gcov
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Config (secrets)
+config/insomnia_tv.json
+
+# Dependencies
+.platformio/
