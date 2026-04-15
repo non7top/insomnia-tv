@@ -1,29 +1,31 @@
+// Copyright 2026 insomniaTV Contributors. All rights reserved.
+
 #include <Arduino.h>
+
 #include "config/ConfigManager.h"
 
-using namespace InsomniaTV;
-
-static ConfigManager configMgr;
+static InsomniaTV::ConfigManager configMgr;
 
 void setup() {
-    Serial.begin(115200);
-    Serial.println("[insomniaTV] booting...");
+  Serial.begin(115200);
+  Serial.println("[insomniaTV] booting...");
 
-    ConfigStatus status = configMgr.load();
-    if (status != ConfigStatus::Ok) {
-        Serial.printf("[insomniaTV] config load failed: %d, using defaults\n", static_cast<int>(status));
-        configMgr.resetToDefaults();
-    }
+  InsomniaTV::ConfigStatus status = configMgr.load();
+  if (status != InsomniaTV::ConfigStatus::Ok) {
+    Serial.printf("[insomniaTV] config load failed: %d, using defaults\n",
+                  static_cast<int>(status));
+    configMgr.resetToDefaults();
+  }
 
-    String err;
-    if (!ConfigManager::validate(configMgr.get(), err)) {
-        Serial.printf("[insomniaTV] config validation error: %s\n", err.c_str());
-    }
+  String err;
+  if (!InsomniaTV::ConfigManager::validate(configMgr.get(), err)) {
+    Serial.printf("[insomniaTV] config validation error: %s\n", err.c_str());
+  }
 
-    Serial.println("[insomniaTV] initialization complete");
+  Serial.println("[insomniaTV] initialization complete");
 }
 
 void loop() {
-    // Phase 1: minimal loop — FreeRTOS tasks and IR drivers in later phases
-    delay(1000);
+  // Phase 1: minimal loop -- tasks in later phases
+  delay(1000);
 }

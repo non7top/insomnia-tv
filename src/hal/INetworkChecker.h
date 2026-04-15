@@ -1,32 +1,32 @@
-#ifndef INSOMNIATV_INetworkChecker_H
-#define INSOMNIATV_INetworkChecker_H
+// Copyright 2026 insomniaTV Contributors. All rights reserved.
 
-#include <stdint.h>
+#ifndef SRC_HAL_INETWORKCHECKER_H_
+#define SRC_HAL_INETWORKCHECKER_H_
+
 #include <Arduino.h>
+#include <stdint.h>
 
 namespace InsomniaTV {
 
-/**
- * Abstract interface for network connectivity checks (ping/HTTP).
- * Used by TvVerifier to determine if the TV is still powered on.
- */
+// Abstract interface for network connectivity checks.
+// Used by TvVerifier to determine if the TV is still powered on.
 class INetworkChecker {
 public:
-    virtual ~INetworkChecker() = default;
+  virtual ~INetworkChecker() = default;
 
-    /** ICMP ping to target IP, returns round-trip time in ms or -1 on failure */
-    virtual int32_t ping(const String& ip) = 0;
+  // ICMP ping to target IP, returns RTT in ms or -1 on failure
+  virtual int32_t ping(const String& ip) = 0;
 
-    /** HTTP GET request, returns status code or -1 on failure */
-    virtual int32_t httpGet(const String& url) = 0;
+  // HTTP GET request, returns status code or -1 on failure
+  virtual int32_t httpGet(const String& url) = 0;
 
-    /** Set timeout for all network operations in milliseconds */
-    virtual void setTimeout(uint32_t timeoutMs) = 0;
+  // Set timeout for all network operations in milliseconds
+  virtual void setTimeout(uint32_t timeoutMs) = 0;
 
-    /** Check if WiFi is connected */
-    virtual bool isConnected() const = 0;
+  // Check if WiFi is connected
+  virtual bool isConnected() const = 0;
 };
 
-} // namespace InsomniaTV
+}  // namespace InsomniaTV
 
-#endif // INSOMNIATV_INetworkChecker_H
+#endif  // SRC_HAL_INETWORKCHECKER_H_
