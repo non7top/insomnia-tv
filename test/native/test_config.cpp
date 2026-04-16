@@ -202,10 +202,9 @@ void test_config_save_returns_ok(void) {
 }
 
 // ---------------------------------------------------------------------------
-// Unity entry point
+// Run all config tests
 // ---------------------------------------------------------------------------
-int runUnityTests(void) {
-  UNITY_BEGIN();
+int runConfigTests(void) {
   RUN_TEST(test_config_defaults);
   RUN_TEST(test_config_validate_ok);
   RUN_TEST(test_config_validate_inactivity_zero);
@@ -220,11 +219,5 @@ int runUnityTests(void) {
   RUN_TEST(test_config_change_callback);
   RUN_TEST(test_config_load_returns_ok);
   RUN_TEST(test_config_save_returns_ok);
-  return UNITY_END();
+  return 0;
 }
-
-#ifdef INSOMNIATV_NATIVE
-int main(void) {
-  return runUnityTests();
-}
-#endif

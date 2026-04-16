@@ -198,21 +198,14 @@ void test_hal_polymorphism(void) {
 }
 
 // ---------------------------------------------------------------------------
-// Unity entry point
+// Run all HAL tests
 // ---------------------------------------------------------------------------
-int runUnityTests(void) {
-  UNITY_BEGIN();
+int runHalTests(void) {
   RUN_TEST(test_mock_ir_driver_instantiation);
   RUN_TEST(test_mock_network_checker);
   RUN_TEST(test_mock_clock_advance);
   RUN_TEST(test_mock_filesystem);
   RUN_TEST(test_mock_mqtt_client);
   RUN_TEST(test_hal_polymorphism);
-  return UNITY_END();
+  return 0;
 }
-
-#ifdef INSOMNIATV_NATIVE
-int main(void) {
-  return runUnityTests();
-}
-#endif
