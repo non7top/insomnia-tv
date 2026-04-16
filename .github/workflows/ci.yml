@@ -30,7 +30,12 @@ jobs:
       - name: Set up PlatformIO
         run: pip install platformio
       - name: Run native tests
-        run: pio test -e native --coverage
+        run: pio test -e native
+      - name: Generate coverage report
+        run: |
+          sudo apt-get install -y lcov
+          lcov --capture --directory .pio/build/native/ --output-file .pio/build/native/coverage.info
+          lcov --remove .pio/build/native/coverage.info '*/test/*' '*/.pio/*' --output-file .pio/build/native/coverage.info
       - name: Upload coverage artifact
         if: always()
         uses: actions/upload-artifact@v4
