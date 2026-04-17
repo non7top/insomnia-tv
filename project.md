@@ -53,7 +53,7 @@ The C++ namespace follows **PascalCase** to align with Arduino/ESP-IDF standards
 - **Hardware Target:** ESP32 (IR TX via RMT/LEDC, IR RX via TSOP382, WiFi, MQTT, AsyncWebServer)
 - **Development Workflow:**
   - `main` branch protected. All changes via Pull Requests only.
-  - CI gates: `lint`, `unit-tests`, `build`, `vexio-integration`
+  - CI gates: `lint`, `unit-tests`, `build`, `velxio-integration`
   - No direct pushes to `main`. Squash-merge required.
   - Phased delivery with mandatory test coverage per phase.
 
@@ -138,9 +138,9 @@ The C++ namespace follows **PascalCase** to align with Arduino/ESP-IDF standards
 | **1** | `feature/phase-1-foundation` | Repo scaffold, HAL interfaces, config parser, `docs/naming-conventions.yaml`, JSON schema, `platformio.ini` | Config load/save, schema validation, HAL mock instantiation | `lint` + `unit-tests` |
 | **2** | `feature/phase-2-ir-core` | `IRremoteESP8266` wrapper, `ActivityTracker`, similarity hash, sliding window | Decode accuracy, inactivity threshold, hash grouping, activity reset | `unit-tests` + coverage ≥80% |
 | **3** | `feature/phase-3-sleep-ramp` | FreeRTOS state machine, `RampScheduler` (`xTimer`), IR cancellation hook, MQTT state publishing | Timer tick accuracy, mid-ramp cancellation, step bounds, MQTT retain | `unit-tests` + `build` |
-| **4** | `feature/phase-4-tv-verify` | `TvVerifier` (async ping/HTTP), retry logic, fallback handler, `/api/test_power_code?index=N` | HTTP 200/404/timeout, retry backoff, DB iteration, network flakiness | `unit-tests` + `vexio-integration` |
+| **4** | `feature/phase-4-tv-verify` | `TvVerifier` (async ping/HTTP), retry logic, fallback handler, `/api/test_power_code?index=N` | HTTP 200/404/timeout, retry backoff, DB iteration, network flakiness | `unit-tests` + `velxio-integration` |
 | **5** | `feature/phase-5-web-mqtt` | AsyncWebServer, FAT32/LittleFS mount, file upload/download UI, `AsyncMqttClient` bridge, OTA endpoint | Web route parsing, FS roundtrip, MQTT pub/sub, config hot-reload | `lint` + `unit-tests` + `build` |
-| **6** | `feature/phase-6-vexio-qemu` | Vexio test runner scripts, QEMU RTOS timing suite, E2E simulation, coverage aggregation | Full ramp→verify→poweroff cycle, IR spam, time warp, watchdog | `vexio-integration` + `qemu-timing` |
+| **6** | `feature/phase-6-velxio-qemu` | Velxio test runner scripts, QEMU RTOS timing suite, E2E simulation, coverage aggregation | Full ramp→verify→poweroff cycle, IR spam, time warp, watchdog | `velxio-integration` + `qemu-timing` |
 | **7** | `release/v1.0.0` | Watchdog, error recovery, memory leak hardening, release workflow, docs | Heap trace, 24h stability run, config corruption recovery | Manual QA + all gates |
 
 ---
@@ -152,7 +152,7 @@ main:
   protect: true
   require_pr_approvals: 2
   dismiss_stale_reviews: true
-  required_status_checks: [lint, unit-tests, build, vexio-integration]
+  required_status_checks: [lint, unit-tests, build, velxio-integration]
   allow_auto_merge: false
   restrict_pushes: true
 ```
@@ -162,7 +162,7 @@ main:
 ## Checklist
 - [ ] `pio test -e native` passes (coverage ≥80%)
 - [ ] `clang-format` & `cpplint` clean
-- [ ] Vexio integration tests pass (`vexio test run`)
+- [ ] Velxio integration tests pass (`velxio test run`)
 - [ ] Naming conventions updated if new symbols introduced
 - [ ] Config schema validated & Web UI endpoints tested
 - [ ] MQTT topic mapping documented (`home/insomnia_tv/*`)
@@ -201,18 +201,18 @@ jobs:
       - uses: actions/upload-artifact@v4
         with: { name: firmware, path: .pio/build/esp32dev/insomnia_tv_esp32.bin }
 
-  vexio-integration:
+  velxio-integration:
     needs: [build-firmware]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with: { name: firmware }
-      - run: npm install -g vexio-cli
-      - run: vexio test run tests/vexio/ --firmware insomnia_tv_esp32.bin --headless --timeout 120
-      - run: vexio coverage export > vexio-coverage.json
+      - run: npm install -g velxio-cli
+      - run: velxio test run tests/velxio/ --firmware insomnia_tv_esp32.bin --headless --timeout 120
+      - run: velxio coverage export > velxio-coverage.json
       - uses: actions/upload-artifact@v4
-        with: { name: vexio-report, path: vexio-coverage.json }
+        with: { name: velxio-report, path: velxio-coverage.json }
 ```
 
 ---
@@ -221,28 +221,28 @@ jobs:
 | Layer | Tool | Purpose | Execution |
 |-------|------|---------|-----------|
 | **Native Unit** | PlatformIO + Unity + FakeIt | Logic, config, state machine, HAL mocks | `pio test -e native` |
-| **Vexio Integration** | Vexio CLI + JS Runner | IR pulse injection, HTTP mock, MQTT broker, time warp | `vexio test run tests/vexio/ --headless` |
+| **Velxio Integration** | Velxio CLI + JS Runner | IR pulse injection, HTTP mock, MQTT broker, time warp | `velxio test run tests/velxio/ --headless` |
 | **QEMU Timing** | `qemu-system-xtensa -M esp32` | FreeRTOS scheduler, interrupt latency, watchdog validation | `pio test -e qemu-esp32` |
-| **Coverage Aggregation** | `lcov` + `vexio-coverage.json` | Unified CI badge, PR diff comment | GitHub Actions artifact merge |
+| **Coverage Aggregation** | `lcov` + `velxio-coverage.json` | Unified CI badge, PR diff comment | GitHub Actions artifact merge |
 
-### Vexio Test Example (`tests/vexio/ramp_cancellation.test.js`)
+### Velxio Test Example (`tests/velxio/ramp_cancellation.test.js`)
 ```javascript
 describe("Ramp Cancellation", () => {
-  beforeAll(() => vexio.firmware.load("insomnia_tv_esp32.bin"));
-  beforeEach(() => { vexio.time.set(0); vexio.mqtt.clear(); });
+  beforeAll(() => velxio.firmware.load("insomnia_tv_esp32.bin"));
+  beforeEach(() => { velxio.time.set(0); velxio.mqtt.clear(); });
 
   it("Transitions to RAMPING after 15m idle", async () => {
-    await vexio.time.advance("15m");
-    await vexio.wait(500);
-    expect(await vexio.mqtt.last("home/insomnia_tv/state")).toBe("RAMPING");
+    await velxio.time.advance("15m");
+    await velxio.wait(500);
+    expect(await velxio.mqtt.last("home/insomnia_tv/state")).toBe("RAMPING");
   });
 
   it("Resets to MONITORING on IR activity", async () => {
-    await vexio.time.advance("15m");
-    await vexio.wait(500);
-    vexio.ir.send("NEC", { address: 0x20DF, command: 0x40BF, bits: 32 });
-    await vexio.wait(300);
-    expect(await vexio.mqtt.last("home/insomnia_tv/state")).toBe("MONITORING");
+    await velxio.time.advance("15m");
+    await velxio.wait(500);
+    velxio.ir.send("NEC", { address: 0x20DF, command: 0x40BF, bits: 32 });
+    await velxio.wait(300);
+    expect(await velxio.mqtt.last("home/insomnia_tv/state")).toBe("MONITORING");
   });
 });
 ```
@@ -270,7 +270,7 @@ insomnia-tv/
 │   └── web/WebServer.cpp|.h
 ├── test/
 │   ├── native/          # PlatformIO unity tests
-│   ├── vexio/           # JS integration scripts
+│   ├── velxio/           # JS integration scripts
 │   └── qemu/            # RTOS timing validation
 ├── config/
 │   └── insomnia_tv_schema.json

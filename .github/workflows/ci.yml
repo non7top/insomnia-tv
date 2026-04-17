@@ -1,0 +1,87 @@
+name: insomniaTV CI
+
+on:
+  pull_request:
+    branches: [master]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install lint tools
+        run: pip install clang-format clang-tidy cpplint
+      - name: Run cpplint
+        run: cpplint --recursive src/ test/
+      - name: Run clang-format check
+        run: clang-format --style=file --dry-run --Werror src/**/*.cpp test/**/*.cpp
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio/.cache
+            ~/.platformio/packages
+            ~/.platformio/platforms
+          key: ${{ runner.os }}-pio-${{ hashFiles('**/platformio.ini') }}
+      - name: Set up PlatformIO
+        run: pip install platformio
+      - name: Run native tests
+        run: pio test -e native
+      - name: Generate coverage report
+        run: |
+          sudo apt-get install -y lcov
+          lcov --capture --directory . --output-file .pio/build/native/coverage.info
+          lcov --remove .pio/build/native/coverage.info '*/test/*' '*/.pio/*' --output-file .pio/build/native/coverage.info
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: .pio/build/native/coverage.info
+
+  build-firmware:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio/.cache
+            ~/.platformio/packages
+            ~/.platformio/platforms
+          key: ${{ runner.os }}-pio-${{ hashFiles('**/platformio.ini') }}
+      - name: Set up PlatformIO
+        run: pip install platformio
+      - name: Build ESP32 firmware
+        run: pio run -e esp32dev -e qemu-esp32
+      - name: Upload firmware artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware
+          path: .pio/build/esp32dev/firmware.bin
+
+#  velxio-integration:
+#    needs: [build-firmware]
+#    runs-on: ubuntu-latest
+#    steps:
+#      - uses: actions/checkout@v4
+#      - name: Download firmware
+#        uses: actions/download-artifact@v4
+#        with:
+#          name: firmware
+#          path: .
+#      - name: Install velxio-cli
+#        run: npm install -g velxio-cli
+#      - name: Run velxio integration tests
+#        run: velxio test run tests/velxio/ --firmware firmware.bin --headless --timeout 120
+#      - name: Export velxio coverage
+#        run: velxio coverage export > velxio-coverage.json
+#      - name: Upload velxio report
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: velxio-report
+#          path: velxio-coverage.json
