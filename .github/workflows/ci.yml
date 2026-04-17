@@ -64,7 +64,7 @@ jobs:
           name: firmware
           path: .pio/build/esp32dev/firmware.bin
 
-  vexio-integration:
+  velxio-integration:
     needs: [build-firmware]
     runs-on: ubuntu-latest
     steps:
@@ -74,14 +74,14 @@ jobs:
         with:
           name: firmware
           path: .
-#      - name: Install vexio-cli
-#        run: npm install -g vexio-cli
-#      - name: Run vexio integration tests
-#        run: vexio test run tests/vexio/ --firmware firmware.bin --headless --timeout 120
-#      - name: Export vexio coverage
-#        run: vexio coverage export > vexio-coverage.json
-#      - name: Upload vexio report
-#        uses: actions/upload-artifact@v4
-#        with:
-#          name: vexio-report
-#          path: vexio-coverage.json
+      - name: Install velxio-cli
+        run: npm install -g velxio-cli
+      - name: Run velxio integration tests
+        run: velxio test run tests/velxio/ --firmware firmware.bin --headless --timeout 120
+      - name: Export velxio coverage
+        run: velxio coverage export > velxio-coverage.json
+      - name: Upload velxio report
+        uses: actions/upload-artifact@v4
+        with:
+          name: velxio-report
+          path: velxio-coverage.json

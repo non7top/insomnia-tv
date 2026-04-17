@@ -44,7 +44,7 @@ See `project.md` for full specification and phase delivery plan.
 | 3. Sleep Ramp | `feature/phase-3-sleep-ramp` | Planned |
 | 4. TV Verify | `feature/phase-4-tv-verify` | Planned |
 | 5. Web/MQTT | `feature/phase-5-web-mqtt` | Planned |
-| 6. Vexio/QEMU | `feature/phase-6-vexio-qemu` | Planned |
+| 6. Velxio/QEMU | `feature/phase-6-velxio-qemu` | Planned |
 | 7. Release v1.0 | `release/v1.0.0` | Planned |
 
 ## Configuration
