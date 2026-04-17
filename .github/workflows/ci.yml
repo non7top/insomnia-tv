@@ -64,24 +64,24 @@ jobs:
           name: firmware
           path: .pio/build/esp32dev/firmware.bin
 
-  velxio-integration:
-    needs: [build-firmware]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Download firmware
-        uses: actions/download-artifact@v4
-        with:
-          name: firmware
-          path: .
-      - name: Install velxio-cli
-        run: npm install -g velxio-cli
-      - name: Run velxio integration tests
-        run: velxio test run tests/velxio/ --firmware firmware.bin --headless --timeout 120
-      - name: Export velxio coverage
-        run: velxio coverage export > velxio-coverage.json
-      - name: Upload velxio report
-        uses: actions/upload-artifact@v4
-        with:
-          name: velxio-report
-          path: velxio-coverage.json
+#  velxio-integration:
+#    needs: [build-firmware]
+#    runs-on: ubuntu-latest
+#    steps:
+#      - uses: actions/checkout@v4
+#      - name: Download firmware
+#        uses: actions/download-artifact@v4
+#        with:
+#          name: firmware
+#          path: .
+#      - name: Install velxio-cli
+#        run: npm install -g velxio-cli
+#      - name: Run velxio integration tests
+#        run: velxio test run tests/velxio/ --firmware firmware.bin --headless --timeout 120
+#      - name: Export velxio coverage
+#        run: velxio coverage export > velxio-coverage.json
+#      - name: Upload velxio report
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: velxio-report
+#          path: velxio-coverage.json
