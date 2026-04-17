@@ -73,6 +73,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: firmware
+          path: .
       - name: Install vexio-cli
         run: npm install -g vexio-cli
       - name: Run vexio integration tests
