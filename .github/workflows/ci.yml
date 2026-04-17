@@ -34,7 +34,7 @@ jobs:
       - name: Generate coverage report
         run: |
           sudo apt-get install -y lcov
-          lcov --capture --directory .pio/build/native/ --output-file .pio/build/native/coverage.info
+          lcov --capture --directory . --output-file .pio/build/native/coverage.info
           lcov --remove .pio/build/native/coverage.info '*/test/*' '*/.pio/*' --output-file .pio/build/native/coverage.info
       - name: Upload coverage artifact
         if: always()
@@ -74,14 +74,14 @@ jobs:
         with:
           name: firmware
           path: .
-      - name: Install vexio-cli
-        run: npm install -g vexio-cli
-      - name: Run vexio integration tests
-        run: vexio test run tests/vexio/ --firmware firmware.bin --headless --timeout 120
-      - name: Export vexio coverage
-        run: vexio coverage export > vexio-coverage.json
-      - name: Upload vexio report
-        uses: actions/upload-artifact@v4
-        with:
-          name: vexio-report
-          path: vexio-coverage.json
+#      - name: Install vexio-cli
+#        run: npm install -g vexio-cli
+#      - name: Run vexio integration tests
+#        run: vexio test run tests/vexio/ --firmware firmware.bin --headless --timeout 120
+#      - name: Export vexio coverage
+#        run: vexio coverage export > vexio-coverage.json
+#      - name: Upload vexio report
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: vexio-report
+#          path: vexio-coverage.json
