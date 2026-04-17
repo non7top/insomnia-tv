@@ -1,5 +1,7 @@
 // Copyright 2026 insomniaTV Contributors. All rights reserved.
 
+#ifndef INSOMNIATV_NATIVE
+
 #include <Arduino.h>
 
 #include "config/ConfigManager.h"
@@ -29,3 +31,5 @@ void loop() {
   // Phase 1: minimal loop -- tasks in later phases
   delay(1000);
 }
+
+#endif  // INSOMNIATV_NATIVE

@@ -62,7 +62,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: firmware
-          path: .pio/build/esp32dev/insomnia_tv_esp32.bin
+          path: .pio/build/esp32dev/firmware.bin
 
   vexio-integration:
     needs: [build-firmware]
@@ -76,7 +76,7 @@ jobs:
       - name: Install vexio-cli
         run: npm install -g vexio-cli
       - name: Run vexio integration tests
-        run: vexio test run tests/vexio/ --firmware insomnia_tv_esp32.bin --headless --timeout 120
+        run: vexio test run tests/vexio/ --firmware firmware.bin --headless --timeout 120
       - name: Export vexio coverage
         run: vexio coverage export > vexio-coverage.json
       - name: Upload vexio report
