@@ -11,6 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+      - uses: actions/cache@v5
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-lint
       - name: Install lint tools
         run: pip install clang-format clang-tidy cpplint
       - name: Run cpplint
@@ -25,10 +29,11 @@ jobs:
       - uses: actions/cache@v5
         with:
           path: |
+            ~/.cache/pip
             ~/.platformio/.cache
             ~/.platformio/packages
             ~/.platformio/platforms
-          key: ${{ runner.os }}-pio-${{ hashFiles('**/platformio.ini') }}
+          key: ${{ runner.os }}-pio-${{ hashFiles('**/platformio.ini', '.github/workflows/ci.yml') }}
       - name: Set up PlatformIO
         run: pip install platformio
       - name: Run native tests
@@ -52,10 +57,11 @@ jobs:
       - uses: actions/cache@v5
         with:
           path: |
+            ~/.cache/pip
             ~/.platformio/.cache
             ~/.platformio/packages
             ~/.platformio/platforms
-          key: ${{ runner.os }}-pio-${{ hashFiles('**/platformio.ini') }}
+          key: ${{ runner.os }}-pio-${{ hashFiles('**/platformio.ini', '.github/workflows/ci.yml') }}
       - name: Set up PlatformIO
         run: pip install platformio
       - name: Build ESP32 firmware
