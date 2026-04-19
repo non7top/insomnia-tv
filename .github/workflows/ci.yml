@@ -24,8 +24,15 @@ jobs:
 
   unit-tests:
     runs-on: ubuntu-latest
+    env:
+      CCACHE_DIR: .ccache
+      CCACHE_BASEDIR: ${{ github.workspace }}
+      CCACHE_COMPRESS: 1
+      CCACHE_MAXSIZE: 1G
     steps:
       - uses: actions/checkout@v6
+      - name: Install ccache
+        run: sudo apt-get install -y ccache
       - uses: actions/cache@v5
         with:
           path: |
@@ -33,11 +40,18 @@ jobs:
             ~/.platformio/.cache
             ~/.platformio/packages
             ~/.platformio/platforms
-          key: ${{ runner.os }}-pio-${{ hashFiles('**/platformio.ini', '.github/workflows/ci.yml') }}
+            .ccache
+          key: ${{ runner.os }}-pio-unit-${{ hashFiles('**/platformio.ini', '.github/workflows/ci.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-pio-unit-
       - name: Set up PlatformIO
         run: pip install platformio
+      - name: Zero ccache stats
+        run: ccache -z
       - name: Run native tests
         run: pio test -e native
+      - name: Show ccache stats
+        run: ccache -s
       - name: Generate coverage report
         run: |
           sudo apt-get install -y lcov
@@ -52,8 +66,15 @@ jobs:
 
   build-firmware:
     runs-on: ubuntu-latest
+    env:
+      CCACHE_DIR: .ccache
+      CCACHE_BASEDIR: ${{ github.workspace }}
+      CCACHE_COMPRESS: 1
+      CCACHE_MAXSIZE: 1G
     steps:
       - uses: actions/checkout@v6
+      - name: Install ccache
+        run: sudo apt-get install -y ccache
       - uses: actions/cache@v5
         with:
           path: |
@@ -61,11 +82,18 @@ jobs:
             ~/.platformio/.cache
             ~/.platformio/packages
             ~/.platformio/platforms
-          key: ${{ runner.os }}-pio-${{ hashFiles('**/platformio.ini', '.github/workflows/ci.yml') }}
+            .ccache
+          key: ${{ runner.os }}-pio-build-${{ hashFiles('**/platformio.ini', '.github/workflows/ci.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-pio-build-
       - name: Set up PlatformIO
         run: pip install platformio
+      - name: Zero ccache stats
+        run: ccache -z
       - name: Build ESP32 firmware
         run: pio run -e esp32dev -e qemu-esp32
+      - name: Show ccache stats
+        run: ccache -s
       - name: Upload firmware artifact
         uses: actions/upload-artifact@v7
         with:
