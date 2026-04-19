@@ -87,7 +87,8 @@ public:
   }
   void disconnect() override { connected_ = false; }
   bool isConnected() const override { return connected_; }
-  int16_t publish(const String&, const String&, uint8_t, bool) override {
+  int16_t publish(const String&, const String&, uint8_t qos = 0,
+                  bool retain = false) override {
     publishCount_++;
     return 1;
   }
