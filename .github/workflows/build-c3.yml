@@ -1,0 +1,50 @@
+name: Build ESP32-C3 Firmware
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/platformio.ini') }}
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio/.cache
+            ~/.platformio/packages
+            ~/.platformio/platforms
+          key: ${{ runner.os }}-pio-${{ hashFiles('**/platformio.ini') }}
+
+      - name: Set up PlatformIO
+        run: pip install platformio
+
+      - name: Build Firmware
+        run: pio run -e esp32c3
+
+      - name: Build Filesystem
+        run: pio run -e esp32c3 -t buildfs
+
+      - name: Upload Firmware Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-c3
+          path: .pio/build/esp32c3/firmware.bin
+
+      - name: Upload Filesystem Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: filesystem-c3
+          path: .pio/build/esp32c3/littlefs.bin
