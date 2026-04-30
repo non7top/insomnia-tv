@@ -1,35 +1,69 @@
-// Copyright 2026 insomniaTV Contributors. All rights reserved.
-
-#ifndef INSOMNIATV_NATIVE
-
 #include <Arduino.h>
+#include <Ticker.h>
 
-#include "config/ConfigManager.h"
+// attach a LED to GPIO 21
+#define LED_PIN 8
 
-static InsomniaTV::ConfigManager configMgr;
+Ticker blinker;
+Ticker toggler;
+Ticker changer;
+float blinkerPace = 0.1;       // seconds
+const float togglePeriod = 5;  // seconds
+
+
+void blink() {
+  digitalWrite(LED_PIN, !digitalRead(LED_PIN));
+  // Optional: verbose output (can spam serial at high blink rates)
+  // Serial.println("[BLINK] LED toggled");
+}
+
+void change() {
+  Serial.println("[CHANGE] blinkerPace updated to 0.5s");
+  blinkerPace = 0.5;
+  // If blinker is active, re-attach with new pace
+  if (blinker.active()) {
+    blinker.detach();
+    blinker.attach(blinkerPace, blink);
+    Serial.println("[CHANGE] blinker re-attached with new pace");
+  }
+}
+
+void toggle() {
+  static bool isBlinking = false;
+  if (isBlinking) {
+    blinker.detach();
+    isBlinking = false;
+    Serial.println("[TOGGLE] Blinking STOPPED");
+  } else {
+    blinker.attach(blinkerPace, blink);
+    isBlinking = true;
+    Serial.printf("[TOGGLE] Blinking STARTED LUNUXXXXXXXXXXXXXXX (pace: %.2fs)\n", blinkerPace);
+  }
+  digitalWrite(LED_PIN, LOW);  // make sure LED is ON after toggling (pin LOW = led ON)
+}
 
 void setup() {
   Serial.begin(115200);
-  Serial.println("[insomniaTV] booting...");
+  while (!Serial) { ; }  // wait for serial port (useful for native USB boards)
 
-  InsomniaTV::ConfigStatus status = configMgr.load();
-  if (status != InsomniaTV::ConfigStatus::Ok) {
-    Serial.printf("[insomniaTV] config load failed: %d, using defaults\n",
-                  static_cast<int>(status));
-    configMgr.resetToDefaults();
-  }
+  Serial.println("\n=== System Starting ===");
+  Serial.printf("LED_PIN: %d\n", LED_PIN);
+  Serial.printf("Initial blinkerPace: %.2fs\n", blinkerPace);
+  Serial.printf("Toggle period: %.1fs\n", togglePeriod);
 
-  String err;
-  if (!InsomniaTV::ConfigManager::validate(configMgr.get(), err)) {
-    Serial.printf("[insomniaTV] config validation error: %s\n", err.c_str());
-  }
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, HIGH);  // start with LED OFF (assuming active-low)
 
-  Serial.println("[insomniaTV] initialization complete");
+  toggler.attach(togglePeriod, toggle);
+  Serial.println("[SETUP] toggler attached");
+
+  changer.once(30, change);
+  Serial.println("[SETUP] changer scheduled for 30s");
+
+  Serial.println("=== Setup Complete ===\n");
 }
 
 void loop() {
-  // Phase 1: minimal loop -- tasks in later phases
-  delay(1000);
+  // Nothing here - Tickers handle everything asynchronously
+  // Add delay(10) if you want to reduce CPU load on some platforms
 }
-
-#endif  // INSOMNIATV_NATIVE

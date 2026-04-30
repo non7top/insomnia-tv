@@ -31,3 +31,23 @@ config/insomnia_tv.json
 # Dependencies
 .platformio/
 .ccache/
+
+# Auto-generated
+managed_components/
+.src_build/
+.env/
+.venv/
+*.bak
+*.backup
+*.tmp
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Build logs
+*.log

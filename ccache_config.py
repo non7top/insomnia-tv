@@ -1,11 +1,16 @@
 import os
+import shutil
 Import("env")
 
 # Check if ccache is available in the system
-if os.system("ccache --version > /dev/null 2>&1") == 0:
-    # Prefix compiler calls with ccache
-    for tool in ["CC", "CXX", "AS", "LINK"]:
-        env[tool] = "ccache " + env[tool]
-    print("ccache enabled successfully via direct string prefix.")
+ccache_path = shutil.which("ccache")
+if ccache_path:
+    # Use Prepend to ensure ccache is at the beginning
+    env.Prepend(
+        CC="ccache ",
+        CXX="ccache ",
+        AS="ccache "
+    )
+    print(f"ccache prepended for {env.get('PIOENV')}")
 else:
     print("ccache NOT found, skipping configuration.")
