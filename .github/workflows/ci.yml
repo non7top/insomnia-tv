@@ -42,7 +42,7 @@ jobs:
           path: |
             ~/.platformio
             ~/.cache/pip
-            ${{ github.workspace }}/.pio/build_cache
+            ${{ github.workspace }}/.pio
           key: ${{ runner.os }}-pio-${{ github.job }}-${{ hashFiles('**/platformio.ini', '.github/workflows/ci.yml') }}
           restore-keys: |
             ${{ runner.os }}-pio-${{ github.job }}-
@@ -79,7 +79,7 @@ jobs:
           path: |
             ~/.platformio
             ~/.cache/pip
-            ${{ github.workspace }}/.pio/build_cache
+            ${{ github.workspace }}/.pio
           key: ${{ runner.os }}-pio-${{ github.job }}-${{ hashFiles('**/platformio.ini', '.github/workflows/ci.yml') }}
           restore-keys: |
             ${{ runner.os }}-pio-${{ github.job }}-
