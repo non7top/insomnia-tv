@@ -46,6 +46,9 @@ managed_components/
 *.tmp
 .env.local
 
+# Dummy build files
+.dummy/
+
 # IDE
 .vscode/
 .idea/
