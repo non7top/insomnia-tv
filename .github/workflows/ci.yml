@@ -32,7 +32,7 @@ jobs:
   unit-tests:
     runs-on: ubuntu-latest
     env:
-      PLATFORMIO_BUILD_CACHE_DIR: ${{ github.workspace }}/.platformio/cache/
+      PLATFORMIO_BUILD_CACHE_DIR: /home/runner/.platformio/cache/
     steps:
       - uses: actions/checkout@v6
 
@@ -69,7 +69,7 @@ jobs:
   build-firmware:
     runs-on: ubuntu-latest
     env:
-      PLATFORMIO_BUILD_CACHE_DIR: ${{ github.workspace }}/.platformio/cache/
+      PLATFORMIO_BUILD_CACHE_DIR: /home/runner/.platformio/cache/
     steps:
       - uses: actions/checkout@v6
 
