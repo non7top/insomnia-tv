@@ -15,7 +15,7 @@
 class MockIrDriver : public InsomniaTV::IIrDriver {
 public:
   void begin() override { began_ = true; }
-  bool send(const String&, uint64_t, uint16_t) override {
+  bool send(const std::string&, uint64_t, uint16_t) override {
     sendCount_++;
     return true;
   }
@@ -25,7 +25,7 @@ public:
     return nullptr;
   }
   bool hasDecoded() const override { return false; }
-  String lastProtocol() const override { return String(); }
+  std::string lastProtocol() const override { return std::string(); }
   uint64_t lastCode() const override { return 0; }
   uint16_t lastBits() const override { return 0; }
 
@@ -36,8 +36,8 @@ public:
 
 class MockNetworkChecker : public InsomniaTV::INetworkChecker {
 public:
-  int32_t ping(const String&) override { return pingResult_; }
-  int32_t httpGet(const String&) override { return httpResult_; }
+  int32_t ping(const std::string&) override { return pingResult_; }
+  int32_t httpGet(const std::string&) override { return httpResult_; }
   void setTimeout(uint32_t ms) override { timeout_ = ms; }
   bool isConnected() const override { return connected_; }
 
@@ -58,19 +58,19 @@ public:
 class MockFileSystem : public InsomniaTV::IFileSystem {
 public:
   bool mount() override { return mountResult_; }
-  String readJson(const String&) override { return jsonString_; }
-  bool writeJson(const String&, const String&) override { return writeResult_; }
-  bool uploadFile(const String&, const uint8_t*, size_t) override {
+  std::string readJson(const std::string&) override { return jsonString_; }
+  bool writeJson(const std::string&, const std::string&) override { return writeResult_; }
+  bool uploadFile(const std::string&, const uint8_t*, size_t) override {
     return uploadResult_;
   }
-  int32_t downloadFile(const String&, uint8_t*, size_t) override {
+  int32_t downloadFile(const std::string&, uint8_t*, size_t) override {
     return downloadResult_;
   }
-  bool exists(const String&) const override { return existsResult_; }
-  bool remove(const String&) override { return removeResult_; }
+  bool exists(const std::string&) const override { return existsResult_; }
+  bool remove(const std::string&) override { return removeResult_; }
 
   bool mountResult_ = true;
-  String jsonString_ = "{}";
+  std::string jsonString_ = "{}";
   bool writeResult_ = true;
   bool uploadResult_ = true;
   int32_t downloadResult_ = 0;
@@ -80,20 +80,20 @@ public:
 
 class MockMqttClient : public InsomniaTV::IMqttClient {
 public:
-  bool connect(const String&, uint16_t, const String&, const String&,
-               const String&) override {
+  bool connect(const std::string&, uint16_t, const std::string&, const std::string&,
+               const std::string&) override {
     connected_ = true;
     return true;
   }
   void disconnect() override { connected_ = false; }
   bool isConnected() const override { return connected_; }
-  int16_t publish(const String&, const String&, uint8_t qos = 0,
+  int16_t publish(const std::string&, const std::string&, uint8_t qos = 0,
                   bool retain = false) override {
     publishCount_++;
     return 1;
   }
-  int16_t subscribe(const String&, uint8_t) override { return 1; }
-  void unsubscribe(const String&) override {}
+  int16_t subscribe(const std::string&, uint8_t) override { return 1; }
+  void unsubscribe(const std::string&) override {}
   void setCallback(InsomniaTV::MqttCallback) override { hasCallback_ = true; }
 
   bool connected_ = false;

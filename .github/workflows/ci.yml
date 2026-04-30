@@ -11,33 +11,55 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+
+      - name: Setup Python cache
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('.github/workflows/ci.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
       - name: Install lint tools
         run: pip install clang-format clang-tidy cpplint
+
       - name: Run cpplint
         run: cpplint --recursive src/ test/
+
       - name: Run clang-format check
         run: clang-format --style=file --dry-run --Werror src/**/*.cpp test/**/*.cpp
 
   unit-tests:
     runs-on: ubuntu-latest
+    env:
+      PLATFORMIO_BUILD_CACHE_DIR: $HOME/.platformio/cache
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/cache@v5
+
+      - name: Setup PlatformIO cache
+        uses: actions/cache@v5
         with:
           path: |
-            ~/.platformio/.cache
-            ~/.platformio/packages
-            ~/.platformio/platforms
-          key: ${{ runner.os }}-pio-${{ hashFiles('**/platformio.ini') }}
+            ~/.platformio
+            .pio
+            ${{ github.workspace }}/.pio
+
+          key: ${{ runner.os }}-pio-unit-${{ hashFiles('**/platformio.ini', '.github/workflows/ci.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-pio-unit-
+
       - name: Set up PlatformIO
         run: pip install platformio
+
       - name: Run native tests
         run: pio test -e native
+
       - name: Generate coverage report
         run: |
           sudo apt-get install -y lcov
           lcov --capture --directory . --output-file .pio/build/native/coverage.info
           lcov --remove .pio/build/native/coverage.info '*/test/*' '*/.pio/*' --output-file .pio/build/native/coverage.info
+
       - name: Upload coverage artifact
         if: always()
         uses: actions/upload-artifact@v7
@@ -47,24 +69,34 @@ jobs:
 
   build-firmware:
     runs-on: ubuntu-latest
+    env:
+      PLATFORMIO_BUILD_CACHE_DIR: $HOME/.platformio/cache
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/cache@v5
+
+      - name: Setup PlatformIO cache
+        uses: actions/cache@v5
         with:
           path: |
-            ~/.platformio/.cache
-            ~/.platformio/packages
-            ~/.platformio/platforms
-          key: ${{ runner.os }}-pio-${{ hashFiles('**/platformio.ini') }}
+            ~/.platformio
+            .pio
+            ${{ github.workspace }}/.pio
+
+          key: ${{ runner.os }}-pio-build-${{ hashFiles('**/platformio.ini', '.github/workflows/ci.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-pio-build-
+
       - name: Set up PlatformIO
         run: pip install platformio
-      - name: Build ESP32 firmware
-        run: pio run -e esp32dev -e qemu-esp32
-      - name: Upload firmware artifact
+
+      - name: Build all ESP32 firmware
+        run: pio run -e esp32c3 -e esp32dev -e qemu-esp32
+
+      - name: Upload ESP32-C3 firmware artifact
         uses: actions/upload-artifact@v7
         with:
-          name: firmware
-          path: .pio/build/esp32dev/firmware.bin
+          name: firmware-esp32c3
+          path: .pio/build/esp32c3/firmware.bin
 
 #  velxio-integration:
 #    needs: [build-firmware]

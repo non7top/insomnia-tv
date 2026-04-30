@@ -3,7 +3,11 @@
 #ifndef SRC_HAL_IFILESYSTEM_H_
 #define SRC_HAL_IFILESYSTEM_H_
 
+#if defined(ARDUINO) || defined(ESP32)
 #include <Arduino.h>
+#endif
+
+#include <string>
 
 namespace InsomniaTV {
 
@@ -17,24 +21,24 @@ public:
   virtual bool mount() = 0;
 
   // Read a file and parse as JSON string (caller frees)
-  virtual String readJson(const String& path) = 0;
+  virtual std::string readJson(const std::string& path) = 0;
 
   // Write a JSON string to file, returns true on success
-  virtual bool writeJson(const String& path, const String& json) = 0;
+  virtual bool writeJson(const std::string& path, const std::string& json) = 0;
 
   // Upload a file from web form, returns true on success
-  virtual bool uploadFile(const String& path, const uint8_t* data,
+  virtual bool uploadFile(const std::string& path, const uint8_t* data,
                           size_t len) = 0;
 
   // Download a file to byte buffer, returns length or -1 on error
-  virtual int32_t downloadFile(const String& path, uint8_t* outBuf,
+  virtual int32_t downloadFile(const std::string& path, uint8_t* outBuf,
                                size_t bufSize) = 0;
 
   // Check if a file exists
-  virtual bool exists(const String& path) const = 0;
+  virtual bool exists(const std::string& path) const = 0;
 
   // Remove a file, returns true on success
-  virtual bool remove(const String& path) = 0;
+  virtual bool remove(const std::string& path) = 0;
 };
 
 }  // namespace InsomniaTV
