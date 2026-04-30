@@ -31,6 +31,8 @@ jobs:
 
   unit-tests:
     runs-on: ubuntu-latest
+    env:
+      PLATFORMIO_BUILD_CACHE_DIR: /home/hmh/.platformio/cache
     steps:
       - uses: actions/checkout@v6
 
@@ -67,6 +69,8 @@ jobs:
 
   build-firmware:
     runs-on: ubuntu-latest
+    env:
+      PLATFORMIO_BUILD_CACHE_DIR: /home/hmh/.platformio/cache
     steps:
       - uses: actions/checkout@v6
 
@@ -74,11 +78,11 @@ jobs:
         uses: actions/cache@v5
         with:
           path: |
-            ~/.platformio/packages
-            ~/.platformio/platforms
-            ~/.platformio/penv
+            ~/.platformio
             .pio
-          key: ${{ runner.os }}-pio-build-${{ hashFiles('**/platformio.ini') }}
+            ${{ github.workspace }}/.pio
+
+          key: ${{ runner.os }}-pio-build-${{ hashFiles('**/platformio.ini', '.github/workflows/ci.yml') }}
           restore-keys: |
             ${{ runner.os }}-pio-build-
 
