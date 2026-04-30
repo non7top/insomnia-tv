@@ -49,6 +49,9 @@ managed_components/
 # Dummy build files
 .dummy/
 
+# Qwen Code
+.qwen/
+
 # IDE
 .vscode/
 .idea/
