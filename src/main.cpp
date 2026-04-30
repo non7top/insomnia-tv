@@ -1,7 +1,14 @@
+/*
+ * insomniaTV - ESP32 Smart IR Sleep Controller
+ *
+ * Blink test firmware for ESP32-C3 hardware validation
+ * Copyright 2026 insomniaTV Contributors
+ */
+
 #include <Arduino.h>
 #include <Ticker.h>
 
-// attach a LED to GPIO 21
+// Onboard LED (active-low) for nologo C3 super mini
 #define LED_PIN 8
 
 Ticker blinker;
@@ -37,9 +44,9 @@ void toggle() {
   } else {
     blinker.attach(blinkerPace, blink);
     isBlinking = true;
-    Serial.printf("[TOGGLE] Blinking STARTED LUNUXXXXXXXXXXXXXXX (pace: %.2fs)\n", blinkerPace);
+    Serial.printf("[TOGGLE] Blinking STARTED (pace: %.2fs)\n", blinkerPace);
   }
-  digitalWrite(LED_PIN, LOW);  // make sure LED is ON after toggling (pin LOW = led ON)
+  digitalWrite(LED_PIN, LOW);  // Active-low LED: LOW = ON
 }
 
 void setup() {
