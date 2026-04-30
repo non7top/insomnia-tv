@@ -30,3 +30,4 @@ config/insomnia_tv.json
 
 # Dependencies
 .platformio/
+.ccache/
