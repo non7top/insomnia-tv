@@ -32,6 +32,10 @@ config/insomnia_tv.json
 .platformio/
 .ccache/
 
+# PlatformIO auto-generated sdkconfig
+sdkconfig
+sdkconfig.*
+
 # Auto-generated
 managed_components/
 .src_build/
