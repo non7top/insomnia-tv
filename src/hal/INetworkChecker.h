@@ -7,6 +7,7 @@
 #include <Arduino.h>
 #endif
 #include <stdint.h>
+
 #include <string>
 
 namespace InsomniaTV {

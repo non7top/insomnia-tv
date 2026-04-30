@@ -2,6 +2,8 @@
 
 #include <unity.h>
 
+#include <string>
+
 #include "config/ConfigManager.h"
 
 // ---------------------------------------------------------------------------
@@ -204,37 +206,96 @@ void test_config_save_returns_ok(void) {
 // ---------------------------------------------------------------------------
 // Test: JSON round-trip serialization/de-serialization
 // ---------------------------------------------------------------------------
-void test_config_json_roundtrip(void) {
-  InsomniaTV::ConfigManager mgr;
-  InsomniaTV::Config cfg;
-  cfg.wifiSsid = "test-ssid";
-  cfg.wifiPassword = "test-password";
-  cfg.mqttEnabled = false;
-  cfg.mqttBroker = "10.0.0.1";
-  cfg.mqttPort = 1234;
-  cfg.inactivityTimeoutMin = 45;
-  cfg.volumeStepPerRamp = 3;
-  cfg.tvVerifyMethod = "http";
-  cfg.irVolumeUpCode = 0xDEADBEEF;
-
-  // Use the internal parseJson_/toJson_ via a friend or by implementing
-  // helper methods if they were public. Since they are private, we'll
-  // test them through the ConfigManager's set/get logic if we can,
-  // or we just test the public methods.
-
-  // For Phase 1, we'll expose parseJson_/toJson_ as public for testing
-  // or use a test-specific subclass.
-}
-
 class TestConfigManager : public InsomniaTV::ConfigManager {
 public:
   bool testParseJson(const std::string& json, InsomniaTV::Config& out) {
     return parseJson_(json, out);
   }
-  std::string testToJson(const InsomniaTV::Config& cfg) {
-    return toJson_(cfg);
-  }
+  std::string testToJson(const InsomniaTV::Config& cfg) { return toJson_(cfg); }
 };
+
+void test_config_json_roundtrip(void) {
+  TestConfigManager mgr;
+  InsomniaTV::Config original;
+
+  // Fill all fields with non-default values
+  original.wifiSsid = "custom-ssid";
+  original.wifiPassword = "custom-password";
+  original.mqttEnabled = false;
+  original.mqttBroker = "192.168.1.100";
+  original.mqttPort = 8883;
+  original.mqttClientId = "custom-client";
+  original.mqttTopicRoot = "custom/root";
+  original.mqttUser = "custom-user";
+  original.mqttPassword = "custom-password";
+  original.inactivityTimeoutMin = 42;
+  original.volumeStepPerRamp = 5;
+  original.rampIntervalMin = 10;
+  original.maxRampStepsBeforePoweroff = 25;
+  original.stayAwake = false;
+  original.tvVerifyMethod = "http";
+  original.tvVerifyTarget = "http://192.168.1.50/status";
+  original.tvVerifyTimeoutMs = 5000;
+  original.tvVerifyRetries = 2;
+  original.irVolumeUpProtocol = "SAMSUNG";
+  original.irVolumeUpCode = 0x123456789ABCDEF0ULL;
+  original.irVolumeUpBits = 64;
+  original.irVolumeDownProtocol = "SONY";
+  original.irVolumeDownCode = 0xFEDCBA9876543210ULL;
+  original.irVolumeDownBits = 12;
+  original.irLearnedCodesPath = "/custom_learned.json";
+  original.webPort = 8080;
+  original.webAuthEnabled = true;
+
+  // Serialize to JSON
+  std::string json = mgr.testToJson(original);
+
+  // Deserialize back
+  InsomniaTV::Config parsed;
+  TEST_ASSERT_TRUE(mgr.testParseJson(json, parsed));
+
+  // Verify all fields
+  TEST_ASSERT_EQUAL_STRING(original.wifiSsid.c_str(), parsed.wifiSsid.c_str());
+  TEST_ASSERT_EQUAL_STRING(original.wifiPassword.c_str(),
+                           parsed.wifiPassword.c_str());
+  TEST_ASSERT_EQUAL_INT(original.mqttEnabled, parsed.mqttEnabled);
+  TEST_ASSERT_EQUAL_STRING(original.mqttBroker.c_str(),
+                           parsed.mqttBroker.c_str());
+  TEST_ASSERT_EQUAL_UINT16(original.mqttPort, parsed.mqttPort);
+  TEST_ASSERT_EQUAL_STRING(original.mqttClientId.c_str(),
+                           parsed.mqttClientId.c_str());
+  TEST_ASSERT_EQUAL_STRING(original.mqttTopicRoot.c_str(),
+                           parsed.mqttTopicRoot.c_str());
+  TEST_ASSERT_EQUAL_STRING(original.mqttUser.c_str(), parsed.mqttUser.c_str());
+  TEST_ASSERT_EQUAL_STRING(original.mqttPassword.c_str(),
+                           parsed.mqttPassword.c_str());
+  TEST_ASSERT_EQUAL_UINT32(original.inactivityTimeoutMin,
+                           parsed.inactivityTimeoutMin);
+  TEST_ASSERT_EQUAL_UINT8(original.volumeStepPerRamp, parsed.volumeStepPerRamp);
+  TEST_ASSERT_EQUAL_UINT32(original.rampIntervalMin, parsed.rampIntervalMin);
+  TEST_ASSERT_EQUAL_UINT8(original.maxRampStepsBeforePoweroff,
+                          parsed.maxRampStepsBeforePoweroff);
+  TEST_ASSERT_EQUAL_INT(original.stayAwake, parsed.stayAwake);
+  TEST_ASSERT_EQUAL_STRING(original.tvVerifyMethod.c_str(),
+                           parsed.tvVerifyMethod.c_str());
+  TEST_ASSERT_EQUAL_STRING(original.tvVerifyTarget.c_str(),
+                           parsed.tvVerifyTarget.c_str());
+  TEST_ASSERT_EQUAL_UINT32(original.tvVerifyTimeoutMs,
+                           parsed.tvVerifyTimeoutMs);
+  TEST_ASSERT_EQUAL_UINT8(original.tvVerifyRetries, parsed.tvVerifyRetries);
+  TEST_ASSERT_EQUAL_STRING(original.irVolumeUpProtocol.c_str(),
+                           parsed.irVolumeUpProtocol.c_str());
+  TEST_ASSERT_EQUAL_HEX64(original.irVolumeUpCode, parsed.irVolumeUpCode);
+  TEST_ASSERT_EQUAL_UINT16(original.irVolumeUpBits, parsed.irVolumeUpBits);
+  TEST_ASSERT_EQUAL_STRING(original.irVolumeDownProtocol.c_str(),
+                           parsed.irVolumeDownProtocol.c_str());
+  TEST_ASSERT_EQUAL_HEX64(original.irVolumeDownCode, parsed.irVolumeDownCode);
+  TEST_ASSERT_EQUAL_UINT16(original.irVolumeDownBits, parsed.irVolumeDownBits);
+  TEST_ASSERT_EQUAL_STRING(original.irLearnedCodesPath.c_str(),
+                           parsed.irLearnedCodesPath.c_str());
+  TEST_ASSERT_EQUAL_UINT16(original.webPort, parsed.webPort);
+  TEST_ASSERT_EQUAL_INT(original.webAuthEnabled, parsed.webAuthEnabled);
+}
 
 void test_config_json_logic(void) {
   TestConfigManager mgr;
@@ -272,13 +333,16 @@ void test_config_json_logic(void) {
   TEST_ASSERT_TRUE(mgr.testParseJson(json, parsed));
 
   TEST_ASSERT_EQUAL_STRING(cfg.wifiSsid.c_str(), parsed.wifiSsid.c_str());
-  TEST_ASSERT_EQUAL_STRING(cfg.wifiPassword.c_str(), parsed.wifiPassword.c_str());
+  TEST_ASSERT_EQUAL_STRING(cfg.wifiPassword.c_str(),
+                           parsed.wifiPassword.c_str());
   TEST_ASSERT_EQUAL_INT(cfg.mqttEnabled, parsed.mqttEnabled);
   TEST_ASSERT_EQUAL_STRING(cfg.mqttBroker.c_str(), parsed.mqttBroker.c_str());
   TEST_ASSERT_EQUAL_UINT16(cfg.mqttPort, parsed.mqttPort);
-  TEST_ASSERT_EQUAL_UINT32(cfg.inactivityTimeoutMin, parsed.inactivityTimeoutMin);
+  TEST_ASSERT_EQUAL_UINT32(cfg.inactivityTimeoutMin,
+                           parsed.inactivityTimeoutMin);
   TEST_ASSERT_EQUAL_UINT8(cfg.volumeStepPerRamp, parsed.volumeStepPerRamp);
-  TEST_ASSERT_EQUAL_STRING(cfg.tvVerifyMethod.c_str(), parsed.tvVerifyMethod.c_str());
+  TEST_ASSERT_EQUAL_STRING(cfg.tvVerifyMethod.c_str(),
+                           parsed.tvVerifyMethod.c_str());
   TEST_ASSERT_EQUAL_UINT64(cfg.irVolumeUpCode, parsed.irVolumeUpCode);
   TEST_ASSERT_EQUAL_UINT16(cfg.webPort, parsed.webPort);
   TEST_ASSERT_EQUAL_INT(cfg.webAuthEnabled, parsed.webAuthEnabled);
@@ -303,6 +367,7 @@ int runUnityTests(void) {
   RUN_TEST(test_config_change_callback);
   RUN_TEST(test_config_load_returns_ok);
   RUN_TEST(test_config_save_returns_ok);
+  RUN_TEST(test_config_json_roundtrip);
   RUN_TEST(test_config_json_logic);
   return UNITY_END();
 }

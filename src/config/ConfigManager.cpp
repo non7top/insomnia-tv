@@ -1,5 +1,10 @@
+// Copyright 2026 insomniaTV Contributors. All rights reserved.
+
 #include "config/ConfigManager.h"
+
 #include <ArduinoJson.h>
+
+#include <string>
 
 namespace InsomniaTV {
 
@@ -109,7 +114,8 @@ void ConfigManager::resetToDefaults() {
 bool ConfigManager::parseJson_(const std::string& json, Config& out) {
   JsonDocument doc;
   DeserializationError error = deserializeJson(doc, json);
-  if (error) return false;
+  if (error)
+    return false;
 
   if (doc["wifi"].is<JsonObject>()) {
     out.wifiSsid = doc["wifi"]["ssid"] | "";
@@ -143,15 +149,20 @@ bool ConfigManager::parseJson_(const std::string& json, Config& out) {
   }
 
   if (doc["ir_codes"].is<JsonObject>()) {
-    out.irVolumeUpProtocol = doc["ir_codes"]["volume_up"]["protocol"] | "NEC";
-    out.irVolumeUpCode = doc["ir_codes"]["volume_up"]["hex"] | 0;
-    out.irVolumeUpBits = doc["ir_codes"]["volume_up"]["bits"] | 32;
-    out.irVolumeDownProtocol =
-        doc["ir_codes"]["volume_down"]["protocol"] | "NEC";
-    out.irVolumeDownCode = doc["ir_codes"]["volume_down"]["hex"] | 0;
-    out.irVolumeDownBits = doc["ir_codes"]["volume_down"]["bits"] | 32;
-    out.irLearnedCodesPath =
-        doc["ir_codes"]["learned_codes_path"] | "/ir_learned.json";
+    JsonObject ir = doc["ir_codes"];
+    if (ir["volume_up"].is<JsonObject>()) {
+      JsonObject volUp = ir["volume_up"];
+      out.irVolumeUpProtocol = volUp["protocol"] | "NEC";
+      out.irVolumeUpCode = volUp["hex"] | 0ULL;
+      out.irVolumeUpBits = volUp["bits"] | 32;
+    }
+    if (ir["volume_down"].is<JsonObject>()) {
+      JsonObject volDown = ir["volume_down"];
+      out.irVolumeDownProtocol = volDown["protocol"] | "NEC";
+      out.irVolumeDownCode = volDown["hex"] | 0ULL;
+      out.irVolumeDownBits = volDown["bits"] | 32;
+    }
+    out.irLearnedCodesPath = ir["learned_codes_path"] | "/ir_learned.json";
   }
 
   if (doc["web"].is<JsonObject>()) {
@@ -192,12 +203,16 @@ std::string ConfigManager::toJson_(const Config& cfg) {
   tv["retries"] = cfg.tvVerifyRetries;
 
   JsonObject ir = doc["ir_codes"].to<JsonObject>();
-  ir["volume_up"]["protocol"] = cfg.irVolumeUpProtocol;
-  ir["volume_up"]["hex"] = cfg.irVolumeUpCode;
-  ir["volume_up"]["bits"] = cfg.irVolumeUpBits;
-  ir["volume_down"]["protocol"] = cfg.irVolumeDownProtocol;
-  ir["volume_down"]["hex"] = cfg.irVolumeDownCode;
-  ir["volume_down"]["bits"] = cfg.irVolumeDownBits;
+  JsonObject volUp = ir["volume_up"].to<JsonObject>();
+  volUp["protocol"] = cfg.irVolumeUpProtocol;
+  volUp["hex"] = cfg.irVolumeUpCode;
+  volUp["bits"] = cfg.irVolumeUpBits;
+
+  JsonObject volDown = ir["volume_down"].to<JsonObject>();
+  volDown["protocol"] = cfg.irVolumeDownProtocol;
+  volDown["hex"] = cfg.irVolumeDownCode;
+  volDown["bits"] = cfg.irVolumeDownBits;
+
   ir["learned_codes_path"] = cfg.irLearnedCodesPath;
 
   JsonObject web = doc["web"].to<JsonObject>();

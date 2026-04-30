@@ -7,10 +7,10 @@
 #include <Arduino.h>
 #endif
 
-#include <functional>
-#include <string>
-#include <map>
 #include <cstdint>
+#include <functional>
+#include <map>
+#include <string>
 
 namespace InsomniaTV {
 

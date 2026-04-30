@@ -2,6 +2,8 @@
 
 #include <unity.h>
 
+#include <string>
+
 #include "hal/IClock.h"
 #include "hal/IFileSystem.h"
 #include "hal/IIrDriver.h"
@@ -59,7 +61,9 @@ class MockFileSystem : public InsomniaTV::IFileSystem {
 public:
   bool mount() override { return mountResult_; }
   std::string readJson(const std::string&) override { return jsonString_; }
-  bool writeJson(const std::string&, const std::string&) override { return writeResult_; }
+  bool writeJson(const std::string&, const std::string&) override {
+    return writeResult_;
+  }
   bool uploadFile(const std::string&, const uint8_t*, size_t) override {
     return uploadResult_;
   }
@@ -80,8 +84,8 @@ public:
 
 class MockMqttClient : public InsomniaTV::IMqttClient {
 public:
-  bool connect(const std::string&, uint16_t, const std::string&, const std::string&,
-               const std::string&) override {
+  bool connect(const std::string&, uint16_t, const std::string&,
+               const std::string&, const std::string&) override {
     connected_ = true;
     return true;
   }

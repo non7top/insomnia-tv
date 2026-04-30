@@ -10,6 +10,8 @@
 #include <Arduino.h>
 #include <Ticker.h>
 
+#include <string>
+
 #include "config/ConfigManager.h"
 
 // Onboard LED (active-low) for nologo C3 super mini
@@ -26,26 +28,29 @@ void setup() {
   Serial.begin(115200);
   // Wait for Serial on USB boards
   uint32_t start = millis();
-  while (!Serial && (millis() - start) < 2000) { ; }
+  while (!Serial && (millis() - start) < 2000) {
+  }
 
   Serial.println("\n[insomniaTV] Initializing...");
 
   // Status LED heartbeat
   pinMode(STATUS_LED_PIN, OUTPUT);
-  digitalWrite(STATUS_LED_PIN, HIGH); // Off
+  digitalWrite(STATUS_LED_PIN, HIGH);  // Off
   heartbeat.attach(0.5, toggleStatusLed);
 
   // Configuration
   Serial.println("[insomniaTV] Loading configuration...");
   InsomniaTV::ConfigStatus status = configMgr.load();
   if (status != InsomniaTV::ConfigStatus::Ok) {
-    Serial.printf("[insomniaTV] Config load failed (%d), using defaults\n", (int)status);
+    Serial.printf("[insomniaTV] Config load failed (%d), using defaults\n",
+                  static_cast<int>(status));
   }
 
   // Validate current config
   std::string validationErr;
   if (!InsomniaTV::ConfigManager::validate(configMgr.get(), validationErr)) {
-    Serial.printf("[insomniaTV] Config validation error: %s\n", validationErr.c_str());
+    Serial.printf("[insomniaTV] Config validation error: %s\n",
+                  validationErr.c_str());
   }
 
   Serial.println("[insomniaTV] Initialization complete");
@@ -57,4 +62,4 @@ void loop() {
   delay(1000);
 }
 
-#endif // UNIT_TEST
+#endif  // UNIT_TEST
