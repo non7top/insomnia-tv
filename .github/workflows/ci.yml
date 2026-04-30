@@ -76,7 +76,10 @@ jobs:
             ~/.platformio/packages
             ~/.platformio/platforms
             ~/.platformio/penv
-          key: ${{ runner.os }}-pio-${{ hashFiles('**/platformio.ini') }}
+            .pio
+          key: ${{ runner.os }}-pio-build-${{ hashFiles('**/platformio.ini') }}
+          restore-keys: |
+            ${{ runner.os }}-pio-build-
 
       - name: Set up PlatformIO
         run: pip install platformio
