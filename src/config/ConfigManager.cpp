@@ -1,6 +1,12 @@
 // Copyright 2026 insomniaTV Contributors. All rights reserved.
 
+#if defined(ARDUINO) || defined(ESP32)
+#include <Arduino.h>
+#endif
+
 #include "config/ConfigManager.h"
+#include <sstream>
+#include <algorithm>
 
 namespace InsomniaTV {
 
@@ -39,7 +45,7 @@ void ConfigManager::onChange(ConfigChangeCallback callback) {
   onChangeCb_ = callback;
 }
 
-bool ConfigManager::validate(const Config& cfg, String& outError) {
+bool ConfigManager::validate(const Config& cfg, std::string& outError) {
   if (cfg.inactivityTimeoutMin < 1 || cfg.inactivityTimeoutMin > 120) {
     outError = "inactivity_timeout_min must be between 1 and 120";
     return false;
@@ -70,6 +76,23 @@ bool ConfigManager::validate(const Config& cfg, String& outError) {
     return false;
   }
   return true;
+}
+
+std::string trim_(const std::string& str) {
+  const std::string whitespace = " \t\n\r";
+  auto start = str.find_first_not_of(whitespace);
+  if (start == std::string::npos) return "";
+  auto end = str.find_last_not_of(whitespace);
+  return str.substr(start, end - start + 1);
+}
+
+std::string toLower_(std::string str) {
+  std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+  return str;
+}
+
+bool startsWith_(const std::string& str, const std::string& prefix) {
+  return str.size() >= prefix.size() && str.substr(0, prefix.size()) == prefix;
 }
 
 void ConfigManager::resetToDefaults() {
@@ -104,17 +127,48 @@ void ConfigManager::resetToDefaults() {
   current_ = d;
 }
 
-bool ConfigManager::parseJson_(const String& json, Config& out) {
+bool ConfigManager::parseJson_(const std::string& json, Config& out) {
   // Phase 5: full JSON parsing with ArduinoJson
+  // For now, return false to indicate parsing not implemented
   (void)json;
   (void)out;
   return false;
 }
 
-String ConfigManager::toJson_(const Config& cfg) {
+std::string ConfigManager::toJson_(const Config& cfg) {
   // Phase 5: full JSON serialization
-  (void)cfg;
-  return String();
+  // Simple JSON string builder without external dependency
+  std::ostringstream oss;
+  oss << "{\n";
+  oss << "  \"wifi_ssid\": \"" << cfg.wifiSsid << "\",\n";
+  oss << "  \"wifi_password\": \"" << cfg.wifiPassword << "\",\n";
+  oss << "  \"mqtt_enabled\": " << (cfg.mqttEnabled ? "true" : "false") << ",\n";
+  oss << "  \"mqtt_broker\": \"" << cfg.mqttBroker << "\",\n";
+  oss << "  \"mqtt_port\": " << cfg.mqttPort << ",\n";
+  oss << "  \"mqtt_client_id\": \"" << cfg.mqttClientId << "\",\n";
+  oss << "  \"mqtt_topic_root\": \"" << cfg.mqttTopicRoot << "\",\n";
+  oss << "  \"mqtt_user\": \"" << cfg.mqttUser << "\",\n";
+  oss << "  \"mqtt_password\": \"" << cfg.mqttPassword << "\",\n";
+  oss << "  \"inactivity_timeout_min\": " << cfg.inactivityTimeoutMin << ",\n";
+  oss << "  \"volume_step_per_ramp\": " << (int)cfg.volumeStepPerRamp << ",\n";
+  oss << "  \"ramp_interval_min\": " << cfg.rampIntervalMin << ",\n";
+  oss << "  \"max_ramp_steps_before_poweroff\": " << (int)cfg.maxRampStepsBeforePoweroff << ",\n";
+  oss << "  \"stay_awake\": " << (cfg.stayAwake ? "true" : "false") << ",\n";
+  oss << "  \"tv_verify_method\": \"" << cfg.tvVerifyMethod << "\",\n";
+  oss << "  \"tv_verify_target\": \"" << cfg.tvVerifyTarget << "\",\n";
+  oss << "  \"tv_verify_timeout_ms\": " << cfg.tvVerifyTimeoutMs << ",\n";
+  oss << "  \"tv_verify_retries\": " << (int)cfg.tvVerifyRetries << ",\n";
+  oss << "  \"ir_volume_up_protocol\": \"" << cfg.irVolumeUpProtocol << "\",\n";
+  oss << "  \"ir_volume_up_code\": " << cfg.irVolumeUpCode << ",\n";
+  oss << "  \"ir_volume_up_bits\": " << (int)cfg.irVolumeUpBits << ",\n";
+  oss << "  \"ir_volume_down_protocol\": \"" << cfg.irVolumeDownProtocol << "\",\n";
+  oss << "  \"ir_volume_down_code\": " << cfg.irVolumeDownCode << ",\n";
+  oss << "  \"ir_volume_down_bits\": " << (int)cfg.irVolumeDownBits << ",\n";
+  oss << "  \"ir_learned_codes_path\": \"" << cfg.irLearnedCodesPath << "\",\n";
+  oss << "  \"web_port\": " << cfg.webPort << ",\n";
+  oss << "  \"web_auth_enabled\": " << (cfg.webAuthEnabled ? "true" : "false") << "\n";
+  oss << "}";
+  return oss.str();
 }
 
 bool ConfigManager::applyDefaults_() {

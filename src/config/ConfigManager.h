@@ -3,9 +3,13 @@
 #ifndef SRC_CONFIG_CONFIGMANAGER_H_
 #define SRC_CONFIG_CONFIGMANAGER_H_
 
+#if defined(ARDUINO) || defined(ESP32)
 #include <Arduino.h>
+#endif
 
 #include <functional>
+#include <string>
+#include <map>
 
 namespace InsomniaTV {
 
@@ -21,17 +25,17 @@ enum class ConfigStatus {
 // Full device configuration
 struct Config {
   // WiFi
-  String wifiSsid;
-  String wifiPassword;
+  std::string wifiSsid;
+  std::string wifiPassword;
 
   // MQTT
   bool mqttEnabled;
-  String mqttBroker;
+  std::string mqttBroker;
   uint16_t mqttPort;
-  String mqttClientId;
-  String mqttTopicRoot;
-  String mqttUser;
-  String mqttPassword;
+  std::string mqttClientId;
+  std::string mqttTopicRoot;
+  std::string mqttUser;
+  std::string mqttPassword;
 
   // Behavior
   uint32_t inactivityTimeoutMin;
@@ -41,19 +45,19 @@ struct Config {
   bool stayAwake;
 
   // TV Verification
-  String tvVerifyMethod;  // "ping" or "http"
-  String tvVerifyTarget;
+  std::string tvVerifyMethod;  // "ping" or "http"
+  std::string tvVerifyTarget;
   uint32_t tvVerifyTimeoutMs;
   uint8_t tvVerifyRetries;
 
   // IR Codes
-  String irVolumeUpProtocol;
+  std::string irVolumeUpProtocol;
   uint64_t irVolumeUpCode;
   uint16_t irVolumeUpBits;
-  String irVolumeDownProtocol;
+  std::string irVolumeDownProtocol;
   uint64_t irVolumeDownCode;
   uint16_t irVolumeDownBits;
-  String irLearnedCodesPath;
+  std::string irLearnedCodesPath;
 
   // Web
   uint16_t webPort;
@@ -89,7 +93,7 @@ public:
   void onChange(ConfigChangeCallback callback);
 
   // Validate configuration against schema rules
-  static bool validate(const Config& cfg, String& outError);
+  static bool validate(const Config& cfg, std::string& outError);
 
   // Reset all fields to factory defaults
   void resetToDefaults();
@@ -98,8 +102,8 @@ private:
   Config current_;
   ConfigChangeCallback onChangeCb_;
 
-  bool parseJson_(const String& json, Config& out);
-  String toJson_(const Config& cfg);
+  bool parseJson_(const std::string& json, Config& out);
+  std::string toJson_(const Config& cfg);
   bool applyDefaults_();
 };
 
