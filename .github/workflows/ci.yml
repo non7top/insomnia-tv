@@ -11,52 +11,53 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/cache@v5
+
+      - name: Setup Python cache
+        uses: actions/cache@v5
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-lint
+          key: ${{ runner.os }}-pip-${{ hashFiles('.github/workflows/ci.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
       - name: Install lint tools
         run: pip install clang-format clang-tidy cpplint
+
       - name: Run cpplint
         run: cpplint --recursive src/ test/
+
       - name: Run clang-format check
         run: clang-format --style=file --dry-run --Werror src/**/*.cpp test/**/*.cpp
 
   unit-tests:
     runs-on: ubuntu-latest
-    env:
-      CCACHE_DIR: .ccache
-      CCACHE_BASEDIR: ${{ github.workspace }}
-      CCACHE_COMPRESS: 1
-      CCACHE_MAXSIZE: 1G
     steps:
       - uses: actions/checkout@v6
-      - name: Install ccache
-        run: sudo apt-get install -y ccache
-      - uses: actions/cache@v5
+
+      - name: Setup PlatformIO cache
+        uses: actions/cache@v5
         with:
           path: |
-            ~/.cache/pip
-            ~/.platformio/.cache
             ~/.platformio/packages
             ~/.platformio/platforms
-            .ccache
+            ~/.platformio/penv
+            .pio
           key: ${{ runner.os }}-pio-unit-${{ hashFiles('**/platformio.ini', '.github/workflows/ci.yml') }}
           restore-keys: |
             ${{ runner.os }}-pio-unit-
+
       - name: Set up PlatformIO
         run: pip install platformio
-      - name: Zero ccache stats
-        run: ccache -z
+
       - name: Run native tests
         run: pio test -e native
-      - name: Show ccache stats
-        run: ccache -s
+
       - name: Generate coverage report
         run: |
           sudo apt-get install -y lcov
           lcov --capture --directory . --output-file .pio/build/native/coverage.info
           lcov --remove .pio/build/native/coverage.info '*/test/*' '*/.pio/*' --output-file .pio/build/native/coverage.info
+
       - name: Upload coverage artifact
         if: always()
         uses: actions/upload-artifact@v7
