@@ -1,12 +1,5 @@
-// Copyright 2026 insomniaTV Contributors. All rights reserved.
-
-#if defined(ARDUINO) || defined(ESP32)
-#include <Arduino.h>
-#endif
-
 #include "config/ConfigManager.h"
-#include <sstream>
-#include <algorithm>
+#include <ArduinoJson.h>
 
 namespace InsomniaTV {
 
@@ -18,14 +11,17 @@ ConfigManager::ConfigManager() {
 }
 
 ConfigStatus ConfigManager::load() {
-  // Phase 1: placeholder -- filesystem integration in Phase 5
-  // For now, use defaults
+  // Phase 1: placeholder for FS -- filesystem integration in Phase 5
+  // For now, just ensuring it returns Ok with defaults.
   applyDefaults_();
   return ConfigStatus::Ok;
 }
 
 ConfigStatus ConfigManager::save() {
-  // Phase 1: placeholder -- filesystem integration in Phase 5
+  // Phase 1: placeholder for FS -- filesystem integration in Phase 5
+  // We can still call toJson_ to ensure it's functional.
+  std::string json = toJson_(current_);
+  (void)json;
   return ConfigStatus::Ok;
 }
 
@@ -78,23 +74,6 @@ bool ConfigManager::validate(const Config& cfg, std::string& outError) {
   return true;
 }
 
-std::string trim_(const std::string& str) {
-  const std::string whitespace = " \t\n\r";
-  auto start = str.find_first_not_of(whitespace);
-  if (start == std::string::npos) return "";
-  auto end = str.find_last_not_of(whitespace);
-  return str.substr(start, end - start + 1);
-}
-
-std::string toLower_(std::string str) {
-  std::transform(str.begin(), str.end(), str.begin(), ::tolower);
-  return str;
-}
-
-bool startsWith_(const std::string& str, const std::string& prefix) {
-  return str.size() >= prefix.size() && str.substr(0, prefix.size()) == prefix;
-}
-
 void ConfigManager::resetToDefaults() {
   Config d;
   d.wifiSsid = "";
@@ -128,47 +107,106 @@ void ConfigManager::resetToDefaults() {
 }
 
 bool ConfigManager::parseJson_(const std::string& json, Config& out) {
-  // Phase 5: full JSON parsing with ArduinoJson
-  // For now, return false to indicate parsing not implemented
-  (void)json;
-  (void)out;
-  return false;
+  JsonDocument doc;
+  DeserializationError error = deserializeJson(doc, json);
+  if (error) return false;
+
+  if (doc["wifi"].is<JsonObject>()) {
+    out.wifiSsid = doc["wifi"]["ssid"] | "";
+    out.wifiPassword = doc["wifi"]["password"] | "";
+  }
+
+  if (doc["mqtt"].is<JsonObject>()) {
+    out.mqttEnabled = doc["mqtt"]["enabled"] | true;
+    out.mqttBroker = doc["mqtt"]["broker"] | "";
+    out.mqttPort = doc["mqtt"]["port"] | 1883;
+    out.mqttClientId = doc["mqtt"]["client_id"] | "insomniatv-esp32";
+    out.mqttTopicRoot = doc["mqtt"]["topic_root"] | "home/insomnia_tv";
+    out.mqttUser = doc["mqtt"]["user"] | "";
+    out.mqttPassword = doc["mqtt"]["password"] | "";
+  }
+
+  if (doc["behavior"].is<JsonObject>()) {
+    out.inactivityTimeoutMin = doc["behavior"]["inactivity_timeout_min"] | 15;
+    out.volumeStepPerRamp = doc["behavior"]["volume_step_per_ramp"] | 1;
+    out.rampIntervalMin = doc["behavior"]["ramp_interval_min"] | 2;
+    out.maxRampStepsBeforePoweroff =
+        doc["behavior"]["max_ramp_steps_before_poweroff"] | 10;
+    out.stayAwake = doc["behavior"]["stay_awake"] | true;
+  }
+
+  if (doc["tv_verification"].is<JsonObject>()) {
+    out.tvVerifyMethod = doc["tv_verification"]["method"] | "ping";
+    out.tvVerifyTarget = doc["tv_verification"]["target"] | "";
+    out.tvVerifyTimeoutMs = doc["tv_verification"]["timeout_ms"] | 1000;
+    out.tvVerifyRetries = doc["tv_verification"]["retries"] | 3;
+  }
+
+  if (doc["ir_codes"].is<JsonObject>()) {
+    out.irVolumeUpProtocol = doc["ir_codes"]["volume_up"]["protocol"] | "NEC";
+    out.irVolumeUpCode = doc["ir_codes"]["volume_up"]["hex"] | 0;
+    out.irVolumeUpBits = doc["ir_codes"]["volume_up"]["bits"] | 32;
+    out.irVolumeDownProtocol =
+        doc["ir_codes"]["volume_down"]["protocol"] | "NEC";
+    out.irVolumeDownCode = doc["ir_codes"]["volume_down"]["hex"] | 0;
+    out.irVolumeDownBits = doc["ir_codes"]["volume_down"]["bits"] | 32;
+    out.irLearnedCodesPath =
+        doc["ir_codes"]["learned_codes_path"] | "/ir_learned.json";
+  }
+
+  if (doc["web"].is<JsonObject>()) {
+    out.webPort = doc["web"]["port"] | 80;
+    out.webAuthEnabled = doc["web"]["auth_enabled"] | false;
+  }
+
+  return true;
 }
 
 std::string ConfigManager::toJson_(const Config& cfg) {
-  // Phase 5: full JSON serialization
-  // Simple JSON string builder without external dependency
-  std::ostringstream oss;
-  oss << "{\n";
-  oss << "  \"wifi_ssid\": \"" << cfg.wifiSsid << "\",\n";
-  oss << "  \"wifi_password\": \"" << cfg.wifiPassword << "\",\n";
-  oss << "  \"mqtt_enabled\": " << (cfg.mqttEnabled ? "true" : "false") << ",\n";
-  oss << "  \"mqtt_broker\": \"" << cfg.mqttBroker << "\",\n";
-  oss << "  \"mqtt_port\": " << cfg.mqttPort << ",\n";
-  oss << "  \"mqtt_client_id\": \"" << cfg.mqttClientId << "\",\n";
-  oss << "  \"mqtt_topic_root\": \"" << cfg.mqttTopicRoot << "\",\n";
-  oss << "  \"mqtt_user\": \"" << cfg.mqttUser << "\",\n";
-  oss << "  \"mqtt_password\": \"" << cfg.mqttPassword << "\",\n";
-  oss << "  \"inactivity_timeout_min\": " << cfg.inactivityTimeoutMin << ",\n";
-  oss << "  \"volume_step_per_ramp\": " << (int)cfg.volumeStepPerRamp << ",\n";
-  oss << "  \"ramp_interval_min\": " << cfg.rampIntervalMin << ",\n";
-  oss << "  \"max_ramp_steps_before_poweroff\": " << (int)cfg.maxRampStepsBeforePoweroff << ",\n";
-  oss << "  \"stay_awake\": " << (cfg.stayAwake ? "true" : "false") << ",\n";
-  oss << "  \"tv_verify_method\": \"" << cfg.tvVerifyMethod << "\",\n";
-  oss << "  \"tv_verify_target\": \"" << cfg.tvVerifyTarget << "\",\n";
-  oss << "  \"tv_verify_timeout_ms\": " << cfg.tvVerifyTimeoutMs << ",\n";
-  oss << "  \"tv_verify_retries\": " << (int)cfg.tvVerifyRetries << ",\n";
-  oss << "  \"ir_volume_up_protocol\": \"" << cfg.irVolumeUpProtocol << "\",\n";
-  oss << "  \"ir_volume_up_code\": " << cfg.irVolumeUpCode << ",\n";
-  oss << "  \"ir_volume_up_bits\": " << (int)cfg.irVolumeUpBits << ",\n";
-  oss << "  \"ir_volume_down_protocol\": \"" << cfg.irVolumeDownProtocol << "\",\n";
-  oss << "  \"ir_volume_down_code\": " << cfg.irVolumeDownCode << ",\n";
-  oss << "  \"ir_volume_down_bits\": " << (int)cfg.irVolumeDownBits << ",\n";
-  oss << "  \"ir_learned_codes_path\": \"" << cfg.irLearnedCodesPath << "\",\n";
-  oss << "  \"web_port\": " << cfg.webPort << ",\n";
-  oss << "  \"web_auth_enabled\": " << (cfg.webAuthEnabled ? "true" : "false") << "\n";
-  oss << "}";
-  return oss.str();
+  JsonDocument doc;
+
+  JsonObject wifi = doc["wifi"].to<JsonObject>();
+  wifi["ssid"] = cfg.wifiSsid;
+  wifi["password"] = cfg.wifiPassword;
+
+  JsonObject mqtt = doc["mqtt"].to<JsonObject>();
+  mqtt["enabled"] = cfg.mqttEnabled;
+  mqtt["broker"] = cfg.mqttBroker;
+  mqtt["port"] = cfg.mqttPort;
+  mqtt["client_id"] = cfg.mqttClientId;
+  mqtt["topic_root"] = cfg.mqttTopicRoot;
+  mqtt["user"] = cfg.mqttUser;
+  mqtt["password"] = cfg.mqttPassword;
+
+  JsonObject behavior = doc["behavior"].to<JsonObject>();
+  behavior["inactivity_timeout_min"] = cfg.inactivityTimeoutMin;
+  behavior["volume_step_per_ramp"] = cfg.volumeStepPerRamp;
+  behavior["ramp_interval_min"] = cfg.rampIntervalMin;
+  behavior["max_ramp_steps_before_poweroff"] = cfg.maxRampStepsBeforePoweroff;
+  behavior["stay_awake"] = cfg.stayAwake;
+
+  JsonObject tv = doc["tv_verification"].to<JsonObject>();
+  tv["method"] = cfg.tvVerifyMethod;
+  tv["target"] = cfg.tvVerifyTarget;
+  tv["timeout_ms"] = cfg.tvVerifyTimeoutMs;
+  tv["retries"] = cfg.tvVerifyRetries;
+
+  JsonObject ir = doc["ir_codes"].to<JsonObject>();
+  ir["volume_up"]["protocol"] = cfg.irVolumeUpProtocol;
+  ir["volume_up"]["hex"] = cfg.irVolumeUpCode;
+  ir["volume_up"]["bits"] = cfg.irVolumeUpBits;
+  ir["volume_down"]["protocol"] = cfg.irVolumeDownProtocol;
+  ir["volume_down"]["hex"] = cfg.irVolumeDownCode;
+  ir["volume_down"]["bits"] = cfg.irVolumeDownBits;
+  ir["learned_codes_path"] = cfg.irLearnedCodesPath;
+
+  JsonObject web = doc["web"].to<JsonObject>();
+  web["port"] = cfg.webPort;
+  web["auth_enabled"] = cfg.webAuthEnabled;
+
+  std::string out;
+  serializeJson(doc, out);
+  return out;
 }
 
 bool ConfigManager::applyDefaults_() {

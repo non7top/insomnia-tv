@@ -10,6 +10,7 @@
 #include <functional>
 #include <string>
 #include <map>
+#include <cstdint>
 
 namespace InsomniaTV {
 
@@ -98,7 +99,7 @@ public:
   // Reset all fields to factory defaults
   void resetToDefaults();
 
-private:
+protected:
   Config current_;
   ConfigChangeCallback onChangeCb_;
 
