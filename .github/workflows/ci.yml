@@ -85,14 +85,14 @@ jobs:
       - name: Set up PlatformIO
         run: pip install platformio
 
-      - name: Build ESP32 firmware
-        run: pio run -e esp32dev -e qemu-esp32
+      - name: Build all ESP32 firmware
+        run: pio run -e esp32c3 -e esp32dev -e qemu-esp32
 
-      - name: Upload firmware artifact
+      - name: Upload ESP32-C3 firmware artifact
         uses: actions/upload-artifact@v7
         with:
-          name: firmware
-          path: .pio/build/esp32dev/firmware.bin
+          name: firmware-esp32c3
+          path: .pio/build/esp32c3/firmware.bin
 
 #  velxio-integration:
 #    needs: [build-firmware]
