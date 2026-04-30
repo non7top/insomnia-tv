@@ -70,7 +70,7 @@ jobs:
   build-firmware:
     runs-on: ubuntu-latest
     env:
-      PLATFORMIO_BUILD_CACHE_DIR: /home/hmh/.platformio/cache
+      PLATFORMIO_BUILD_CACHE_DIR: $HOME/.platformio/cache
     steps:
       - uses: actions/checkout@v6
 
