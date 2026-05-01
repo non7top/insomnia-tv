@@ -14,8 +14,3 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-
-  - package-ecosystem: "platformio"
-    directory: "/"
-    schedule:
-      interval: "weekly"
