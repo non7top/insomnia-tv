@@ -1,0 +1,21 @@
+name: PlatformIO Dependabot
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * 0' # Weekly
+
+jobs:
+  dependabot:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run PlatformIO Dependabot
+        uses: peterus/platformio_dependabot@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
