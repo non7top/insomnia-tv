@@ -71,6 +71,7 @@ jobs:
           path: .pio/build/native/coverage.info
 
   build-firmware:
+    needs: [lint, unit-tests]
     strategy:
       fail-fast: true
     runs-on: ubuntu-latest
