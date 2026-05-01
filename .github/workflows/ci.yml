@@ -8,6 +8,8 @@ on:
 
 jobs:
   lint:
+    strategy:
+      fail-fast: true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -30,6 +32,8 @@ jobs:
         run: clang-format --style=file --dry-run --Werror src/**/*.cpp test/**/*.cpp
 
   unit-tests:
+    strategy:
+      fail-fast: true
     runs-on: ubuntu-latest
     env:
       PLATFORMIO_BUILD_CACHE_DIR: /home/runner/.platformio/cache/
@@ -67,6 +71,8 @@ jobs:
           path: .pio/build/native/coverage.info
 
   build-firmware:
+    strategy:
+      fail-fast: true
     runs-on: ubuntu-latest
     env:
       PLATFORMIO_BUILD_CACHE_DIR: /home/runner/.platformio/cache/
