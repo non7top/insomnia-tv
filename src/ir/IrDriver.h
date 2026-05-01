@@ -8,8 +8,19 @@
 
 namespace InsomniaTV {
 
+/**
+ * @brief Concrete implementation of IIrDriver for ESP32.
+ *
+ * Wraps the IRremoteESP8266 library to provide IR transmit and receive
+ * capabilities, abstracting hardware-specific pin management.
+ */
 class IrDriver : public IIrDriver {
 public:
+    /**
+     * @brief Constructs IrDriver.
+     * @param tx_pin GPIO pin for IR LED.
+     * @param rx_pin GPIO pin for TSOP receiver.
+     */
     IrDriver(uint8_t tx_pin, uint8_t rx_pin);
     ~IrDriver() override = default;
 
