@@ -9,6 +9,7 @@
 
 #include <functional>
 #include <string>
+#include <cstdint>
 
 namespace InsomniaTV {
 

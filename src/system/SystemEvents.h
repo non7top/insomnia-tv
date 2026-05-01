@@ -6,13 +6,13 @@
 namespace InsomniaTV {
 
 enum class SystemEvent {
-    PIR_ACTIVE,
-    IR_ACTIVITY,
-    TV_PING_SUCCESS,
-    TV_PING_FAIL,
-    SYSTEM_IDLE,
-    SYSTEM_ACTIVE,
-    CURRENT_UPDATE
+  PIR_ACTIVE,
+  IR_ACTIVITY,
+  TV_PING_SUCCESS,
+  TV_PING_FAIL,
+  SYSTEM_IDLE,
+  SYSTEM_ACTIVE,
+  CURRENT_UPDATE
 };
 }  // namespace InsomniaTV
 

@@ -6,8 +6,11 @@
 
 namespace InsomniaTV {
 
-SystemStateManager::SystemStateManager()
-    : _state({TvPower::ON, Presence::PRESENT, Activity::HIGH}) {
+SystemStateManager::SystemStateManager() {
+  _state.tvPower = TvPower::ON;
+  _state.presence = Presence::PRESENT;
+  _state.activity = Activity::ACT_HIGH;
+  _state.currentAmperes = 0.0f;
   EventBus::instance().subscribe(
       [this](SystemEvent event) { this->handleEvent(event); });
 }
@@ -19,10 +22,10 @@ const SystemState& SystemStateManager::getState() const {
 void SystemStateManager::handleEvent(SystemEvent event) {
   switch (event) {
     case SystemEvent::IR_ACTIVITY:
-      _state.activity = Activity::HIGH;
+      _state.activity = Activity::ACT_HIGH;
       break;
     case SystemEvent::SYSTEM_IDLE:
-      _state.activity = Activity::IDLE;
+      _state.activity = Activity::ACT_IDLE;
       break;
     case SystemEvent::TV_PING_SUCCESS:
       _state.tvPower = TvPower::ON;
@@ -31,10 +34,11 @@ void SystemStateManager::handleEvent(SystemEvent event) {
       _state.tvPower = TvPower::OFF;
       break;
     case SystemEvent::CURRENT_UPDATE:
-      // Placeholder: Logic to process current reading
+      // Logic for future use
       break;
     default:
       break;
   }
 }
+
 }  // namespace InsomniaTV

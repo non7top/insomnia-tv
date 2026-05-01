@@ -31,10 +31,10 @@ void test_system_state_manager_update() {
   SystemStateManager ssm;
 
   EventBus::instance().publish(SystemEvent::IR_ACTIVITY);
-  TEST_ASSERT_EQUAL(Activity::HIGH, ssm.getState().activity);
+  TEST_ASSERT_EQUAL(Activity::ACT_HIGH, ssm.getState().activity);
 
   EventBus::instance().publish(SystemEvent::SYSTEM_IDLE);
-  TEST_ASSERT_EQUAL(Activity::IDLE, ssm.getState().activity);
+  TEST_ASSERT_EQUAL(Activity::ACT_IDLE, ssm.getState().activity);
 }
 
 int main() {
