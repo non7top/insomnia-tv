@@ -9,11 +9,11 @@ RampScheduler::RampScheduler(uint32_t interval_ms,
     : _interval_ms(interval_ms), _on_ramp_step(on_ramp_step) {}
 
 void RampScheduler::start() {
-    // Start FreeRTOS timer
+  // Start FreeRTOS timer
 }
 
 void RampScheduler::stop() {
-    // Stop FreeRTOS timer
+  // Stop FreeRTOS timer
 }
 
 }  // namespace InsomniaTV

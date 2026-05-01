@@ -13,14 +13,14 @@ namespace InsomniaTV {
  */
 class RampScheduler {
 public:
-    RampScheduler(uint32_t interval_ms, std::function<void()> on_ramp_step);
+  RampScheduler(uint32_t interval_ms, std::function<void()> on_ramp_step);
 
-    void start();
-    void stop();
+  void start();
+  void stop();
 
 private:
-    uint32_t _interval_ms;
-    std::function<void()> _on_ramp_step;
+  uint32_t _interval_ms;
+  std::function<void()> _on_ramp_step;
 };
 
 }  // namespace InsomniaTV

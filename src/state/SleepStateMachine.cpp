@@ -7,15 +7,15 @@ namespace InsomniaTV {
 SleepStateMachine::SleepStateMachine() : _current_state(State::MONITORING) {}
 
 void SleepStateMachine::tick() {
-    // State machine logic
+  // State machine logic
 }
 
 void SleepStateMachine::onIrActivity() {
-    _current_state = State::MONITORING;
+  _current_state = State::MONITORING;
 }
 
 State SleepStateMachine::getCurrentState() const {
-    return _current_state;
+  return _current_state;
 }
 
 }  // namespace InsomniaTV

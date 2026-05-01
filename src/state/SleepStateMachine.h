@@ -8,27 +8,21 @@
 
 namespace InsomniaTV {
 
-enum class State {
-    MONITORING,
-    RAMPING,
-    VERIFYING,
-    POWERING_OFF,
-    FALLBACK_OFF
-};
+enum class State { MONITORING, RAMPING, VERIFYING, POWERING_OFF, FALLBACK_OFF };
 
 /**
  * @brief Manages the TV sleep state machine.
  */
 class SleepStateMachine {
 public:
-    SleepStateMachine();
+  SleepStateMachine();
 
-    void tick();
-    void onIrActivity();
-    State getCurrentState() const;
+  void tick();
+  void onIrActivity();
+  State getCurrentState() const;
 
 private:
-    State _current_state;
+  State _current_state;
 };
 
 }  // namespace InsomniaTV
