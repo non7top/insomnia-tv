@@ -1,7 +1,7 @@
 // Copyright 2026 insomniaTV Contributors. All rights reserved.
 
 #include "NetworkChecker.h"
-
+#include <string>
 #if defined(ESP32)
 #include <ESP32Ping.h>
 #include <WiFi.h>

@@ -3,6 +3,7 @@
 #ifndef SRC_NETWORK_NETWORKCHECKER_H_
 #define SRC_NETWORK_NETWORKCHECKER_H_
 
+#include <string>
 #include "../hal/INetworkChecker.h"
 
 namespace InsomniaTV {

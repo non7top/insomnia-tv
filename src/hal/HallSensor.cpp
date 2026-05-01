@@ -14,7 +14,7 @@ float HallSensor::getCurrentAmperes() {
     int raw = analogRead(_pin);
     // Basic conversion logic (example)
     float voltage = (raw * 3.3f) / 4095.0f;
-    return (voltage - _zeroPoint) / 0.185f; // Example sensitivity 185mV/A
+    return (voltage - _zeroPoint) / 0.185f;  // Example sensitivity 185mV/A
 #else
     return 0.0f;
 #endif
