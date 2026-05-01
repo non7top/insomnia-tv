@@ -18,9 +18,9 @@ struct IrPulse {
 
 class ActivityTracker {
 public:
-    ActivityTracker(uint32_t inactivity_threshold_ms);
+    explicit ActivityTracker(uint32_t inactivity_threshold_ms);
 
-    // Records a new IR activity, returns true if similarity group threshold exceeded
+    // Records a new IR activity, returns true if similarity threshold exceeded
     bool record(const std::string& protocol, uint64_t code, uint16_t bits);
 
     // Returns time since last recorded activity

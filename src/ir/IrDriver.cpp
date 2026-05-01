@@ -1,6 +1,7 @@
 // Copyright 2026 insomniaTV Contributors. All rights reserved.
 
 #include "IrDriver.h"
+#include <string>
 
 namespace InsomniaTV {
 

@@ -1,10 +1,13 @@
+// Copyright 2026 insomniaTV Contributors. All rights reserved.
+
 #include <unity.h>
 #include <thread>
 #include <chrono>
 #include "../../src/ir/ActivityTracker.h"
 #include "../../src/ir/IrDriver.h"
 
-using namespace InsomniaTV;
+using InsomniaTV::ActivityTracker;
+using InsomniaTV::IrDriver;
 
 void delay_ms(int ms) {
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));

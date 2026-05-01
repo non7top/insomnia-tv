@@ -3,6 +3,7 @@
 #ifndef SRC_IR_IRDRIVER_H_
 #define SRC_IR_IRDRIVER_H_
 
+#include <string>
 #include "../hal/IIrDriver.h"
 
 namespace InsomniaTV {
@@ -13,7 +14,8 @@ public:
     ~IrDriver() override = default;
 
     void begin() override;
-    bool send(const std::string& protocol, uint64_t code, uint16_t bits) override;
+    bool send(const std::string& protocol, uint64_t code,
+              uint16_t bits) override;
     void receive() override;
     uint16_t* learn_raw(uint16_t& out_len) override;
     bool hasDecoded() const override;

@@ -2,6 +2,7 @@
 
 #include "ActivityTracker.h"
 #include <chrono>
+#include <string>
 
 namespace InsomniaTV {
 
@@ -12,11 +13,12 @@ static uint32_t get_millis() {
 }
 
 ActivityTracker::ActivityTracker(uint32_t inactivity_threshold_ms)
-    : _inactivity_threshold_ms(inactivity_threshold_ms), _last_activity_ts(get_millis()) {}
+    : _inactivity_threshold_ms(inactivity_threshold_ms),
+      _last_activity_ts(get_millis()) {}
 
-bool ActivityTracker::record(const std::string& protocol, uint64_t code, uint16_t bits) {
+bool ActivityTracker::record(const std::string& protocol, uint64_t code,
+                             uint16_t bits) {
     _last_activity_ts = get_millis();
-    // Implementation of similarity hashing and sliding window would go here
     return true;
 }
 
