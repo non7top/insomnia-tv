@@ -28,13 +28,13 @@ void test_event_bus_subscription() {
 }
 
 void test_system_state_manager_update() {
-  SystemStateManager ssm;
+    SystemStateManager ssm;
 
-  EventBus::instance().publish(SystemEvent::IR_ACTIVITY);
-  TEST_ASSERT_EQUAL(Activity::HIGH, ssm.getState().activity);
+    EventBus::instance().publish(SystemEvent::IR_ACTIVITY);
+    TEST_ASSERT_EQUAL(Activity::HIGH, ssm.getState().activity);
 
-  EventBus::instance().publish(SystemEvent::SYSTEM_IDLE);
-  TEST_ASSERT_EQUAL(Activity::IDLE, ssm.getState().activity);
+    EventBus::instance().publish(SystemEvent::SYSTEM_IDLE);
+    TEST_ASSERT_EQUAL(Activity::IDLE, ssm.getState().activity);
 }
 
 int main() {

@@ -10,7 +10,7 @@ namespace InsomniaTV {
 
 enum class TvPower { ON, OFF, VERIFYING };
 enum class Presence { PRESENT, ABSENT };
-enum class Activity { IDLE, A_LOW, HIGH };
+enum class Activity { IDLE, LOW, HIGH };
 
 /**
  * @brief Represents the centralized state of the insomniaTV system.
