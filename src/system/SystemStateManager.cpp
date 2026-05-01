@@ -24,6 +24,12 @@ void SystemStateManager::handleEvent(SystemEvent event) {
     case SystemEvent::SYSTEM_IDLE:
       _state.activity = Activity::IDLE;
       break;
+    case SystemEvent::TV_PING_SUCCESS:
+      _state.tvPower = TvPower::ON;
+      break;
+    case SystemEvent::TV_PING_FAIL:
+      _state.tvPower = TvPower::OFF;
+      break;
     default:
       break;
   }
