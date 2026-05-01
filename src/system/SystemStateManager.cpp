@@ -22,19 +22,20 @@ void SystemStateManager::handleEvent(SystemEvent event) {
       _state.activity = Activity::HIGH;
       break;
     case SystemEvent::SYSTEM_IDLE:
-      _state.activity = Activity::IDLE;
-      break;
+        _state.activity = Activity::IDLE;
+        break;
     case SystemEvent::TV_PING_SUCCESS:
-      _state.tvPower = TvPower::ON;
-      break;
+        _state.tvPower = TvPower::ON;
+        break;
     case SystemEvent::TV_PING_FAIL:
-      _state.tvPower = TvPower::OFF;
-      break;
+        _state.tvPower = TvPower::OFF;
+        break;
     case SystemEvent::CURRENT_UPDATE:
-      // Placeholder: Logic to process current reading
-      break;
+        // Logic for future use
+        break;
     default:
-      break;
-  }
-}
+        break;
+    }
+    }
+
 }  // namespace InsomniaTV
