@@ -1,6 +1,7 @@
 // Copyright 2026 insomniaTV Contributors. All rights reserved.
 
 #include <unity.h>
+#include <string>
 #include "../../src/mqtt/MqttBridge.h"
 #include "../../src/system/SystemStateManager.h"
 
@@ -8,11 +9,21 @@
 class MockMqttClient : public InsomniaTV::IMqttClient {
 public:
     bool publishCalled = false;
-    bool connect(const std::string& broker, uint16_t port, const std::string& clientId, const std::string& user, const std::string& password) override { return true; }
+    bool connect(const std::string& broker, uint16_t port,
+                 const std::string& clientId, const std::string& user,
+                 const std::string& password) override {
+        return true;
+    }
     void disconnect() override {}
     bool isConnected() const override { return true; }
-    int16_t publish(const std::string& topic, const std::string& payload, uint8_t qos = 0, bool retain = false) override { publishCalled = true; return 1; }
-    int16_t subscribe(const std::string& topic, uint8_t qos = 0) override { return 1; }
+    int16_t publish(const std::string& topic, const std::string& payload,
+                    uint8_t qos = 0, bool retain = false) override {
+        publishCalled = true;
+        return 1;
+    }
+    int16_t subscribe(const std::string& topic, uint8_t qos = 0) override {
+        return 1;
+    }
     void unsubscribe(const std::string& topic) override {}
     void setCallback(InsomniaTV::MqttCallback callback) override {}
 };

@@ -22,7 +22,7 @@ public:
      * @brief Constructs the WebServer on the specified port.
      * @param port The server port (e.g., 80).
      */
-    WebServer(uint16_t port);
+    explicit WebServer(uint16_t port);
 
     /**
      * @brief Starts the web server.
