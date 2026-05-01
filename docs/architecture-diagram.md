@@ -15,8 +15,10 @@ graph TD
 
     %% System Core
     EB -->|Publish| SSM[SystemStateManager]
+    WS[WifiSetup] -->|Init WiFi| EB
 
     %% State Logic
+
     SSM -->|Update State| S[SystemState]
     S -->|Subscribe/React| FSM[SleepStateMachine]
     FSM -->|Schedule/Ramp| RS[RampScheduler]
