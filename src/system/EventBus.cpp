@@ -14,9 +14,13 @@ void EventBus::subscribe(EventCallback callback) {
 }
 
 void EventBus::publish(SystemEvent event) {
-  for (auto& callback : _subscribers) {
-    callback(event);
-  }
+    for (auto& callback : _subscribers) {
+        callback(event);
+    }
+}
+
+void EventBus::clear() {
+    _subscribers.clear();
 }
 
 }  // namespace InsomniaTV

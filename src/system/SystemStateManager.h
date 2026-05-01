@@ -3,9 +3,8 @@
 #ifndef SRC_SYSTEM_SYSTEMSTATEMANAGER_H_
 #define SRC_SYSTEM_SYSTEMSTATEMANAGER_H_
 
-#include <cstdint>
-
 #include "SystemEvents.h"
+#include <cstdint>
 
 namespace InsomniaTV {
 
@@ -13,22 +12,37 @@ enum class TvPower { ON, OFF, VERIFYING };
 enum class Presence { PRESENT, ABSENT };
 enum class Activity { IDLE, LOW, HIGH };
 
+/**
+ * @brief Represents the centralized state of the insomniaTV system.
+ */
 struct SystemState {
-  TvPower tvPower;
-  Presence presence;
-  Activity activity;
+    TvPower tvPower;
+    Presence presence;
+    Activity activity;
 };
 
+/**
+ * @brief Manages the centralized system state by subscribing to events.
+ */
 class SystemStateManager {
 public:
-  SystemStateManager();
+    /**
+     * @brief Initializes the state manager and subscribes to the EventBus.
+     */
+    SystemStateManager();
 
-  const SystemState& getState() const;
+    /**
+     * @brief Gets the current system state.
+     */
+    const SystemState& getState() const;
 
 private:
-  void handleEvent(SystemEvent event);
+    /**
+     * @brief Processes system events to update the state.
+     */
+    void handleEvent(SystemEvent event);
 
-  SystemState _state;
+    SystemState _state;
 };
 
 }  // namespace InsomniaTV
