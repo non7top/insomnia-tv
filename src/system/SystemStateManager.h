@@ -19,6 +19,7 @@ struct SystemState {
     TvPower tvPower;
     Presence presence;
     Activity activity;
+    float currentAmperes;
 };
 
 /**
