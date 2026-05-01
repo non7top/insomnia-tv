@@ -61,7 +61,7 @@ jobs:
         run: |
           sudo apt-get install -y lcov
           lcov --capture --directory . --build-directory . --ignore-errors gcov --output-file .pio/build/native/coverage.info
-          lcov --remove .pio/build/native/coverage.info '*/test/*' '*/.pio/*' --output-file .pio/build/native/coverage.info
+          lcov --remove .pio/build/native/coverage.info '*/test/*' '*/.pio/*' --ignore-errors unused --output-file .pio/build/native/coverage.info
 
       - name: Upload coverage artifact
         if: always()
