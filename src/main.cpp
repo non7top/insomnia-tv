@@ -13,11 +13,13 @@
 #include <string>
 
 #include "config/ConfigManager.h"
+#include "network/WifiSetup.h"
 
 // Onboard LED (active-low) for nologo C3 super mini
 #define STATUS_LED_PIN 8
 
 static InsomniaTV::ConfigManager configMgr;
+static InsomniaTV::WifiSetup wifiSetup;
 static Ticker heartbeat;
 
 void toggleStatusLed() {
@@ -54,12 +56,16 @@ void setup() {
   }
 
   Serial.println("[insomniaTV] Initialization complete");
+
+  // WiFi Setup
+  wifiSetup.begin();
 }
 
 void loop() {
+  wifiSetup.handleResetButton();
   // Phase 1: minimal loop
   // Later phases will add task scheduling here
-  delay(1000);
+  delay(100);
 }
 
 #endif  // UNIT_TEST
