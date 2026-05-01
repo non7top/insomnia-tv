@@ -23,7 +23,11 @@ graph TD
 
     %% Outputs
     RS -->|Execute| IRTX[IR Transmitter]
-    FSM -->|Publish State| MQTT[MQTT Client]
+    FSM -->|Publish State| MQTT[MqttBridge]
+    MQTT -->|Publish| MClient[IMqttClient]
+    SSM -->|Read/Provide| Web[WebServer]
+    Web -->|API| UI[Remote Client]
+
 ```
 
 ## Component Roles
