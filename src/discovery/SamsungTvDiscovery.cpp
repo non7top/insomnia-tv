@@ -34,7 +34,7 @@ void SamsungTvDiscovery::scan() {
       "HOST: 239.255.255.250:1900\r\n"
       "MAN: \"ssdp:discover\"\r\n"
       "MX: 2\r\n"
-      "ST: urn:schemas-upnp-org:device:MediaRenderer:1\r\n"
+      "ST: ssdp:all\r\n"
       "\r\n";
 
   udp.beginMulticast(ssdpIp, ssdpPort);
