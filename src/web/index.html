@@ -46,11 +46,11 @@ function openTab(evt, tabName) {
 
     if (tabName === 'Status') {
         fetch('/api/status').then(r => r.json()).then(data => {
-            document.getElementById('sys-status').innerText = data.status;
-            document.getElementById('sys-ip').innerText = data.ip;
-            document.getElementById('sys-chipid').innerText = data.chipId;
-            document.getElementById('sys-heap').innerText = data.freeHeap;
-            document.getElementById('sys-wifi').innerText = data.wifiStatus;
+            document.getElementById('sys-status').textContent = data.status;
+            document.getElementById('sys-ip').textContent = data.ip;
+            document.getElementById('sys-chipid').textContent = data.chipId;
+            document.getElementById('sys-heap').textContent = data.freeHeap;
+            document.getElementById('sys-wifi').textContent = data.wifiStatus;
         });
     } else if (tabName === 'Config') {
         fetch('/api/discovery').then(r => r.json()).then(data => {
