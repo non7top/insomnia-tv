@@ -2,6 +2,7 @@
 
 #include "WebServer.h"
 #include <ArduinoJson.h>
+#include <WiFi.h>
 #include <string>
 
 namespace InsomniaTV {
@@ -85,7 +86,16 @@ document.getElementsByClassName('tablinks')[0].click();
     if (!request->authenticate("admin", "insomnia")) {
       return request->requestAuthentication();
     }
-    request->send(200, "application/json", "{\"status\":\"ok\"}");
+    JsonDocument doc;
+    doc["status"] = "ok";
+    doc["ip"] = WiFi.localIP().toString();
+    doc["chipId"] = ESP.getEfuseMac();
+    doc["freeHeap"] = ESP.getFreeHeap();
+    doc["wifiStatus"] = WiFi.status() == WL_CONNECTED ? "connected" : "disconnected";
+
+    String response;
+    serializeJson(doc, response);
+    request->send(200, "application/json", response);
   });
 
   _server.on("/api/scan", HTTP_GET, [this](AsyncWebServerRequest* request) {
