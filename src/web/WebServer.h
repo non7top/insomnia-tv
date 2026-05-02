@@ -17,24 +17,24 @@ namespace InsomniaTV {
  */
 class WebServer {
 public:
-    /**
-     * @brief Constructs the WebServer.
-     * @param port The server port.
-     * @param discovery Reference to the TV discovery service.
-     */
-    WebServer(uint16_t port, SamsungTvDiscovery& discovery);
+  /**
+   * @brief Constructs the WebServer.
+   * @param port The server port.
+   * @param discovery Reference to the TV discovery service.
+   */
+  WebServer(uint16_t port, SamsungTvDiscovery& discovery);
 
-    /**
-     * @brief Starts the web server.
-     */
-    void begin();
+  /**
+   * @brief Starts the web server.
+   */
+  void begin();
 
 private:
 #if defined(ARDUINO)
-    AsyncWebServer _server;
+  AsyncWebServer _server;
 #endif
-    SamsungTvDiscovery& _discovery;
-    void setupRoutes();
+  SamsungTvDiscovery& _discovery;
+  void setupRoutes();
 };
 
 }  // namespace InsomniaTV

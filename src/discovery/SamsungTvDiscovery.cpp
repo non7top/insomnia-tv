@@ -119,18 +119,18 @@ void SamsungTvDiscovery::fetchDeviceMetadata(SamsungTvInfo& tv) {
     size_t mnStart = payload.find("<modelName>");
     size_t mnEnd = payload.find("</modelName>");
     if (mnStart != std::string::npos && mnEnd != std::string::npos) {
-        tv.model = payload.substr(mnStart + 11, mnEnd - (mnStart + 11));
+      tv.model = payload.substr(mnStart + 11, mnEnd - (mnStart + 11));
     }
 
     size_t mNumStart = payload.find("<modelNumber>");
     size_t mNumEnd = payload.find("</modelNumber>");
     if (mNumStart != std::string::npos && mNumEnd != std::string::npos) {
-        std::string modelNumber = payload.substr(mNumStart + 13, mNumEnd - (mNumStart + 13));
-        if (!modelNumber.empty()) {
-            tv.model += " (" + modelNumber + ")";
-        }
+      std::string modelNumber =
+          payload.substr(mNumStart + 13, mNumEnd - (mNumStart + 13));
+      if (!modelNumber.empty()) {
+        tv.model += " (" + modelNumber + ")";
+      }
     }
-
   }
   http.end();
 #endif
