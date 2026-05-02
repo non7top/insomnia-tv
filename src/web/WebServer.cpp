@@ -2,7 +2,9 @@
 
 #include "WebServer.h"
 #include <ArduinoJson.h>
+#if defined(ARDUINO)
 #include <WiFi.h>
+#endif
 #include <string>
 
 namespace InsomniaTV {
