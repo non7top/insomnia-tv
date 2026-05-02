@@ -1,9 +1,7 @@
 // Copyright 2026 insomniaTV Contributors. All rights reserved.
 
 #include "WebServer.h"
-
 #include <ArduinoJson.h>
-
 #include <string>
 
 namespace InsomniaTV {
@@ -82,26 +80,31 @@ document.getElementsByClassName('tablinks')[0].click();
 )rawliteral";
     request->send(200, "text/html", index_html);
   });
-  ...
 
-      _server.on("/api/scan", HTTP_GET, [this](AsyncWebServerRequest* request) {
-        if (!request->authenticate("admin", "insomnia")) {
-          return request->requestAuthentication();
-        }
+  _server.on("/api/status", HTTP_GET, [](AsyncWebServerRequest* request) {
+    if (!request->authenticate("admin", "insomnia")) {
+      return request->requestAuthentication();
+    }
+    request->send(200, "application/json", "{\"status\":\"ok\"}");
+  });
 
-        // Run scan in a separate task to avoid blocking AsyncTCP
-        // and causing stack overflow
-        xTaskCreate(
-            [](void* pvParameters) {
-              auto* self = static_cast<WebServer*>(pvParameters);
-              self->_discovery.clear();
-              self->_discovery.scan();
-              vTaskDelete(NULL);
-            },
-            "discovery_task", 4096, this, 1, NULL);
+  _server.on("/api/scan", HTTP_GET, [this](AsyncWebServerRequest* request) {
+    if (!request->authenticate("admin", "insomnia")) {
+      return request->requestAuthentication();
+    }
 
-        request->send(200, "application/json", "{\"status\":\"scanning\"}");
-      });
+    // Run scan in a separate task
+    xTaskCreate(
+        [](void* pvParameters) {
+          auto* self = static_cast<WebServer*>(pvParameters);
+          self->_discovery.clear();
+          self->_discovery.scan();
+          vTaskDelete(NULL);
+        },
+        "discovery_task", 4096, this, 1, NULL);
+
+    request->send(200, "application/json", "{\"status\":\"scanning\"}");
+  });
 
   _server.on("/api/discovery", HTTP_GET,
              [this](AsyncWebServerRequest* request) {
