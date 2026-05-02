@@ -8,32 +8,35 @@
 #include <ESPAsyncWebServer.h>
 #endif
 
+#include "../discovery/SamsungTvDiscovery.h"
+
 namespace InsomniaTV {
 
 /**
  * @brief Handles web interface and API routes for insomniaTV.
- *
- * Provides a RESTful API for monitoring system state and controlling basic
- * insomniaTV settings via JSON.
  */
 class WebServer {
 public:
     /**
-     * @brief Constructs the WebServer on the specified port.
-     * @param port The server port (e.g., 80).
+     * @brief Constructs the WebServer.
+     * @param port The server port.
+     * @param discovery Reference to the TV discovery service.
      */
-    explicit WebServer(uint16_t port);
+    WebServer(uint16_t port, SamsungTvDiscovery& discovery);
 
     /**
      * @brief Starts the web server.
      */
     void begin();
+
 private:
-  #if defined(ARDUINO)
-      AsyncWebServer _server;
-  #endif
-      void setupRoutes();
-  };
+#if defined(ARDUINO)
+    AsyncWebServer _server;
+#endif
+    SamsungTvDiscovery& _discovery;
+    void setupRoutes();
+};
+
 }  // namespace InsomniaTV
 
 #endif  // SRC_WEB_WEBSERVER_H_

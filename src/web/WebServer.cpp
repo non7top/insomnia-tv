@@ -7,7 +7,8 @@
 namespace InsomniaTV {
 
 #if defined(ARDUINO)
-WebServer::WebServer(uint16_t port) : _server(port) {
+WebServer::WebServer(uint16_t port, SamsungTvDiscovery& discovery)
+    : _server(port), _discovery(discovery) {
   setupRoutes();
 }
 
@@ -20,8 +21,41 @@ void WebServer::setupRoutes() {
     if (!request->authenticate("admin", "insomnia")) {
       return request->requestAuthentication();
     }
-    // Placeholder JSON response
     request->send(200, "application/json", "{\"status\":\"ok\"}");
+  });
+
+  _server.on("/api/scan", HTTP_GET, [this](AsyncWebServerRequest* request) {
+    if (!request->authenticate("admin", "insomnia")) {
+      return request->requestAuthentication();
+    }
+    _discovery.clear();
+    _discovery.scan();
+
+    JsonDocument doc;
+    JsonArray array = doc.to<JsonArray>();
+    for (const auto& tv : _discovery.getDiscoveredTvs()) {
+      JsonObject obj = array.add<JsonObject>();
+      obj["name"] = tv.name;
+      obj["model"] = tv.model;
+      obj["ip"] = tv.ip;
+    }
+
+    String response;
+    serializeJson(doc, response);
+    request->send(200, "application/json", response);
+  });
+
+  _server.on("/discovery", HTTP_GET, [this](AsyncWebServerRequest* request) {
+    if (!request->authenticate("admin", "insomnia")) {
+      return request->requestAuthentication();
+    }
+    std::string html = "<h1>Samsung TV Discovery</h1><ul>";
+    for (const auto& tv : _discovery.getDiscoveredTvs()) {
+      html += "<li><b>Name:</b> " + tv.name + " | <b>Model:</b> " + tv.model +
+              " | <b>IP:</b> " + tv.ip + "</li>";
+    }
+    html += "</ul><p><a href='/api/scan'>Scan Now (JSON)</a></p>";
+    request->send(200, "text/html", html.c_str());
   });
 
   _server.on("/wifi", HTTP_GET, [](AsyncWebServerRequest* request) {
@@ -29,13 +63,13 @@ void WebServer::setupRoutes() {
       return request->requestAuthentication();
     }
     request->send(200, "text/html",
-                  "<h1>WiFi Configuration</h1><p>Placeholder for WiFi setup. "
-                  "Use physical button (10s) to reset.</p>");
+                  "<h1>WiFi Configuration</h1><p>Placeholder for WiFi "
+                  "setup. Use physical button (10s) to reset.</p>");
   });
 }
-
 #else
-WebServer::WebServer(uint16_t port) {}
+WebServer::WebServer(uint16_t port, SamsungTvDiscovery& discovery)
+    : _discovery(discovery) {}
 void WebServer::begin() {}
 void WebServer::setupRoutes() {}
 #endif
