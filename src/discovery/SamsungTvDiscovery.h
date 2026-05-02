@@ -4,6 +4,7 @@
 #define SRC_DISCOVERY_SAMSUNGTVDISCOVERY_H_
 
 #include <cstdint>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -32,10 +33,15 @@ public:
   void scan();
 
   /**
+   * @brief Checks if a scan is currently in progress.
+   */
+  bool isScanning() const;
+
+  /**
    * @brief Gets the list of discovered TVs.
    * @return Vector of SamsungTvInfo.
    */
-  const std::vector<SamsungTvInfo>& getDiscoveredTvs() const;
+  std::vector<SamsungTvInfo> getDiscoveredTvs() const;
 
   /**
    * @brief Clears the list of discovered TVs.
@@ -57,6 +63,8 @@ protected:
 
 private:
   std::vector<SamsungTvInfo> _discoveredTvs;
+  mutable std::mutex _mutex;
+  bool _isScanning;
 };
 
 }  // namespace InsomniaTV
