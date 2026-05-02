@@ -37,7 +37,10 @@
 </div>
 
 <script>
+console.log("Script loaded");
+
 function openTab(evt, tabName) {
+    console.log("Switching to: " + tabName);
     var i, tabcontent, tablinks;
     tabcontent = document.getElementsByClassName("tabcontent");
     for (i = 0; i < tabcontent.length; i++) { tabcontent[i].style.display = "none"; }
@@ -46,12 +49,14 @@ function openTab(evt, tabName) {
 
     if (tabName === 'Status') {
         fetch('/api/status').then(r => r.json()).then(data => {
+            console.log("Status Data: ", data);
             document.getElementById('sys-status').textContent = data.status;
             document.getElementById('sys-ip').textContent = data.ip;
             document.getElementById('sys-chipid').textContent = data.chipId;
             document.getElementById('sys-heap').textContent = data.freeHeap;
             document.getElementById('sys-wifi').textContent = data.wifiStatus;
         }).catch(err => {
+            console.error("Status Error: ", err);
             document.getElementById('sys-status').textContent = 'Error: ' + err;
         });
     }
@@ -59,6 +64,7 @@ function openTab(evt, tabName) {
     document.getElementById(tabName).style.display = "block";
     evt.currentTarget.className += " active";
 }
+
 function scanTV() {
     document.getElementById('discovery-content').textContent = 'Scanning...';
     fetch('/api/scan').then(r => r.json()).then(data => {
