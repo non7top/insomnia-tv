@@ -1,6 +1,7 @@
 // Copyright 2026 insomniaTV Contributors. All rights reserved.
 
 #include "WebServer.h"
+
 #include <ArduinoJson.h>
 #if defined(ARDUINO)
 #include <WiFi.h>
@@ -126,7 +127,8 @@ document.getElementsByClassName('tablinks')[0].click();
 </body>
 </html>
 )rawliteral";
-    AsyncWebServerResponse* res = request->beginResponse(200, "text/html", index_html);
+    AsyncWebServerResponse* res =
+        request->beginResponse(200, "text/html", index_html);
     res->addHeader("Cache-Control", "no-store, no-cache, must-revalidate");
     request->send(res);
   });
@@ -146,11 +148,13 @@ document.getElementsByClassName('tablinks')[0].click();
     doc["version"] = INSOMNIATV_VERSION;
     doc["chipId"] = ESP.getEfuseMac();
     doc["freeHeap"] = ESP.getFreeHeap();
-    doc["wifiStatus"] = WiFi.status() == WL_CONNECTED ? "connected" : "disconnected";
+    doc["wifiStatus"] =
+        WiFi.status() == WL_CONNECTED ? "connected" : "disconnected";
 
     String response;
     serializeJson(doc, response);
-    AsyncWebServerResponse* res = request->beginResponse(200, "application/json", response);
+    AsyncWebServerResponse* res =
+        request->beginResponse(200, "application/json", response);
     res->addHeader("Cache-Control", "no-store, no-cache, must-revalidate");
     request->send(res);
   });
@@ -178,7 +182,6 @@ document.getElementsByClassName('tablinks')[0].click();
                if (!request->authenticate("admin", "insomnia")) {
                  return request->requestAuthentication();
                }
-
                JsonDocument doc;
                JsonArray array = doc.to<JsonArray>();
                for (const auto& tv : _discovery.getDiscoveredTvs()) {
@@ -187,7 +190,6 @@ document.getElementsByClassName('tablinks')[0].click();
                  obj["model"] = tv.model;
                  obj["ip"] = tv.ip;
                }
-
                String response;
                serializeJson(doc, response);
                request->send(200, "application/json", response);
