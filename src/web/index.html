@@ -51,10 +51,8 @@ function openTab(evt, tabName) {
             document.getElementById('sys-chipid').textContent = data.chipId;
             document.getElementById('sys-heap').textContent = data.freeHeap;
             document.getElementById('sys-wifi').textContent = data.wifiStatus;
-        });
-    } else if (tabName === 'Config') {
-        fetch('/api/discovery').then(r => r.json()).then(data => {
-            renderDiscovery(data);
+        }).catch(err => {
+            document.getElementById('sys-status').textContent = 'Error: ' + err;
         });
     }
 
@@ -62,13 +60,17 @@ function openTab(evt, tabName) {
     evt.currentTarget.className += " active";
 }
 function scanTV() {
-    document.getElementById('discovery-content').innerText = 'Scanning...';
+    document.getElementById('discovery-content').textContent = 'Scanning...';
     fetch('/api/scan').then(r => r.json()).then(data => {
         setTimeout(loadDiscovery, 3000);
+    }).catch(err => {
+        document.getElementById('discovery-content').textContent = 'Error: ' + err;
     });
 }
 function loadDiscovery() {
-    fetch('/api/discovery').then(r => r.json()).then(renderDiscovery);
+    fetch('/api/discovery').then(r => r.json()).then(renderDiscovery).catch(err => {
+        document.getElementById('discovery-content').textContent = 'Error: ' + err;
+    });
 }
 function renderDiscovery(data) {
     let html = '<ul>';
