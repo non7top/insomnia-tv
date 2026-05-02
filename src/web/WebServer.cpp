@@ -47,13 +47,28 @@ void WebServer::setupRoutes() {
 
 <div id="Status" class="tabcontent">
   <h3>System Status</h3>
-  <div id="status-content">Loading...</div>
+  <div id="status-content">
+    <p><b>Status:</b> <span id="sys-status">Loading...</span></p>
+    <p><b>Version:</b> <span id="sys-version"></span></p>
+    <p><b>MAC:</b> <span id="sys-mac"></span></p>
+    <p><b>SSID:</b> <span id="sys-ssid"></span></p>
+    <p><b>RSSI:</b> <span id="sys-rssi"></span> dBm</p>
+    <p><b>IP Address:</b> <span id="sys-ip"></span></p>
+    <p><b>DHCP:</b> <span id="sys-dhcp"></span></p>
+    <p><b>AP Name:</b> <span id="sys-ap"></span></p>
+    <p><b>Chip ID:</b> <span id="sys-chipid"></span></p>
+    <p><b>Free Heap:</b> <span id="sys-heap"></span></p>
+    <p><b>WiFi Status:</b> <span id="sys-wifi"></span></p>
+  </div>
 </div>
 
 <div id="Config" class="tabcontent">
   <h3>WiFi & TV Config</h3>
   <button onclick="scanTV()">Scan for TVs</button>
-  <div id="discovery-content"></div>
+  <div id="discovery-content">
+      <h4>Discovered TVs:</h4>
+      <ul id="tv-list"></ul>
+  </div>
 </div>
 
 <script>
@@ -63,13 +78,43 @@ function openTab(evt, tabName) {
     for (i = 0; i < tabcontent.length; i++) { tabcontent[i].style.display = "none"; }
     tablinks = document.getElementsByClassName("tablinks");
     for (i = 0; i < tablinks.length; i++) { tablinks[i].className = tablinks[i].className.replace(" active", ""); }
+
+    if (tabName === 'Status') {
+        fetch('/api/status').then(r => r.json()).then(data => {
+            for (const [key, value] of Object.entries(data)) {
+                const el = document.getElementById('sys-' + key);
+                if (el) el.textContent = value;
+            }
+        }).catch(err => {
+            document.getElementById('sys-status').textContent = 'Error: ' + err;
+        });
+    } else if (tabName === 'Config') {
+        loadDiscovery();
+    }
+
     document.getElementById(tabName).style.display = "block";
     evt.currentTarget.className += " active";
 }
 function scanTV() {
-    document.getElementById('discovery-content').innerText = 'Scanning...';
+    document.getElementById('tv-list').textContent = 'Scanning...';
     fetch('/api/scan').then(r => r.json()).then(data => {
-        document.getElementById('discovery-content').innerText = JSON.stringify(data);
+        setTimeout(loadDiscovery, 3000);
+    }).catch(err => {
+        document.getElementById('tv-list').textContent = 'Error: ' + err;
+    });
+}
+function loadDiscovery() {
+    fetch('/api/discovery').then(r => r.json()).then(renderDiscovery).catch(err => {
+        document.getElementById('tv-list').textContent = 'Error: ' + err;
+    });
+}
+function renderDiscovery(data) {
+    let list = document.getElementById('tv-list');
+    list.innerHTML = '';
+    data.forEach(tv => {
+        let li = document.createElement('li');
+        li.innerHTML = `<b>Name:</b> ${tv.name} | <b>Model:</b> ${tv.model} | <b>IP:</b> ${tv.ip}`;
+        list.appendChild(li);
     });
 }
 // Default open Status tab
@@ -79,7 +124,9 @@ document.getElementsByClassName('tablinks')[0].click();
 </body>
 </html>
 )rawliteral";
-    request->send(200, "text/html", index_html);
+    AsyncWebServerResponse* res = request->beginResponse(200, "text/html", index_html);
+    res->addHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+    request->send(res);
   });
 
   _server.on("/api/status", HTTP_GET, [](AsyncWebServerRequest* request) {
@@ -89,13 +136,21 @@ document.getElementsByClassName('tablinks')[0].click();
     JsonDocument doc;
     doc["status"] = "ok";
     doc["ip"] = WiFi.localIP().toString();
+    doc["mac"] = WiFi.macAddress().c_str();
+    doc["ssid"] = WiFi.SSID();
+    doc["rssi"] = WiFi.RSSI();
+    doc["dhcp"] = WiFi.getMode() == WIFI_STA ? "enabled" : "disabled";
+    doc["ap"] = WiFi.softAPSSID();
+    doc["version"] = INSOMNIATV_VERSION;
     doc["chipId"] = ESP.getEfuseMac();
     doc["freeHeap"] = ESP.getFreeHeap();
     doc["wifiStatus"] = WiFi.status() == WL_CONNECTED ? "connected" : "disconnected";
 
     String response;
     serializeJson(doc, response);
-    request->send(200, "application/json", response);
+    AsyncWebServerResponse* res = request->beginResponse(200, "application/json", response);
+    res->addHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+    request->send(res);
   });
 
   _server.on("/api/scan", HTTP_GET, [this](AsyncWebServerRequest* request) {
