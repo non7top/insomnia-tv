@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  mock-tv:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    network_mode: host
+    restart: always
+
+  integration-test:
+    build:
+      context: ../../
+      dockerfile: tests/integration/Dockerfile.test
+    network_mode: host
+    depends_on:
+      - mock-tv
