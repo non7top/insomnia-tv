@@ -21,7 +21,13 @@
 
 <div id="Status" class="tabcontent">
   <h3>System Status</h3>
-  <div id="status-content">Loading...</div>
+  <div id="status-content">
+    <p><b>Status:</b> <span id="sys-status">Loading...</span></p>
+    <p><b>IP Address:</b> <span id="sys-ip"></span></p>
+    <p><b>Chip ID:</b> <span id="sys-chipid"></span></p>
+    <p><b>Free Heap:</b> <span id="sys-heap"></span></p>
+    <p><b>WiFi Status:</b> <span id="sys-wifi"></span></p>
+  </div>
 </div>
 
 <div id="Config" class="tabcontent">
@@ -37,13 +43,40 @@ function openTab(evt, tabName) {
     for (i = 0; i < tabcontent.length; i++) { tabcontent[i].style.display = "none"; }
     tablinks = document.getElementsByClassName("tablinks");
     for (i = 0; i < tablinks.length; i++) { tablinks[i].className = tablinks[i].className.replace(" active", ""); }
+
+    if (tabName === 'Status') {
+        fetch('/api/status').then(r => r.json()).then(data => {
+            document.getElementById('sys-status').innerText = data.status;
+            document.getElementById('sys-ip').innerText = data.ip;
+            document.getElementById('sys-chipid').innerText = data.chipId;
+            document.getElementById('sys-heap').innerText = data.freeHeap;
+            document.getElementById('sys-wifi').innerText = data.wifiStatus;
+        });
+    } else if (tabName === 'Config') {
+        fetch('/api/discovery').then(r => r.json()).then(data => {
+            renderDiscovery(data);
+        });
+    }
+
     document.getElementById(tabName).style.display = "block";
     evt.currentTarget.className += " active";
 }
 function scanTV() {
+    document.getElementById('discovery-content').innerText = 'Scanning...';
     fetch('/api/scan').then(r => r.json()).then(data => {
-        document.getElementById('discovery-content').innerText = JSON.stringify(data);
+        setTimeout(loadDiscovery, 3000);
     });
+}
+function loadDiscovery() {
+    fetch('/api/discovery').then(r => r.json()).then(renderDiscovery);
+}
+function renderDiscovery(data) {
+    let html = '<ul>';
+    data.forEach(tv => {
+        html += `<li><b>Name:</b> ${tv.name} | <b>Model:</b> ${tv.model} | <b>IP:</b> ${tv.ip}</li>`;
+    });
+    html += '</ul>';
+    document.getElementById('discovery-content').innerHTML = html;
 }
 // Default open Status tab
 document.getElementsByClassName('tablinks')[0].click();
