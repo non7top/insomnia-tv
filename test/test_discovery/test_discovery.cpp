@@ -6,7 +6,6 @@
 
 #include "../../src/discovery/SamsungTvDiscovery.h"
 
-
 using InsomniaTV::SamsungTvDiscovery;
 using InsomniaTV::SamsungTvInfo;
 

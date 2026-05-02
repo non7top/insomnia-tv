@@ -1,11 +1,12 @@
 // Copyright 2026 insomniaTV Contributors. All rights reserved.
 
 #include "WebServer.h"
+
 #include <ArduinoJson.h>
+
 #include <string>
 
 namespace InsomniaTV {
-
 
 #if defined(ARDUINO)
 WebServer::WebServer(uint16_t port, SamsungTvDiscovery& discovery)
