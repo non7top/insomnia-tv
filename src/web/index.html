@@ -23,7 +23,13 @@
   <h3>System Status</h3>
   <div id="status-content">
     <p><b>Status:</b> <span id="sys-status">Loading...</span></p>
+    <p><b>Version:</b> <span id="sys-version"></span></p>
+    <p><b>MAC:</b> <span id="sys-mac"></span></p>
+    <p><b>SSID:</b> <span id="sys-ssid"></span></p>
+    <p><b>RSSI:</b> <span id="sys-rssi"></span> dBm</p>
     <p><b>IP Address:</b> <span id="sys-ip"></span></p>
+    <p><b>DHCP:</b> <span id="sys-dhcp"></span></p>
+    <p><b>AP Name:</b> <span id="sys-ap"></span></p>
     <p><b>Chip ID:</b> <span id="sys-chipid"></span></p>
     <p><b>Free Heap:</b> <span id="sys-heap"></span></p>
     <p><b>WiFi Status:</b> <span id="sys-wifi"></span></p>
@@ -33,14 +39,14 @@
 <div id="Config" class="tabcontent">
   <h3>WiFi & TV Config</h3>
   <button onclick="scanTV()">Scan for TVs</button>
-  <div id="discovery-content"></div>
+  <div id="discovery-content">
+      <h4>Discovered TVs:</h4>
+      <ul id="tv-list"></ul>
+  </div>
 </div>
 
 <script>
-console.log("Script loaded");
-
 function openTab(evt, tabName) {
-    console.log("Switching to: " + tabName);
     var i, tabcontent, tablinks;
     tabcontent = document.getElementsByClassName("tabcontent");
     for (i = 0; i < tabcontent.length; i++) { tabcontent[i].style.display = "none"; }
@@ -49,42 +55,41 @@ function openTab(evt, tabName) {
 
     if (tabName === 'Status') {
         fetch('/api/status').then(r => r.json()).then(data => {
-            console.log("Status Data: ", data);
-            document.getElementById('sys-status').textContent = data.status;
-            document.getElementById('sys-ip').textContent = data.ip;
-            document.getElementById('sys-chipid').textContent = data.chipId;
-            document.getElementById('sys-heap').textContent = data.freeHeap;
-            document.getElementById('sys-wifi').textContent = data.wifiStatus;
+            for (const [key, value] of Object.entries(data)) {
+                const el = document.getElementById('sys-' + key);
+                if (el) el.textContent = value;
+            }
         }).catch(err => {
-            console.error("Status Error: ", err);
             document.getElementById('sys-status').textContent = 'Error: ' + err;
         });
+    } else if (tabName === 'Config') {
+        loadDiscovery();
     }
 
     document.getElementById(tabName).style.display = "block";
     evt.currentTarget.className += " active";
 }
-
 function scanTV() {
-    document.getElementById('discovery-content').textContent = 'Scanning...';
+    document.getElementById('tv-list').textContent = 'Scanning...';
     fetch('/api/scan').then(r => r.json()).then(data => {
         setTimeout(loadDiscovery, 3000);
     }).catch(err => {
-        document.getElementById('discovery-content').textContent = 'Error: ' + err;
+        document.getElementById('tv-list').textContent = 'Error: ' + err;
     });
 }
 function loadDiscovery() {
     fetch('/api/discovery').then(r => r.json()).then(renderDiscovery).catch(err => {
-        document.getElementById('discovery-content').textContent = 'Error: ' + err;
+        document.getElementById('tv-list').textContent = 'Error: ' + err;
     });
 }
 function renderDiscovery(data) {
-    let html = '<ul>';
+    let list = document.getElementById('tv-list');
+    list.innerHTML = '';
     data.forEach(tv => {
-        html += `<li><b>Name:</b> ${tv.name} | <b>Model:</b> ${tv.model} | <b>IP:</b> ${tv.ip}</li>`;
+        let li = document.createElement('li');
+        li.innerHTML = `<b>Name:</b> ${tv.name} | <b>Model:</b> ${tv.model} | <b>IP:</b> ${tv.ip}`;
+        list.appendChild(li);
     });
-    html += '</ul>';
-    document.getElementById('discovery-content').innerHTML = html;
 }
 // Default open Status tab
 document.getElementsByClassName('tablinks')[0].click();
