@@ -82,26 +82,26 @@ document.getElementsByClassName('tablinks')[0].click();
 )rawliteral";
     request->send(200, "text/html", index_html);
   });
-...
+  ...
 
-  _server.on("/api/scan", HTTP_GET, [this](AsyncWebServerRequest* request) {
-    if (!request->authenticate("admin", "insomnia")) {
-      return request->requestAuthentication();
-    }
+      _server.on("/api/scan", HTTP_GET, [this](AsyncWebServerRequest* request) {
+        if (!request->authenticate("admin", "insomnia")) {
+          return request->requestAuthentication();
+        }
 
-    // Run scan in a separate task to avoid blocking AsyncTCP
-    // and causing stack overflow
-    xTaskCreate(
-        [](void* pvParameters) {
-          auto* self = static_cast<WebServer*>(pvParameters);
-          self->_discovery.clear();
-          self->_discovery.scan();
-          vTaskDelete(NULL);
-        },
-        "discovery_task", 4096, this, 1, NULL);
+        // Run scan in a separate task to avoid blocking AsyncTCP
+        // and causing stack overflow
+        xTaskCreate(
+            [](void* pvParameters) {
+              auto* self = static_cast<WebServer*>(pvParameters);
+              self->_discovery.clear();
+              self->_discovery.scan();
+              vTaskDelete(NULL);
+            },
+            "discovery_task", 4096, this, 1, NULL);
 
-    request->send(200, "application/json", "{\"status\":\"scanning\"}");
-  });
+        request->send(200, "application/json", "{\"status\":\"scanning\"}");
+      });
 
   _server.on("/api/discovery", HTTP_GET,
              [this](AsyncWebServerRequest* request) {
