@@ -3,11 +3,19 @@
 #include "MqttBridge.h"
 
 #include <ArduinoJson.h>
+#include <string>
+
+#include "../system/EventBus.h"
 
 namespace InsomniaTV {
 
 MqttBridge::MqttBridge(IMqttClient& client, const SystemStateManager& ssm)
     : _client(client), _ssm(ssm) {}
+
+void MqttBridge::begin() {
+  EventBus::instance().subscribe(
+      [this](SystemEvent event) { this->publishStatus(); });
+}
 
 void MqttBridge::publishStatus() {
   JsonDocument doc;
