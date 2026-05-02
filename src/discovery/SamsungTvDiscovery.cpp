@@ -20,7 +20,8 @@ void SamsungTvDiscovery::scan() {
 #if defined(ARDUINO)
   {
     std::lock_guard<std::mutex> lock(_mutex);
-    if (_isScanning) return;
+    if (_isScanning)
+      return;
     _isScanning = true;
   }
 
@@ -79,11 +80,14 @@ void SamsungTvDiscovery::clear() {
 
 void SamsungTvDiscovery::parseSsdpResponse(const std::string& response) {
   size_t locPos = response.find("LOCATION: ");
-  if (locPos == std::string::npos) locPos = response.find("location: ");
-  if (locPos == std::string::npos) return;
+  if (locPos == std::string::npos)
+    locPos = response.find("location: ");
+  if (locPos == std::string::npos)
+    return;
 
   size_t endPos = response.find("\r\n", locPos);
-  if (endPos == std::string::npos) return;
+  if (endPos == std::string::npos)
+    return;
 
   std::string location = response.substr(locPos + 10, endPos - (locPos + 10));
 
@@ -95,7 +99,8 @@ void SamsungTvDiscovery::parseSsdpResponse(const std::string& response) {
                            [&location](const SamsungTvInfo& info) {
                              return info.location == location;
                            });
-    if (it != _discoveredTvs.end()) exists = true;
+    if (it != _discoveredTvs.end())
+      exists = true;
   }
 
   if (!exists) {
@@ -106,7 +111,8 @@ void SamsungTvDiscovery::parseSsdpResponse(const std::string& response) {
     size_t ipStart = location.find("//");
     if (ipStart != std::string::npos) {
       size_t ipEnd = location.find(":", ipStart + 2);
-      if (ipEnd == std::string::npos) ipEnd = location.find("/", ipStart + 2);
+      if (ipEnd == std::string::npos)
+        ipEnd = location.find("/", ipStart + 2);
       if (ipEnd != std::string::npos) {
         newTv.ip = location.substr(ipStart + 2, ipEnd - (ipStart + 2));
       }
