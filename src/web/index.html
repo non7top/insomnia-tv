@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>insomniaTV</title>
+    <style>
+        body { font-family: sans-serif; margin: 0; padding: 0; }
+        .tab { overflow: hidden; background-color: #f1f1f1; }
+        .tab button { background-color: inherit; border: none; outline: none; cursor: pointer; padding: 14px 16px; transition: 0.3s; }
+        .tab button:hover { background-color: #ddd; }
+        .tab button.active { background-color: #ccc; }
+        .tabcontent { display: none; padding: 12px; border: 1px solid #ccc; border-top: none; }
+        fieldset { margin-bottom: 15px; border: 1px solid #ccc; padding: 10px; }
+        legend { font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="tab">
+  <button class="tablinks" onclick="openTab(event, 'Status')">Status</button>
+  <button class="tablinks" onclick="openTab(event, 'Config')">Config</button>
+</div>
+
+<div id="Status" class="tabcontent">
+  <h3>System Status</h3>
+  <fieldset>
+    <legend>System</legend>
+    <p><b>Status:</b> <span id="sys-status">Loading...</span></p>
+    <p><b>Version:</b> <span id="sys-version"></span></p>
+    <p><b>Chip ID:</b> <span id="sys-chipId"></span></p>
+    <p><b>Free Heap:</b> <span id="sys-freeHeap"></span></p>
+  </fieldset>
+  <fieldset>
+    <legend>Network</legend>
+    <p><b>IP Address:</b> <span id="sys-ip"></span></p>
+    <p><b>MAC:</b> <span id="sys-mac"></span></p>
+    <p><b>DHCP:</b> <span id="sys-dhcp"></span></p>
+    <p><b>AP Name:</b> <span id="sys-ap"></span></p>
+  </fieldset>
+  <fieldset>
+    <legend>WiFi</legend>
+    <p><b>Status:</b> <span id="sys-wifiStatus"></span></p>
+    <p><b>SSID:</b> <span id="sys-ssid"></span></p>
+    <p><b>RSSI:</b> <span id="sys-rssi"></span> dBm</p>
+  </fieldset>
+</div>
+
+<div id="Config" class="tabcontent">
+  <h3>WiFi & TV Config</h3>
+  <button onclick="scanTV()">Scan for TVs</button>
+  <div id="discovery-content">
+      <h4>Discovered TVs:</h4>
+      <ul id="tv-list"></ul>
+  </div>
+</div>
+
+<script>
+function openTab(evt, tabName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) { tabcontent[i].style.display = "none"; }
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) { tablinks[i].className = tablinks[i].className.replace(" active", ""); }
+
+    if (tabName === 'Status') {
+        fetch('/api/status').then(r => r.json()).then(data => {
+            for (const [key, value] of Object.entries(data)) {
+                const el = document.getElementById('sys-' + key);
+                if (el) el.textContent = value;
+            }
+        }).catch(err => {
+            document.getElementById('sys-status').textContent = 'Error: ' + err;
+        });
+    } else if (tabName === 'Config') {
+        loadDiscovery();
+    }
+
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+}
+function scanTV() {
+    document.getElementById('tv-list').textContent = 'Scanning...';
+    fetch('/api/scan').then(r => r.json()).then(data => {
+        setTimeout(loadDiscovery, 3000);
+    }).catch(err => {
+        document.getElementById('tv-list').textContent = 'Error: ' + err;
+    });
+}
+function loadDiscovery() {
+    fetch('/api/discovery').then(r => r.json()).then(renderDiscovery).catch(err => {
+        document.getElementById('tv-list').textContent = 'Error: ' + err;
+    });
+}
+function renderDiscovery(data) {
+    let list = document.getElementById('tv-list');
+    list.innerHTML = '';
+    data.forEach(tv => {
+        let li = document.createElement('li');
+        li.innerHTML = `<b>Name:</b> ${tv.name} | <b>Model:</b> ${tv.model} | <b>IP:</b> ${tv.ip}`;
+        list.appendChild(li);
+    });
+}
+// Default open Status tab
+document.getElementsByClassName('tablinks')[0].click();
+</script>
+
+</body>
+</html>
