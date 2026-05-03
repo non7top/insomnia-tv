@@ -6,6 +6,7 @@
 #include <string>
 
 #if defined(ARDUINO)
+#include <ArduinoOTA.h>
 #include <WiFi.h>
 #include <WiFiManager.h>
 #endif
@@ -35,12 +36,17 @@ void WifiSetup::begin() {
   Serial.print("[insomniaTV] IP address: ");
   Serial.println(WiFi.localIP());
 
+  ArduinoOTA.setHostname(apName.c_str());
+  ArduinoOTA.onStart([]() { Serial.println("OTA Start"); });
+  ArduinoOTA.begin();
+
   pinMode(RESET_BUTTON_PIN, INPUT_PULLUP);
 #endif
 }
 
 void WifiSetup::handleResetButton() {
 #if defined(ARDUINO)
+  ArduinoOTA.handle();
   // Active low button
   bool currentVal = (digitalRead(RESET_BUTTON_PIN) == LOW);
 
@@ -67,8 +73,9 @@ std::string WifiSetup::getChipId() {
 #if defined(ARDUINO)
   uint64_t chipid = ESP.getEfuseMac();
   char idStr[13];
-  snprintf(idStr, sizeof(idStr), "%04X%08X",
+  snprintf(idStr, sizeof(idStr), "%04X%08lX",
            static_cast<uint16_t>(chipid >> 32), static_cast<uint32_t>(chipid));
+
   return std::string(idStr);
 #else
   return "NATIVE_CHIP";
