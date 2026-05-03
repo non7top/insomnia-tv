@@ -3,15 +3,18 @@
 #ifndef SRC_SYSTEM_FS_FILESYSTEMMANAGER_H_
 #define SRC_SYSTEM_FS_FILESYSTEMMANAGER_H_
 
+#include <string>
+#include "../../hal/IFileSystem.h"
+
+#if defined(ARDUINO)
 #include <FS.h>
 #include <LittleFS.h>
-
-#include "../../hal/IFileSystem.h"
+#endif
 
 namespace InsomniaTV {
 
 class FileSystemManager : public IFileSystem {
-public:
+ public:
   FileSystemManager();
   bool mount() override;
   std::string readJson(const std::string& path) override;
@@ -23,8 +26,10 @@ public:
   bool exists(const std::string& path) const override;
   bool remove(const std::string& path) override;
 
-private:
+ private:
+#if defined(ARDUINO)
   fs::FS* _fs;
+#endif
 };
 
 }  // namespace InsomniaTV

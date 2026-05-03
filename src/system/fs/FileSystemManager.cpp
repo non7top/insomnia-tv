@@ -1,12 +1,19 @@
 // Copyright 2026 insomniaTV Contributors. All rights reserved.
 
 #include "FileSystemManager.h"
+#include <string>
 
+#if defined(ARDUINO)
 #include <Arduino.h>
+#endif
 
 namespace InsomniaTV {
 
-FileSystemManager::FileSystemManager() : _fs(&LittleFS) {}
+FileSystemManager::FileSystemManager() {
+#if defined(ARDUINO)
+  _fs = &LittleFS;
+#endif
+}
 
 bool FileSystemManager::mount() {
 #if defined(ARDUINO)
@@ -19,8 +26,7 @@ bool FileSystemManager::mount() {
 std::string FileSystemManager::readJson(const std::string& path) {
 #if defined(ARDUINO)
   File file = _fs->open(path.c_str(), "r");
-  if (!file)
-    return "";
+  if (!file) return "";
   String content = file.readString();
   file.close();
   return content.c_str();
@@ -33,8 +39,7 @@ bool FileSystemManager::writeJson(const std::string& path,
                                   const std::string& json) {
 #if defined(ARDUINO)
   File file = _fs->open(path.c_str(), "w");
-  if (!file)
-    return false;
+  if (!file) return false;
   file.print(json.c_str());
   file.close();
   return true;
@@ -47,8 +52,7 @@ bool FileSystemManager::uploadFile(const std::string& path, const uint8_t* data,
                                    size_t len) {
 #if defined(ARDUINO)
   File file = _fs->open(path.c_str(), "w");
-  if (!file)
-    return false;
+  if (!file) return false;
   file.write(data, len);
   file.close();
   return true;
@@ -61,8 +65,7 @@ int32_t FileSystemManager::downloadFile(const std::string& path,
                                         uint8_t* outBuf, size_t bufSize) {
 #if defined(ARDUINO)
   File file = _fs->open(path.c_str(), "r");
-  if (!file)
-    return -1;
+  if (!file) return -1;
   size_t len = file.read(outBuf, bufSize);
   file.close();
   return static_cast<int32_t>(len);
