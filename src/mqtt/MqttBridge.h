@@ -16,17 +16,18 @@ namespace InsomniaTV {
  */
 class MqttBridge {
 public:
-    /**
-     * @brief Constructs MqttBridge.
-     * @param client The MQTT client HAL interface.
-     * @param ssm The system state manager to observe.
-     */
-    MqttBridge(IMqttClient& client, const SystemStateManager& ssm);
+  /**
+   * @brief Constructs MqttBridge.
+   * @param client The MQTT client HAL interface.
+   * @param ssm The system state manager to observe.
+   */
+  MqttBridge(IMqttClient& client, const SystemStateManager& ssm);
 
-    /**
-     * @brief Serializes the current system state and publishes it to MQTT.
-     */
-    void publishStatus();
+  /**
+   * @brief Serializes the current system state and publishes it to MQTT.
+   */
+  void publishStatus();
+
 private:
   IMqttClient& _client;
   const SystemStateManager& _ssm;

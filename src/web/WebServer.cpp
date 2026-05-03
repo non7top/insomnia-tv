@@ -3,21 +3,50 @@
 #include "WebServer.h"
 
 #include <ArduinoJson.h>
+
+#include <string>
+
 #if defined(ARDUINO)
+#include <AsyncEventSource.h>
+#include <Update.h>
 #include <WiFi.h>
 #endif
-#include <string>
+
+#include "../sensors/SensorManager.h"
 
 namespace InsomniaTV {
 
 #if defined(ARDUINO)
+AsyncEventSource events("/events");
+
 WebServer::WebServer(uint16_t port, SamsungTvDiscovery& discovery)
     : _server(port), _discovery(discovery) {
   setupRoutes();
 }
 
 void WebServer::begin() {
+  _server.addHandler(&events);
   _server.begin();
+
+  // Periodic sensor reader task
+  xTaskCreate(
+      [](void* pvParameters) {
+        for (;;) {
+          auto sensors = SensorManager::instance().listSensors();
+          for (auto const& s : sensors) {
+            bool val = s->read();
+            JsonDocument doc;
+            doc["id"] = s->getId();
+            doc["value"] = val;
+            doc["available"] = s->isAvailable();
+            String buf;
+            serializeJson(doc, buf);
+            events.send(buf.c_str(), "sensor_update", millis());
+          }
+          vTaskDelay(pdMS_TO_TICKS(5000));
+        }
+      },
+      "sensor_poll", 4096, NULL, 1, NULL);
 }
 
 void WebServer::setupRoutes() {
@@ -38,7 +67,12 @@ void WebServer::setupRoutes() {
         .tab button { background-color: inherit; border: none; outline: none; cursor: pointer; padding: 14px 16px; transition: 0.3s; }
         .tab button:hover { background-color: #ddd; }
         .tab button.active { background-color: #ccc; }
-        .tabcontent { display: none; padding: 6px 12px; border: 1px solid #ccc; border-top: none; }
+        .tabcontent { display: none; padding: 12px; border: 1px solid #ccc; border-top: none; }
+        fieldset { margin-bottom: 15px; border: 1px solid #ccc; padding: 10px; }
+        legend { font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        tr:nth-child(even) { background-color: #f2f2f2; }
     </style>
 </head>
 <body>
@@ -46,23 +80,31 @@ void WebServer::setupRoutes() {
 <div class="tab">
   <button class="tablinks" onclick="openTab(event, 'Status')">Status</button>
   <button class="tablinks" onclick="openTab(event, 'Config')">Config</button>
+  <button class="tablinks" onclick="openTab(event, 'Sensors')">Sensors</button>
 </div>
 
 <div id="Status" class="tabcontent">
   <h3>System Status</h3>
-  <div id="status-content">
+  <fieldset>
+    <legend>System</legend>
     <p><b>Status:</b> <span id="sys-status">Loading...</span></p>
     <p><b>Version:</b> <span id="sys-version"></span></p>
-    <p><b>MAC:</b> <span id="sys-mac"></span></p>
-    <p><b>SSID:</b> <span id="sys-ssid"></span></p>
-    <p><b>RSSI:</b> <span id="sys-rssi"></span> dBm</p>
+    <p><b>Chip ID:</b> <span id="sys-chipId"></span></p>
+    <p><b>Free Heap:</b> <span id="sys-freeHeap"></span></p>
+  </fieldset>
+  <fieldset>
+    <legend>Network</legend>
     <p><b>IP Address:</b> <span id="sys-ip"></span></p>
+    <p><b>MAC:</b> <span id="sys-mac"></span></p>
     <p><b>DHCP:</b> <span id="sys-dhcp"></span></p>
     <p><b>AP Name:</b> <span id="sys-ap"></span></p>
-    <p><b>Chip ID:</b> <span id="sys-chipid"></span></p>
-    <p><b>Free Heap:</b> <span id="sys-heap"></span></p>
-    <p><b>WiFi Status:</b> <span id="sys-wifi"></span></p>
-  </div>
+  </fieldset>
+  <fieldset>
+    <legend>WiFi</legend>
+    <p><b>Status:</b> <span id="sys-wifiStatus"></span></p>
+    <p><b>SSID:</b> <span id="sys-ssid"></span></p>
+    <p><b>RSSI:</b> <span id="sys-rssi"></span> dBm</p>
+  </fieldset>
 </div>
 
 <div id="Config" class="tabcontent">
@@ -72,9 +114,40 @@ void WebServer::setupRoutes() {
       <h4>Discovered TVs:</h4>
       <ul id="tv-list"></ul>
   </div>
+  <h3>Firmware Update</h3>
+  <form method="POST" action="/update" enctype="multipart/form-data">
+    <input type="file" name="update">
+    <input type="submit" value="Update">
+  </form>
+</div>
+
+<div id="Sensors" class="tabcontent">
+  <h3>Sensor Registry</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Type</th>
+        <th>Value</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody id="sensor-table-body">
+    </tbody>
+  </table>
 </div>
 
 <script>
+const source = new EventSource('/events');
+source.addEventListener('sensor_update', function(e) {
+    const data = JSON.parse(e.data);
+    const row = document.getElementById('sensor-row-' + data.id);
+    if (row) {
+        row.cells[2].textContent = data.value;
+        row.cells[3].textContent = data.available ? '🟢' : '🔴';
+    }
+}, false);
+
 function openTab(evt, tabName) {
     var i, tabcontent, tablinks;
     tabcontent = document.getElementsByClassName("tabcontent");
@@ -93,14 +166,30 @@ function openTab(evt, tabName) {
         });
     } else if (tabName === 'Config') {
         loadDiscovery();
+    } else if (tabName === 'Sensors') {
+        loadSensors();
     }
 
     document.getElementById(tabName).style.display = "block";
     evt.currentTarget.className += " active";
 }
+
+function loadSensors() {
+    fetch('/api/sensors').then(r => r.json()).then(data => {
+        const tbody = document.getElementById('sensor-table-body');
+        tbody.innerHTML = '';
+        data.forEach(s => {
+            const tr = document.createElement('tr');
+            tr.id = 'sensor-row-' + s.id;
+            tr.innerHTML = `<td>${s.id}</td><td>${s.type}</td><td>${s.value}</td><td>${s.available ? '🟢' : '🔴'}</td>`;
+            tbody.appendChild(tr);
+        });
+    });
+}
+
 function scanTV() {
     document.getElementById('tv-list').textContent = 'Scanning...';
-    fetch('/api/scan').then(r => r.json()).then(data => {
+    fetch('/api/scan', {method: 'POST'}).then(r => r.json()).then(data => {
         setTimeout(loadDiscovery, 3000);
     }).catch(err => {
         document.getElementById('tv-list').textContent = 'Error: ' + err;
@@ -159,12 +248,57 @@ document.getElementsByClassName('tablinks')[0].click();
     request->send(res);
   });
 
-  _server.on("/api/scan", HTTP_GET, [this](AsyncWebServerRequest* request) {
+  _server.on("/api/sensors", HTTP_GET, [](AsyncWebServerRequest* request) {
     if (!request->authenticate("admin", "insomnia")) {
       return request->requestAuthentication();
     }
+    auto sensors = SensorManager::instance().listSensors();
+    JsonDocument doc;
+    JsonArray array = doc.to<JsonArray>();
+    for (auto const& sensor : sensors) {
+      JsonObject obj = array.add<JsonObject>();
+      obj["id"] = sensor->getId();
+      obj["type"] = sensor->getType();
+      obj["available"] = sensor->isAvailable();
+      obj["value"] = sensor->read();
+    }
+    String response;
+    serializeJson(doc, response);
+    request->send(200, "application/json", response);
+  });
 
-    // Run scan in a separate task
+  _server.on(
+      "/update", HTTP_POST,
+      [](AsyncWebServerRequest* request) {
+        bool shouldReboot = !Update.hasError();
+        AsyncWebServerResponse* res = request->beginResponse(
+            200, "text/plain", shouldReboot ? "OK" : "FAIL");
+        res->addHeader("Connection", "close");
+        request->send(res);
+        if (shouldReboot)
+          ESP.restart();
+      },
+      [](AsyncWebServerRequest* request, String filename, size_t index,
+         uint8_t* data, size_t len, bool final) {
+        if (!index) {
+          if (!Update.begin(UPDATE_SIZE_UNKNOWN)) {
+            Update.printError(Serial);
+          }
+        }
+        if (Update.write(data, len) != len) {
+          Update.printError(Serial);
+        }
+        if (final) {
+          if (!Update.end(true)) {
+            Update.printError(Serial);
+          }
+        }
+      });
+
+  _server.on("/api/scan", HTTP_POST, [this](AsyncWebServerRequest* request) {
+    if (!request->authenticate("admin", "insomnia")) {
+      return request->requestAuthentication();
+    }
     xTaskCreate(
         [](void* pvParameters) {
           auto* self = static_cast<WebServer*>(pvParameters);
@@ -194,33 +328,6 @@ document.getElementsByClassName('tablinks')[0].click();
                serializeJson(doc, response);
                request->send(200, "application/json", response);
              });
-
-  _server.on("/discovery", HTTP_GET, [this](AsyncWebServerRequest* request) {
-    if (!request->authenticate("admin", "insomnia")) {
-      return request->requestAuthentication();
-    }
-    std::string html = "<h1>Samsung TV Discovery</h1>";
-    if (_discovery.isScanning()) {
-      html += "<p>Scan in progress... <a href='/discovery'>Refresh</a></p>";
-    } else {
-      html += "<ul>";
-      for (const auto& tv : _discovery.getDiscoveredTvs()) {
-        html += "<li><b>Name:</b> " + tv.name + " | <b>Model:</b> " + tv.model +
-                " | <b>IP:</b> " + tv.ip + "</li>";
-      }
-      html += "</ul><p><a href='/api/scan'>Start New Scan</a></p>";
-    }
-    request->send(200, "text/html", html.c_str());
-  });
-
-  _server.on("/wifi", HTTP_GET, [](AsyncWebServerRequest* request) {
-    if (!request->authenticate("admin", "insomnia")) {
-      return request->requestAuthentication();
-    }
-    request->send(200, "text/html",
-                  "<h1>WiFi Configuration</h1><p>Placeholder for WiFi "
-                  "setup. Use physical button (10s) to reset.</p>");
-  });
 }
 #else
 WebServer::WebServer(uint16_t port, SamsungTvDiscovery& discovery)

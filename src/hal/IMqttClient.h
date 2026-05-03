@@ -7,9 +7,9 @@
 #include <Arduino.h>
 #endif
 
+#include <cstdint>
 #include <functional>
 #include <string>
-#include <cstdint>
 
 namespace InsomniaTV {
 

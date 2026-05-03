@@ -108,6 +108,7 @@ void ConfigManager::resetToDefaults() {
   d.irLearnedCodesPath = "/ir_learned.json";
   d.webPort = 80;
   d.webAuthEnabled = false;
+  d.sensorsJson = "[]";
   current_ = d;
 }
 
@@ -170,6 +171,10 @@ bool ConfigManager::parseJson_(const std::string& json, Config& out) {
     out.webAuthEnabled = doc["web"]["auth_enabled"] | false;
   }
 
+  if (doc["sensors"].is<JsonArray>()) {
+    serializeJson(doc["sensors"], out.sensorsJson);
+  }
+
   return true;
 }
 
@@ -218,6 +223,12 @@ std::string ConfigManager::toJson_(const Config& cfg) {
   JsonObject web = doc["web"].to<JsonObject>();
   web["port"] = cfg.webPort;
   web["auth_enabled"] = cfg.webAuthEnabled;
+
+  if (!cfg.sensorsJson.empty()) {
+    JsonDocument sensorDoc;
+    deserializeJson(sensorDoc, cfg.sensorsJson);
+    doc["sensors"] = sensorDoc.as<JsonArray>();
+  }
 
   std::string out;
   serializeJson(doc, out);
