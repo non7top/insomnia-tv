@@ -1,6 +1,7 @@
 // Copyright 2026 insomniaTV Contributors. All rights reserved.
 
 #include "FileSystemManager.h"
+
 #include <string>
 
 #if defined(ARDUINO)
@@ -25,6 +26,7 @@ bool FileSystemManager::mount() {
 
 std::string FileSystemManager::readJson(const std::string& path) {
 #if defined(ARDUINO)
+  if (!_fs) return "";
   File file = _fs->open(path.c_str(), "r");
   if (!file) return "";
   String content = file.readString();
@@ -38,6 +40,7 @@ std::string FileSystemManager::readJson(const std::string& path) {
 bool FileSystemManager::writeJson(const std::string& path,
                                   const std::string& json) {
 #if defined(ARDUINO)
+  if (!_fs) return false;
   File file = _fs->open(path.c_str(), "w");
   if (!file) return false;
   file.print(json.c_str());
@@ -51,6 +54,7 @@ bool FileSystemManager::writeJson(const std::string& path,
 bool FileSystemManager::uploadFile(const std::string& path, const uint8_t* data,
                                    size_t len) {
 #if defined(ARDUINO)
+  if (!_fs) return false;
   File file = _fs->open(path.c_str(), "w");
   if (!file) return false;
   file.write(data, len);
@@ -64,6 +68,7 @@ bool FileSystemManager::uploadFile(const std::string& path, const uint8_t* data,
 int32_t FileSystemManager::downloadFile(const std::string& path,
                                         uint8_t* outBuf, size_t bufSize) {
 #if defined(ARDUINO)
+  if (!_fs) return -1;
   File file = _fs->open(path.c_str(), "r");
   if (!file) return -1;
   size_t len = file.read(outBuf, bufSize);
@@ -76,6 +81,7 @@ int32_t FileSystemManager::downloadFile(const std::string& path,
 
 bool FileSystemManager::exists(const std::string& path) const {
 #if defined(ARDUINO)
+  if (!_fs) return false;
   return _fs->exists(path.c_str());
 #else
   return false;
@@ -84,6 +90,7 @@ bool FileSystemManager::exists(const std::string& path) const {
 
 bool FileSystemManager::remove(const std::string& path) {
 #if defined(ARDUINO)
+  if (!_fs) return false;
   return _fs->remove(path.c_str());
 #else
   return false;

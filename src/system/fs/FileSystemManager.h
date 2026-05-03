@@ -4,6 +4,7 @@
 #define SRC_SYSTEM_FS_FILESYSTEMMANAGER_H_
 
 #include <string>
+
 #include "../../hal/IFileSystem.h"
 
 #if defined(ARDUINO)
