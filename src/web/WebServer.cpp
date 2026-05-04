@@ -1,9 +1,7 @@
 // Copyright 2026 insomniaTV Contributors. All rights reserved.
 
 #include "WebServer.h"
-
 #include <ArduinoJson.h>
-
 #include <string>
 
 #if defined(ARDUINO)
@@ -19,8 +17,9 @@ namespace InsomniaTV {
 #if defined(ARDUINO)
 AsyncEventSource events("/events");
 
-WebServer::WebServer(uint16_t port, SamsungTvDiscovery& discovery)
-    : _server(port), _discovery(discovery) {
+WebServer::WebServer(uint16_t port, SamsungTvDiscovery& discovery,
+                     ConfigManager& configMgr)
+    : _server(port), _discovery(discovery), _configMgr(configMgr) {
   setupRoutes();
 }
 
@@ -123,6 +122,7 @@ void WebServer::setupRoutes() {
 
 <div id="Sensors" class="tabcontent">
   <h3>Sensor Registry</h3>
+  <button onclick="openModal()">Add Sensor</button>
   <table>
     <thead>
       <tr>
@@ -138,6 +138,26 @@ void WebServer::setupRoutes() {
   </table>
 </div>
 
+<div id="sensorModal" style="display:none; position:fixed; z-index:1; left:0; top:0; width:100%; height:100%; background-color:rgba(0,0,0,0.4);">
+  <div style="background-color:#fefefe; margin:15% auto; padding:20px; border:1px solid #888; width:50%;">
+    <span onclick="closeModal()" style="float:right; cursor:pointer;">&times;</span>
+    <h3>Add Sensor</h3>
+    <form id="sensorForm">
+      <label>ID:</label><input type="text" id="sensorId" required><br>
+      <label>Type:</label>
+      <select id="sensorType" onchange="updateFormFields()">
+        <option value="gpio_input">GPIO Input</option>
+        <option value="gpio_analog">GPIO Analog</option>
+        <option value="ping">Ping</option>
+        <option value="http">HTTP</option>
+        <option value="upnp">UPnP</option>
+      </select><br>
+      <div id="dynamicFields"></div>
+      <button type="button" onclick="saveSensor()">Save</button>
+    </form>
+  </div>
+</div>
+
 <script>
 const source = new EventSource('/events');
 source.addEventListener('sensor_update', function(e) {
@@ -148,6 +168,32 @@ source.addEventListener('sensor_update', function(e) {
         row.cells[3].textContent = data.available ? '🟢' : '🔴';
     }
 }, false);
+
+function openModal() { document.getElementById('sensorModal').style.display = 'block'; updateFormFields(); }
+function closeModal() { document.getElementById('sensorModal').style.display = 'none'; }
+
+function updateFormFields() {
+    const type = document.getElementById('sensorType').value;
+    const fields = document.getElementById('dynamicFields');
+    fields.innerHTML = '';
+    if (type === 'gpio_input') {
+        fields.innerHTML = '<label>Pin:</label><input type="number" id="s_pin"><label>Pullup:</label><input type="checkbox" id="s_pullup" checked>';
+    } else if (type === 'ping') {
+        fields.innerHTML = '<label>Target IP:</label><input type="text" id="s_target_ip">';
+    }
+}
+
+function saveSensor() {
+    const data = {
+        id: document.getElementById('sensorId').value,
+        type: document.getElementById('sensorType').value
+    };
+    fetch('/api/sensors', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    }).then(() => { closeModal(); loadSensors(); });
+}
 
 function openTab(evt, tabName) {
     var i, tabcontent, tablinks;
@@ -185,8 +231,6 @@ function loadSensors() {
             tr.innerHTML = `<td>${s.id}</td><td>${s.type}</td><td>${s.value}</td><td>${s.available ? '🟢' : '🔴'}</td><td><button onclick="testSensor('${s.id}')">Test</button></td>`;
             tbody.appendChild(tr);
         });
-    }).catch(err => {
-        console.error('Error loading sensors:', err);
     });
 }
 
@@ -275,12 +319,35 @@ document.getElementsByClassName('tablinks')[0].click();
       obj["id"] = sensor->getId();
       obj["type"] = sensor->getType();
       obj["available"] = sensor->isAvailable();
-      // Use config to represent type-specific metadata if needed
       obj["value"] = sensor->read();
     }
     String response;
     serializeJson(doc, response);
     request->send(200, "application/json", response);
+  });
+
+  _server.on("/api/sensors", HTTP_POST, [](AsyncWebServerRequest* request) {
+    if (!request->authenticate("admin", "insomnia")) {
+      return request->requestAuthentication();
+    }
+  }, NULL, [this](AsyncWebServerRequest* request, uint8_t* data, size_t len,
+              size_t index, size_t total) {
+    JsonDocument doc;
+    deserializeJson(doc, data, len);
+
+    // Save to configuration
+    Config cfg = _configMgr.get();
+    JsonDocument sensorDoc;
+    deserializeJson(sensorDoc, cfg.sensorsJson);
+    sensorDoc.add(doc);
+    serializeJson(sensorDoc, cfg.sensorsJson);
+    _configMgr.set(cfg);
+    _configMgr.save();
+
+    // Register immediately
+    SensorManager::instance().init(cfg.sensorsJson, _discovery);
+
+    request->send(200, "application/json", "{\"status\":\"ok\"}");
   });
 
   _server.on(
@@ -365,8 +432,8 @@ document.getElementsByClassName('tablinks')[0].click();
              });
 }
 #else
-WebServer::WebServer(uint16_t port, SamsungTvDiscovery& discovery)
-    : _discovery(discovery) {}
+WebServer::WebServer(uint16_t port, SamsungTvDiscovery& discovery, ConfigManager& configMgr)
+    : _discovery(discovery), _configMgr(configMgr) {}
 void WebServer::begin() {}
 void WebServer::setupRoutes() {}
 #endif

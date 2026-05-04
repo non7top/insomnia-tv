@@ -8,6 +8,7 @@
 #include <ESPAsyncWebServer.h>
 #endif
 
+#include "../config/ConfigManager.h"
 #include "../discovery/SamsungTvDiscovery.h"
 
 namespace InsomniaTV {
@@ -16,24 +17,27 @@ namespace InsomniaTV {
  * @brief Handles web interface and API routes for insomniaTV.
  */
 class WebServer {
-public:
+ public:
   /**
    * @brief Constructs the WebServer.
    * @param port The server port.
    * @param discovery Reference to the TV discovery service.
+   * @param configMgr Reference to the ConfigManager.
    */
-  WebServer(uint16_t port, SamsungTvDiscovery& discovery);
+  WebServer(uint16_t port, SamsungTvDiscovery& discovery,
+            ConfigManager& configMgr);
 
   /**
    * @brief Starts the web server.
    */
   void begin();
 
-private:
+ private:
 #if defined(ARDUINO)
   AsyncWebServer _server;
 #endif
   SamsungTvDiscovery& _discovery;
+  ConfigManager& _configMgr;
   void setupRoutes();
 };
 

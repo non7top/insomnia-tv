@@ -24,7 +24,7 @@
 static InsomniaTV::ConfigManager configMgr;
 static InsomniaTV::WifiSetup wifiSetup;
 static InsomniaTV::SamsungTvDiscovery tvDiscovery;
-static InsomniaTV::WebServer webServer(80, tvDiscovery);
+static InsomniaTV::WebServer webServer(80, tvDiscovery, configMgr);
 static Ticker heartbeat;
 
 void toggleStatusLed() {
