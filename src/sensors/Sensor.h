@@ -13,16 +13,30 @@ namespace InsomniaTV {
  * @brief Abstract base class for all sensors (hardware and software).
  */
 class Sensor {
-public:
+ public:
+  enum class State {
+    UNINITIALIZED,
+    READY,
+    ERROR,
+    RETRYING
+  };
+
   virtual std::string getId() const = 0;
-  virtual std::string getType()
-      const = 0;            // "gpio_input", "upnp", "ping", etc.
-  virtual bool read() = 0;  // Returns current state/value
+  virtual std::string getType() const = 0;
+  virtual bool read() = 0;
   virtual JsonDocument getConfig() = 0;
   virtual void setConfig(const JsonDocument& cfg) = 0;
-  virtual bool isAvailable() const { return true; }  // Online/connected status
+
+  virtual State getState() const { return state_; }
+  virtual void setState(State state) { state_ = state; }
+
+  virtual bool isAvailable() const { return state_ == State::READY; }
   virtual ~Sensor() = default;
+
+ protected:
+  State state_ = State::UNINITIALIZED;
 };
+
 
 }  // namespace InsomniaTV
 

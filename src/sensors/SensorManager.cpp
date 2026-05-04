@@ -60,8 +60,7 @@ void SensorManager::subscribe(SensorCallback callback) {
   subscribers_.push_back(callback);
 }
 
-void SensorManager::init(const std::string& configJson,
-                         SamsungTvDiscovery& discovery) {
+void SensorManager::init(const std::string& configJson, SamsungTvDiscovery& discovery) {
   // Register built-in factories
   registerFactory("gpio_input", [](const JsonDocument& cfg) {
     return GpioInputSensor::create(cfg);
@@ -69,21 +68,19 @@ void SensorManager::init(const std::string& configJson,
   registerFactory("gpio_analog", [](const JsonDocument& cfg) {
     return GpioAnalogSensor::create(cfg);
   });
-  registerFactory(
-      "ping", [](const JsonDocument& cfg) { return PingSensor::create(cfg); });
-  registerFactory(
-      "http", [](const JsonDocument& cfg) { return HttpSensor::create(cfg); });
+  registerFactory("ping",
+                  [](const JsonDocument& cfg) { return PingSensor::create(cfg); });
+  registerFactory("http",
+                  [](const JsonDocument& cfg) { return HttpSensor::create(cfg); });
   registerFactory("upnp", [&discovery](const JsonDocument& cfg) {
     return UpnpSensor::create(cfg, discovery);
   });
 
-  if (configJson.empty())
-    return;
+  if (configJson.empty()) return;
 
   JsonDocument doc;
   DeserializationError error = deserializeJson(doc, configJson);
-  if (error)
-    return;
+  if (error) return;
 
   if (doc.is<JsonArray>()) {
     for (JsonObject sensorCfg : doc.as<JsonArray>()) {
@@ -95,6 +92,7 @@ void SensorManager::init(const std::string& configJson,
         if (factories_.count(type)) {
           auto sensor = factories_[type](sensorCfg);
           if (sensor) {
+            sensor->setState(Sensor::State::READY);
             sensors_[id] = sensor;
           }
         }
@@ -102,5 +100,17 @@ void SensorManager::init(const std::string& configJson,
     }
   }
 }
+
+void SensorManager::tick() {
+  std::lock_guard<std::mutex> lock(mutex_);
+  for (auto const& [id, sensor] : sensors_) {
+    if (sensor->read()) {
+      sensor->setState(Sensor::State::READY);
+    } else {
+      sensor->setState(Sensor::State::ERROR);
+    }
+  }
+}
+
 
 }  // namespace InsomniaTV

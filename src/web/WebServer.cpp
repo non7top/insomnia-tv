@@ -130,6 +130,7 @@ void WebServer::setupRoutes() {
         <th>Type</th>
         <th>Value</th>
         <th>Status</th>
+        <th>Actions</th>
       </tr>
     </thead>
     <tbody id="sensor-table-body">
@@ -176,17 +177,28 @@ function openTab(evt, tabName) {
 
 function loadSensors() {
     fetch('/api/sensors').then(r => r.json()).then(data => {
-        console.log('Sensors loaded:', data);
         const tbody = document.getElementById('sensor-table-body');
         tbody.innerHTML = '';
         data.forEach(s => {
             const tr = document.createElement('tr');
             tr.id = 'sensor-row-' + s.id;
-            tr.innerHTML = `<td>${s.id}</td><td>${s.type}</td><td>${s.value}</td><td>${s.available ? '🟢' : '🔴'}</td>`;
+            tr.innerHTML = `<td>${s.id}</td><td>${s.type}</td><td>${s.value}</td><td>${s.available ? '🟢' : '🔴'}</td><td><button onclick="testSensor('${s.id}')">Test</button></td>`;
             tbody.appendChild(tr);
         });
     }).catch(err => {
         console.error('Error loading sensors:', err);
+    });
+}
+
+function testSensor(id) {
+    fetch('/api/sensors/test', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'id=' + id
+    }).then(r => r.json()).then(data => {
+        alert('Test result for ' + data.id + ': ' + data.value);
+    }).catch(err => {
+        alert('Test failed: ' + err);
     });
 }
 
@@ -263,12 +275,32 @@ document.getElementsByClassName('tablinks')[0].click();
       obj["id"] = sensor->getId();
       obj["type"] = sensor->getType();
       obj["available"] = sensor->isAvailable();
+      // Use config to represent type-specific metadata if needed
       obj["value"] = sensor->read();
     }
     String response;
     serializeJson(doc, response);
     request->send(200, "application/json", response);
   });
+
+  _server.on(
+      "/api/sensors/test", HTTP_POST, [](AsyncWebServerRequest* request) {
+        if (!request->authenticate("admin", "insomnia")) {
+          return request->requestAuthentication();
+        }
+        if (request->hasParam("id", true)) {
+          String id = request->getParam("id", true)->value();
+          auto sensor = SensorManager::instance().getSensor(id.c_str());
+          if (sensor) {
+            bool result = sensor->read();
+            String response = "{\"id\":\"" + id + "\", \"value\":" +
+                              (result ? "true" : "false") + "}";
+            request->send(200, "application/json", response);
+            return;
+          }
+        }
+        request->send(404, "application/json", "{\"error\":\"Not found\"}");
+      });
 
   _server.on(
       "/update", HTTP_POST,

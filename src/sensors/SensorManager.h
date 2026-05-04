@@ -44,8 +44,10 @@ public:
 
   // Thread-safe access to all sensors
   void init(const std::string& configJson, SamsungTvDiscovery& discovery);
+  void tick();
 
-private:
+  private:
+
   SensorManager() = default;
   ~SensorManager() = default;
   SensorManager(const SensorManager&) = delete;
