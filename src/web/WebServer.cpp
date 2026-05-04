@@ -176,6 +176,7 @@ function openTab(evt, tabName) {
 
 function loadSensors() {
     fetch('/api/sensors').then(r => r.json()).then(data => {
+        console.log('Sensors loaded:', data);
         const tbody = document.getElementById('sensor-table-body');
         tbody.innerHTML = '';
         data.forEach(s => {
@@ -184,6 +185,8 @@ function loadSensors() {
             tr.innerHTML = `<td>${s.id}</td><td>${s.type}</td><td>${s.value}</td><td>${s.available ? '🟢' : '🔴'}</td>`;
             tbody.appendChild(tr);
         });
+    }).catch(err => {
+        console.error('Error loading sensors:', err);
     });
 }
 
