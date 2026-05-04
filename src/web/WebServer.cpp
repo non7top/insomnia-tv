@@ -270,6 +270,10 @@ function renderDiscovery(data) {
 }
 // Default open Status tab
 document.getElementsByClassName('tablinks')[0].click();
+// Trigger sensors load if it's the active tab
+if (document.getElementsByClassName('tablinks')[2].classList.contains('active')) {
+    loadSensors();
+}
 </script>
 
 </body>
