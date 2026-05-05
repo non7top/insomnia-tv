@@ -1,10 +1,12 @@
 // Copyright 2026 insomniaTV Contributors. All rights reserved.
 
 #include "config/ConfigManager.h"
-
 #include <ArduinoJson.h>
-
 #include <string>
+
+#if defined(ARDUINO)
+#include <LittleFS.h>
+#endif
 
 namespace InsomniaTV {
 
@@ -16,18 +18,47 @@ ConfigManager::ConfigManager() {
 }
 
 ConfigStatus ConfigManager::load() {
-  // Phase 1: placeholder for FS -- filesystem integration in Phase 5
-  // For now, just ensuring it returns Ok with defaults.
+#if defined(ARDUINO)
+  if (!LittleFS.exists(kConfigPath)) {
+    applyDefaults_();
+    return ConfigStatus::FileNotFound;
+  }
+
+  File file = LittleFS.open(kConfigPath, "r");
+  if (!file) return ConfigStatus::FileNotFound;
+
+  std::string json = file.readString().c_str();
+  file.close();
+
+  Config next;
+  if (!parseJson_(json, next)) {
+    return ConfigStatus::InvalidJson;
+  }
+
+  current_ = next;
+  return ConfigStatus::Ok;
+#else
   applyDefaults_();
   return ConfigStatus::Ok;
+#endif
 }
 
 ConfigStatus ConfigManager::save() {
-  // Phase 1: placeholder for FS -- filesystem integration in Phase 5
-  // We can still call toJson_ to ensure it's functional.
   std::string json = toJson_(current_);
+#if defined(ARDUINO)
+  // Ensure directory exists
+  if (!LittleFS.exists("/config")) {
+      LittleFS.mkdir("/config");
+  }
+  File file = LittleFS.open(kConfigPath, "w");
+  if (!file) return ConfigStatus::WriteFailed;
+  file.print(json.c_str());
+  file.close();
+  return ConfigStatus::Ok;
+#else
   (void)json;
   return ConfigStatus::Ok;
+#endif
 }
 
 const Config& ConfigManager::get() const {
@@ -70,10 +101,6 @@ bool ConfigManager::validate(const Config& cfg, std::string& outError) {
   }
   if (cfg.tvVerifyRetries < 1 || cfg.tvVerifyRetries > 5) {
     outError = "tv_verify retries must be between 1 and 5";
-    return false;
-  }
-  if (cfg.tvVerifyMethod != "ping" && cfg.tvVerifyMethod != "http") {
-    outError = "tv_verify method must be 'ping' or 'http'";
     return false;
   }
   return true;

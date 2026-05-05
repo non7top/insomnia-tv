@@ -1,7 +1,6 @@
 // Copyright 2026 insomniaTV Contributors. All rights reserved.
 
 #include "SensorManager.h"
-
 #include <ArduinoJson.h>
 
 #include "GpioAnalogSensor.h"
@@ -17,15 +16,13 @@ SensorManager& SensorManager::instance() {
   return instance;
 }
 
-void SensorManager::registerFactory(const std::string& type,
-                                    SensorFactory factory) {
+void SensorManager::registerFactory(const std::string& type, SensorFactory factory) {
   std::lock_guard<std::mutex> lock(mutex_);
   factories_[type] = factory;
 }
 
 void SensorManager::registerSensor(std::shared_ptr<Sensor> sensor) {
-  if (!sensor)
-    return;
+  if (!sensor) return;
   std::lock_guard<std::mutex> lock(mutex_);
   sensors_[sensor->getId()] = sensor;
 
@@ -60,21 +57,33 @@ void SensorManager::subscribe(SensorCallback callback) {
   subscribers_.push_back(callback);
 }
 
+void SensorManager::clear() {
+  std::lock_guard<std::mutex> lock(mutex_);
+  sensors_.clear();
+}
+
+void SensorManager::removeSensor(const std::string& id) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  sensors_.erase(id);
+}
+
 void SensorManager::init(const std::string& configJson, SamsungTvDiscovery& discovery) {
-  // Register built-in factories
-  registerFactory("gpio_input", [](const JsonDocument& cfg) {
-    return GpioInputSensor::create(cfg);
-  });
-  registerFactory("gpio_analog", [](const JsonDocument& cfg) {
-    return GpioAnalogSensor::create(cfg);
-  });
-  registerFactory("ping",
-                  [](const JsonDocument& cfg) { return PingSensor::create(cfg); });
-  registerFactory("http",
-                  [](const JsonDocument& cfg) { return HttpSensor::create(cfg); });
-  registerFactory("upnp", [&discovery](const JsonDocument& cfg) {
-    return UpnpSensor::create(cfg, discovery);
-  });
+  // Register built-in factories if map is empty
+  if (factories_.empty()) {
+    registerFactory("gpio_input", [](const JsonDocument& cfg) {
+      return GpioInputSensor::create(cfg);
+    });
+    registerFactory("gpio_analog", [](const JsonDocument& cfg) {
+      return GpioAnalogSensor::create(cfg);
+    });
+    registerFactory("ping",
+                    [](const JsonDocument& cfg) { return PingSensor::create(cfg); });
+    registerFactory("http",
+                    [](const JsonDocument& cfg) { return HttpSensor::create(cfg); });
+    registerFactory("upnp", [&discovery](const JsonDocument& cfg) {
+      return UpnpSensor::create(cfg, discovery);
+    });
+  }
 
   if (configJson.empty()) return;
 
@@ -83,6 +92,11 @@ void SensorManager::init(const std::string& configJson, SamsungTvDiscovery& disc
   if (error) return;
 
   if (doc.is<JsonArray>()) {
+    // We clear current sensors before re-loading from config to avoid orphaned sensors
+    // Note: If some sensors are "active" (e.g. registered manually and not in config),
+    // they will be lost. This is intended for config sync.
+    clear();
+
     for (JsonObject sensorCfg : doc.as<JsonArray>()) {
       std::string type = sensorCfg["type"] | "";
       std::string id = sensorCfg["id"] | "";
@@ -111,6 +125,5 @@ void SensorManager::tick() {
     }
   }
 }
-
 
 }  // namespace InsomniaTV

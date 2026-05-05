@@ -61,17 +61,28 @@ void WebServer::setupRoutes() {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>insomniaTV</title>
     <style>
-        body { font-family: sans-serif; margin: 0; padding: 0; }
-        .tab { overflow: hidden; background-color: #f1f1f1; }
-        .tab button { background-color: inherit; border: none; outline: none; cursor: pointer; padding: 14px 16px; transition: 0.3s; }
-        .tab button:hover { background-color: #ddd; }
-        .tab button.active { background-color: #ccc; }
-        .tabcontent { display: none; padding: 12px; border: 1px solid #ccc; border-top: none; }
-        fieldset { margin-bottom: 15px; border: 1px solid #ccc; padding: 10px; }
-        legend { font-weight: bold; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        tr:nth-child(even) { background-color: #f2f2f2; }
+        body { font-family: sans-serif; margin: 0; padding: 0; background: #f4f4f9; color: #333; }
+        .tab { overflow: hidden; background-color: #333; }
+        .tab button { background-color: inherit; border: none; outline: none; cursor: pointer; padding: 14px 16px; transition: 0.3s; color: white; }
+        .tab button:hover { background-color: #555; }
+        .tab button.active { background-color: #4CAF50; }
+        .tabcontent { display: none; padding: 20px; }
+        fieldset { margin-bottom: 15px; border: 1px solid #ccc; padding: 15px; background: white; border-radius: 5px; }
+        legend { font-weight: bold; padding: 0 5px; }
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 5px; overflow: hidden; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        button { cursor: pointer; padding: 8px 12px; border: none; border-radius: 4px; background: #4CAF50; color: white; }
+        button:hover { background: #45a049; }
+        button.delete { background: #f44336; }
+        button.delete:hover { background: #da190b; }
+        .modal { display:none; position:fixed; z-index:100; left:0; top:0; width:100%; height:100%; background-color:rgba(0,0,0,0.5); }
+        .modal-content { background-color:#fefefe; margin:10% auto; padding:25px; border:1px solid #888; width:80%; max-width: 500px; border-radius: 8px; }
+        .close { float:right; cursor:pointer; font-size: 24px; }
+        label { display: block; margin: 10px 0 5px; font-weight: bold; }
+        input[type=text], input[type=number], select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .discovery-item { padding: 8px; border-bottom: 1px solid #eee; cursor: pointer; }
+        .discovery-item:hover { background: #f0f0f0; }
     </style>
 </head>
 <body>
@@ -91,28 +102,12 @@ void WebServer::setupRoutes() {
     <p><b>Chip ID:</b> <span id="sys-chipId"></span></p>
     <p><b>Free Heap:</b> <span id="sys-freeHeap"></span></p>
   </fieldset>
-  <fieldset>
-    <legend>Network</legend>
-    <p><b>IP Address:</b> <span id="sys-ip"></span></p>
-    <p><b>MAC:</b> <span id="sys-mac"></span></p>
-    <p><b>DHCP:</b> <span id="sys-dhcp"></span></p>
-    <p><b>AP Name:</b> <span id="sys-ap"></span></p>
-  </fieldset>
-  <fieldset>
-    <legend>WiFi</legend>
-    <p><b>Status:</b> <span id="sys-wifiStatus"></span></p>
-    <p><b>SSID:</b> <span id="sys-ssid"></span></p>
-    <p><b>RSSI:</b> <span id="sys-rssi"></span> dBm</p>
-  </fieldset>
 </div>
 
 <div id="Config" class="tabcontent">
-  <h3>WiFi & TV Config</h3>
-  <button onclick="scanTV()">Scan for TVs</button>
-  <div id="discovery-content">
-      <h4>Discovered TVs:</h4>
-      <ul id="tv-list"></ul>
-  </div>
+  <h3>TV Discovery</h3>
+  <button onclick="scanTV()">Scan Network</button>
+  <ul id="tv-list"></ul>
   <h3>Firmware Update</h3>
   <form method="POST" action="/update" enctype="multipart/form-data">
     <input type="file" name="update">
@@ -122,7 +117,7 @@ void WebServer::setupRoutes() {
 
 <div id="Sensors" class="tabcontent">
   <h3>Sensor Registry</h3>
-  <button onclick="openModal()">Add Sensor</button>
+  <button onclick="openModal()" style="margin-bottom: 15px;">Add New Sensor</button>
   <table>
     <thead>
       <tr>
@@ -138,22 +133,26 @@ void WebServer::setupRoutes() {
   </table>
 </div>
 
-<div id="sensorModal" style="display:none; position:fixed; z-index:1; left:0; top:0; width:100%; height:100%; background-color:rgba(0,0,0,0.4);">
-  <div style="background-color:#fefefe; margin:15% auto; padding:20px; border:1px solid #888; width:50%;">
-    <span onclick="closeModal()" style="float:right; cursor:pointer;">&times;</span>
+<div id="sensorModal" class="modal">
+  <div class="modal-content">
+    <span onclick="closeModal()" class="close">&times;</span>
     <h3>Add Sensor</h3>
     <form id="sensorForm">
-      <label>ID:</label><input type="text" id="sensorId" required><br>
-      <label>Type:</label>
+      <label>Unique ID:</label>
+      <input type="text" id="sensorId" placeholder="e.g., room_motion" required>
+
+      <label>Sensor Type:</label>
       <select id="sensorType" onchange="updateFormFields()">
-        <option value="gpio_input">GPIO Input</option>
-        <option value="gpio_analog">GPIO Analog</option>
-        <option value="ping">Ping</option>
-        <option value="http">HTTP</option>
-        <option value="upnp">UPnP</option>
-      </select><br>
+        <option value="gpio_input">GPIO Input (Digital)</option>
+        <option value="gpio_analog">GPIO Analog (ADC)</option>
+        <option value="ping">Ping (ICMP)</option>
+        <option value="http">HTTP (GET)</option>
+        <option value="upnp">UPnP (Discovery)</option>
+      </select>
+
       <div id="dynamicFields"></div>
-      <button type="button" onclick="saveSensor()">Save</button>
+
+      <button type="button" onclick="saveSensor()" style="margin-top: 20px; width: 100%;">Save Sensor</button>
     </form>
   </div>
 </div>
@@ -169,32 +168,6 @@ source.addEventListener('sensor_update', function(e) {
     }
 }, false);
 
-function openModal() { document.getElementById('sensorModal').style.display = 'block'; updateFormFields(); }
-function closeModal() { document.getElementById('sensorModal').style.display = 'none'; }
-
-function updateFormFields() {
-    const type = document.getElementById('sensorType').value;
-    const fields = document.getElementById('dynamicFields');
-    fields.innerHTML = '';
-    if (type === 'gpio_input') {
-        fields.innerHTML = '<label>Pin:</label><input type="number" id="s_pin"><label>Pullup:</label><input type="checkbox" id="s_pullup" checked>';
-    } else if (type === 'ping') {
-        fields.innerHTML = '<label>Target IP:</label><input type="text" id="s_target_ip">';
-    }
-}
-
-function saveSensor() {
-    const data = {
-        id: document.getElementById('sensorId').value,
-        type: document.getElementById('sensorType').value
-    };
-    fetch('/api/sensors', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(data)
-    }).then(() => { closeModal(); loadSensors(); });
-}
-
 function openTab(evt, tabName) {
     var i, tabcontent, tablinks;
     tabcontent = document.getElementsByClassName("tabcontent");
@@ -202,23 +175,20 @@ function openTab(evt, tabName) {
     tablinks = document.getElementsByClassName("tablinks");
     for (i = 0; i < tablinks.length; i++) { tablinks[i].className = tablinks[i].className.replace(" active", ""); }
 
-    if (tabName === 'Status') {
-        fetch('/api/status').then(r => r.json()).then(data => {
-            for (const [key, value] of Object.entries(data)) {
-                const el = document.getElementById('sys-' + key);
-                if (el) el.textContent = value;
-            }
-        }).catch(err => {
-            document.getElementById('sys-status').textContent = 'Error: ' + err;
-        });
-    } else if (tabName === 'Config') {
-        loadDiscovery();
-    } else if (tabName === 'Sensors') {
-        loadSensors();
-    }
-
     document.getElementById(tabName).style.display = "block";
     evt.currentTarget.className += " active";
+
+    if (tabName === 'Status') loadStatus();
+    if (tabName === 'Sensors') loadSensors();
+}
+
+function loadStatus() {
+    fetch('/api/status').then(r => r.json()).then(data => {
+        for (const [key, value] of Object.entries(data)) {
+            const el = document.getElementById('sys-' + key);
+            if (el) el.textContent = value;
+        }
+    });
 }
 
 function loadSensors() {
@@ -228,10 +198,105 @@ function loadSensors() {
         data.forEach(s => {
             const tr = document.createElement('tr');
             tr.id = 'sensor-row-' + s.id;
-            tr.innerHTML = `<td>${s.id}</td><td>${s.type}</td><td>${s.value}</td><td>${s.available ? '🟢' : '🔴'}</td><td><button onclick="testSensor('${s.id}')">Test</button></td>`;
+            tr.innerHTML = `
+                <td>${s.id}</td>
+                <td>${s.type}</td>
+                <td>${s.value}</td>
+                <td>${s.available ? '🟢' : '🔴'}</td>
+                <td>
+                    <button onclick="testSensor('${s.id}')">Test</button>
+                    <button class="delete" onclick="deleteSensor('${s.id}')">Delete</button>
+                </td>`;
             tbody.appendChild(tr);
         });
     });
+}
+
+function openModal() { document.getElementById('sensorModal').style.display = 'block'; updateFormFields(); }
+function closeModal() { document.getElementById('sensorModal').style.display = 'none'; }
+
+function updateFormFields() {
+    const type = document.getElementById('sensorType').value;
+    const fields = document.getElementById('dynamicFields');
+    fields.innerHTML = '';
+
+    if (type === 'gpio_input') {
+        fields.innerHTML = `
+            <label>Pin Number:</label><input type="number" id="s_pin" value="0">
+            <label>Pullup:</label><input type="checkbox" id="s_pullup" checked>
+            <label>Debounce (ms):</label><input type="number" id="s_debounce" value="50">`;
+    } else if (type === 'gpio_analog') {
+        fields.innerHTML = `
+            <label>Pin Number:</label><input type="number" id="s_pin" value="0">
+            <label>Scale:</label><input type="number" id="s_scale" step="0.001" value="1.0">
+            <label>Offset:</label><input type="number" id="s_offset" step="0.001" value="0.0">`;
+    } else if (type === 'ping') {
+        fields.innerHTML = `<label>Target IP/Host:</label><input type="text" id="s_target" placeholder="192.168.1.1">`;
+    } else if (type === 'http') {
+        fields.innerHTML = `<label>URL:</label><input type="text" id="s_url" placeholder="http://api.local/status">`;
+    } else if (type === 'upnp') {
+        fields.innerHTML = `
+            <label>Select Device:</label>
+            <div id="upnp-list" style="border: 1px solid #ccc; max-height: 100px; overflow-y: auto;">Scanning...</div>
+            <input type="hidden" id="s_target_name">`;
+        fetchUpnpDevices();
+    }
+}
+
+function fetchUpnpDevices() {
+    fetch('/api/discovery').then(r => r.json()).then(data => {
+        const list = document.getElementById('upnp-list');
+        list.innerHTML = '';
+        if (data.length === 0) list.innerHTML = '<div class="discovery-item">No TVs found. Scan in Config tab first.</div>';
+        data.forEach(tv => {
+            const div = document.createElement('div');
+            div.className = 'discovery-item';
+            div.textContent = `${tv.name} (${tv.ip})`;
+            div.onclick = () => {
+                document.getElementById('s_target_name').value = tv.name;
+                Array.from(list.children).forEach(c => c.style.background = '');
+                div.style.background = '#e0e0e0';
+            };
+            list.appendChild(div);
+        });
+    });
+}
+
+function saveSensor() {
+    const id = document.getElementById('sensorId').value;
+    const type = document.getElementById('sensorType').value;
+    if (!id) return alert('ID is required');
+
+    const config = { id, type };
+    if (type === 'gpio_input') {
+        config.pin = parseInt(document.getElementById('s_pin').value);
+        config.pullup = document.getElementById('s_pullup').checked;
+        config.debounce_ms = parseInt(document.getElementById('s_debounce').value);
+    } else if (type === 'gpio_analog') {
+        config.pin = parseInt(document.getElementById('s_pin').value);
+        config.scale = parseFloat(document.getElementById('s_scale').value);
+        config.offset = parseFloat(document.getElementById('s_offset').value);
+    } else if (type === 'ping') {
+        config.target_ip = document.getElementById('s_target').value;
+    } else if (type === 'http') {
+        config.url = document.getElementById('s_url').value;
+    } else if (type === 'upnp') {
+        config.target_name = document.getElementById('s_target_name').value;
+    }
+
+    fetch('/api/sensors', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(config)
+    }).then(r => {
+        if (r.ok) { closeModal(); loadSensors(); }
+        else alert('Failed to save');
+    });
+}
+
+function deleteSensor(id) {
+    if (!confirm('Delete sensor ' + id + '?')) return;
+    fetch('/api/sensors?id=' + id, { method: 'DELETE' }).then(() => loadSensors());
 }
 
 function testSensor(id) {
@@ -240,40 +305,27 @@ function testSensor(id) {
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
         body: 'id=' + id
     }).then(r => r.json()).then(data => {
-        alert('Test result for ' + data.id + ': ' + data.value);
-    }).catch(err => {
-        alert('Test failed: ' + err);
+        alert('Test result for ' + data.id + ': ' + (data.value ? 'HIGH/OK' : 'LOW/FAIL'));
     });
 }
 
 function scanTV() {
-    document.getElementById('tv-list').textContent = 'Scanning...';
-    fetch('/api/scan', {method: 'POST'}).then(r => r.json()).then(data => {
-        setTimeout(loadDiscovery, 3000);
-    }).catch(err => {
-        document.getElementById('tv-list').textContent = 'Error: ' + err;
-    });
+    document.getElementById('tv-list').innerHTML = '<li>Scanning...</li>';
+    fetch('/api/scan', {method: 'POST'}).then(() => setTimeout(loadDiscovery, 3000));
 }
 function loadDiscovery() {
-    fetch('/api/discovery').then(r => r.json()).then(renderDiscovery).catch(err => {
-        document.getElementById('tv-list').textContent = 'Error: ' + err;
+    fetch('/api/discovery').then(r => r.json()).then(data => {
+        let list = document.getElementById('tv-list');
+        list.innerHTML = '';
+        data.forEach(tv => {
+            let li = document.createElement('li');
+            li.innerHTML = `<b>${tv.name}</b> (${tv.ip}) - ${tv.model}`;
+            list.appendChild(li);
+        });
     });
 }
-function renderDiscovery(data) {
-    let list = document.getElementById('tv-list');
-    list.innerHTML = '';
-    data.forEach(tv => {
-        let li = document.createElement('li');
-        li.innerHTML = `<b>Name:</b> ${tv.name} | <b>Model:</b> ${tv.model} | <b>IP:</b> ${tv.ip}`;
-        list.appendChild(li);
-    });
-}
-// Default open Status tab
+
 document.getElementsByClassName('tablinks')[0].click();
-// Trigger sensors load if it's the active tab
-if (document.getElementsByClassName('tablinks')[2].classList.contains('active')) {
-    loadSensors();
-}
 </script>
 
 </body>
@@ -343,15 +395,59 @@ if (document.getElementsByClassName('tablinks')[2].classList.contains('active'))
     Config cfg = _configMgr.get();
     JsonDocument sensorDoc;
     deserializeJson(sensorDoc, cfg.sensorsJson);
-    sensorDoc.add(doc);
+
+    // Check if it already exists to avoid duplicates
+    bool found = false;
+    for (JsonObject s : sensorDoc.as<JsonArray>()) {
+        if (s["id"] == doc["id"]) {
+            s.set(doc.as<JsonObject>());
+            found = true;
+            break;
+        }
+    }
+    if (!found) sensorDoc.add(doc);
+
     serializeJson(sensorDoc, cfg.sensorsJson);
     _configMgr.set(cfg);
     _configMgr.save();
 
-    // Register immediately
+    // Re-register immediately
     SensorManager::instance().init(cfg.sensorsJson, _discovery);
 
     request->send(200, "application/json", "{\"status\":\"ok\"}");
+  });
+
+  _server.on("/api/sensors", HTTP_DELETE, [this](AsyncWebServerRequest* request) {
+    if (!request->authenticate("admin", "insomnia")) {
+      return request->requestAuthentication();
+    }
+    if (request->hasParam("id")) {
+      String id = request->getParam("id")->value();
+
+      // Remove from configuration
+      Config cfg = _configMgr.get();
+      JsonDocument sensorDoc;
+      deserializeJson(sensorDoc, cfg.sensorsJson);
+
+      JsonArray array = sensorDoc.as<JsonArray>();
+      for (size_t i = 0; i < array.size(); i++) {
+          if (array[i]["id"] == id) {
+              array.remove(i);
+              break;
+          }
+      }
+
+      serializeJson(sensorDoc, cfg.sensorsJson);
+      _configMgr.set(cfg);
+      _configMgr.save();
+
+      // For now, simple re-init (might need a clear() in SensorManager if instances linger)
+      SensorManager::instance().init(cfg.sensorsJson, _discovery);
+
+      request->send(200, "application/json", "{\"status\":\"ok\"}");
+      return;
+    }
+    request->send(400);
   });
 
   _server.on(
@@ -436,7 +532,8 @@ if (document.getElementsByClassName('tablinks')[2].classList.contains('active'))
              });
 }
 #else
-WebServer::WebServer(uint16_t port, SamsungTvDiscovery& discovery, ConfigManager& configMgr)
+WebServer::WebServer(uint16_t port, SamsungTvDiscovery& discovery,
+                     ConfigManager& configMgr)
     : _discovery(discovery), _configMgr(configMgr) {}
 void WebServer::begin() {}
 void WebServer::setupRoutes() {}
