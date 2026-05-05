@@ -237,10 +237,16 @@ function updateFormFields() {
     } else if (type === 'upnp') {
         fields.innerHTML = `
             <label>Select Device:</label>
-            <div id="upnp-list" style="border: 1px solid #ccc; max-height: 100px; overflow-y: auto;">Scanning...</div>
+            <div id="upnp-list" style="border: 1px solid #ccc; max-height: 100px; overflow-y: auto; margin-bottom: 10px;">Scanning...</div>
+            <button type="button" onclick="scanTVForModal()" style="width: 100%; margin-bottom: 10px; background: #2196F3;">Scan Network</button>
             <input type="hidden" id="s_target_name">`;
         fetchUpnpDevices();
     }
+}
+
+function scanTVForModal() {
+    document.getElementById('upnp-list').innerHTML = '<div class="discovery-item">Scanning...</div>';
+    fetch('/api/scan', {method: 'POST'}).then(() => setTimeout(fetchUpnpDevices, 3000));
 }
 
 function fetchUpnpDevices() {

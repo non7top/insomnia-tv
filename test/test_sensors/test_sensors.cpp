@@ -12,6 +12,7 @@ using namespace InsomniaTV;
 
 void test_sensor_manager_registry() {
     auto& mgr = SensorManager::instance();
+    mgr.clear();
     auto sensor = std::make_shared<GpioInputSensor>("test_gpio", 5);
 
     mgr.registerSensor(sensor);
@@ -20,6 +21,37 @@ void test_sensor_manager_registry() {
     TEST_ASSERT_NOT_NULL(retrieved.get());
     TEST_ASSERT_EQUAL_STRING("test_gpio", retrieved->getId().c_str());
     TEST_ASSERT_EQUAL_STRING("gpio_input", retrieved->getType().c_str());
+}
+
+void test_sensor_manager_lifecycle() {
+    auto& mgr = SensorManager::instance();
+    mgr.clear();
+
+    auto s1 = std::make_shared<GpioInputSensor>("s1", 1);
+    auto s2 = std::make_shared<GpioInputSensor>("s2", 2);
+
+    mgr.registerSensor(s1);
+    mgr.registerSensor(s2);
+    TEST_ASSERT_EQUAL(2, mgr.listSensors().size());
+
+    mgr.removeSensor("s1");
+    TEST_ASSERT_EQUAL(1, mgr.listSensors().size());
+    TEST_ASSERT_NULL(mgr.getSensor("s1").get());
+    TEST_ASSERT_NOT_NULL(mgr.getSensor("s2").get());
+
+    mgr.clear();
+    TEST_ASSERT_EQUAL(0, mgr.listSensors().size());
+}
+
+void test_sensor_state_machine() {
+    GpioInputSensor sensor("state_test", 10);
+    TEST_ASSERT_TRUE(sensor.getState() == Sensor::State::UNINITIALIZED);
+
+    sensor.setState(Sensor::State::READY);
+    TEST_ASSERT_TRUE(sensor.isAvailable());
+
+    sensor.setState(Sensor::State::ERROR);
+    TEST_ASSERT_FALSE(sensor.isAvailable());
 }
 
 void test_gpio_input_sensor() {
@@ -49,6 +81,8 @@ void test_http_sensor() {
 int main() {
     UNITY_BEGIN();
     RUN_TEST(test_sensor_manager_registry);
+    RUN_TEST(test_sensor_manager_lifecycle);
+    RUN_TEST(test_sensor_state_machine);
     RUN_TEST(test_gpio_input_sensor);
     RUN_TEST(test_gpio_analog_sensor);
     RUN_TEST(test_ping_sensor);

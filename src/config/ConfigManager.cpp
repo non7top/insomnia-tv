@@ -103,6 +103,10 @@ bool ConfigManager::validate(const Config& cfg, std::string& outError) {
     outError = "tv_verify retries must be between 1 and 5";
     return false;
   }
+  if (cfg.tvVerifyMethod != "ping" && cfg.tvVerifyMethod != "http") {
+    outError = "tv_verify method must be 'ping' or 'http'";
+    return false;
+  }
   return true;
 }
 

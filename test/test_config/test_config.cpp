@@ -351,6 +351,25 @@ void test_config_json_logic(void) {
 // ---------------------------------------------------------------------------
 // Unity entry point
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Test: Sensor JSON persistence
+// ---------------------------------------------------------------------------
+void test_config_sensors_json(void) {
+  TestConfigManager mgr;
+  mgr.resetToDefaults();
+  InsomniaTV::Config cfg = mgr.get();
+  cfg.sensorsJson = "[{\"id\":\"test\",\"type\":\"gpio_input\"}]";
+  mgr.set(cfg);
+
+  std::string json = mgr.testToJson(cfg);
+  TEST_ASSERT_NOT_EQUAL(std::string::npos, json.find("sensors"));
+  TEST_ASSERT_NOT_EQUAL(std::string::npos, json.find("gpio_input"));
+
+  InsomniaTV::Config next;
+  TEST_ASSERT_TRUE(mgr.testParseJson(json, next));
+  TEST_ASSERT_EQUAL_STRING(cfg.sensorsJson.c_str(), next.sensorsJson.c_str());
+}
+
 int runUnityTests(void) {
   UNITY_BEGIN();
   RUN_TEST(test_config_defaults);
@@ -369,6 +388,7 @@ int runUnityTests(void) {
   RUN_TEST(test_config_save_returns_ok);
   RUN_TEST(test_config_json_roundtrip);
   RUN_TEST(test_config_json_logic);
+  RUN_TEST(test_config_sensors_json);
   return UNITY_END();
 }
 
