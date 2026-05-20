@@ -57,6 +57,11 @@ void SensorManager::subscribe(SensorCallback callback) {
   subscribers_.push_back(callback);
 }
 
+void SensorManager::subscribeValueChange(ValueChangeCallback callback) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  valueChangeSubscribers_.push_back(callback);
+}
+
 void SensorManager::clear() {
   std::lock_guard<std::mutex> lock(mutex_);
   sensors_.clear();
@@ -116,12 +121,25 @@ void SensorManager::init(const std::string& configJson, SamsungTvDiscovery& disc
 }
 
 void SensorManager::tick() {
-  std::lock_guard<std::mutex> lock(mutex_);
-  for (auto const& [id, sensor] : sensors_) {
-    if (sensor->read()) {
-      sensor->setState(Sensor::State::READY);
-    } else {
-      sensor->setState(Sensor::State::ERROR);
+  std::vector<std::pair<std::string, bool>> changes;
+  std::vector<ValueChangeCallback> cbs;
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    for (auto const& [id, sensor] : sensors_) {
+      bool value = sensor->read();
+      sensor->setState(value ? Sensor::State::READY : Sensor::State::ERROR);
+      auto it = lastValues_.find(id);
+      if (it == lastValues_.end() || it->second != value) {
+        lastValues_[id] = value;
+        changes.emplace_back(id, value);
+      }
+    }
+    cbs = valueChangeSubscribers_;
+  }
+  // Notify outside the lock to avoid deadlock with subscribers that call back in
+  for (auto const& [id, value] : changes) {
+    for (auto& cb : cbs) {
+      cb(id, value);
     }
   }
 }

@@ -18,6 +18,8 @@ namespace InsomniaTV {
 using SensorCallback = std::function<void(std::shared_ptr<Sensor>)>;
 using SensorFactory =
     std::function<std::shared_ptr<Sensor>(const JsonDocument&)>;
+using ValueChangeCallback =
+    std::function<void(const std::string& id, bool value)>;
 
 /**
  * @brief Singleton manager for all sensors in the system.
@@ -39,8 +41,11 @@ public:
   std::vector<std::shared_ptr<Sensor>> listSensors(
       const std::string& type = "");
 
-  // Subscribe to all sensor changes (or additions)
+  // Subscribe to sensor registration events
   void subscribe(SensorCallback callback);
+
+  // Subscribe to sensor value changes (fires only when value differs from last read)
+  void subscribeValueChange(ValueChangeCallback callback);
 
   // Thread-safe access to all sensors
   void init(const std::string& configJson, SamsungTvDiscovery& discovery);
@@ -58,6 +63,8 @@ public:
   std::map<std::string, std::shared_ptr<Sensor>> sensors_;
   std::map<std::string, SensorFactory> factories_;
   std::vector<SensorCallback> subscribers_;
+  std::vector<ValueChangeCallback> valueChangeSubscribers_;
+  std::map<std::string, bool> lastValues_;
   mutable std::mutex mutex_;
 };
 
