@@ -107,10 +107,11 @@ void WebServer::setupRoutes() {
         .s-badge.ping { background:#e3f2fd; color:#1565c0; }
         .s-badge.upnp { background:#f3e5f5; color:#6a1b9a; }
         .s-badge.http { background:#e8f5e9; color:#2e7d32; }
-        .wz-srow { display:flex; align-items:center; gap:10px; padding:8px 12px; border:1px solid #ddd; border-radius:6px; margin:5px 0; background:#fafafa; }
-        .wz-srow input[type=checkbox] { width:auto; flex-shrink:0; margin:0; }
-        .wz-srow .wz-sid { flex:1; min-width:0; width:auto; box-sizing:border-box; padding:5px 8px; font-size:13px; border:1px solid #ccc; border-radius:4px; }
-        .wz-sdesc { color:#888; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex-shrink:1; max-width:180px; }
+        .wz-srow { display:flex; align-items:center; gap:10px; padding:10px 14px; border:1px solid #e0e0e0; border-radius:6px; margin:5px 0; background:#fafafa; }
+        .wz-srow input[type=checkbox] { width:auto; flex-shrink:0; margin:0; cursor:pointer; }
+        .wz-srow-info { flex:1; min-width:0; overflow:hidden; }
+        .wz-srow-name { font-size:13px; color:#333; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .wz-srow-id { font-size:11px; color:#aaa; margin-top:2px; font-family:monospace; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         .spinner { display:inline-block; width:18px; height:18px; border:3px solid #ddd; border-top-color:#4CAF50; border-radius:50%; animation:spin .7s linear infinite; vertical-align:middle; margin-right:8px; }
         @keyframes spin { to { transform:rotate(360deg); } }
         .btn-tv { background:#1565c0; }
@@ -515,8 +516,10 @@ function wzBuildSensors(tv) {
             '<input type=”checkbox” id=”wsen' + i + '” ' + (s.enabled ? 'checked' : '') +
             ' onchange=”wzSensors[' + i + '].enabled=this.checked”>' +
             '<span class=”s-badge ' + s.type + '”>' + s.label + '</span>' +
-            '<input type=”text” class=”wz-sid” value=”' + s.id + '” oninput=”wzSensors[' + i + '].id=this.value”>' +
-            '<span class=”wz-sdesc”>' + s.desc + '</span>';
+            '<div class=”wz-srow-info”>' +
+            '<div class=”wz-srow-name”>' + s.desc + '</div>' +
+            '<div class=”wz-srow-id”>' + s.id + '</div>' +
+            '</div>';
         list.appendChild(row);
     });
 }
