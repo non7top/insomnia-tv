@@ -457,38 +457,29 @@ function wzShowPage(n) {
 function wzStartScan() {
     wzShowPage(2);
     document.getElementById('wz-tv-list').innerHTML = '';
-    document.getElementById('wz-scan-status').innerHTML =
-        '<span class=”spinner”></span>Scanning network&hellip;' +
-        '&nbsp;<a href=”#” style=”font-size:13px;color:#aaa” onclick=”wzStartScan();return false”>Rescan</a>';
+    document.getElementById('wz-scan-status').innerHTML = '<span class=”spinner”></span>Scanning network&hellip;';
     fetch('/api/scan', {method:'POST'});
     wzPollCount = 0;
     wzPoll();
 }
 function wzPoll() {
     wzPollCount++;
-    fetch('/api/discovery').then(r => r.json()).then(all => {
-        // Filter out non-TV devices (media servers, NAS, etc.)
-        const tvs = all.filter(d =>
-            !d.name.toLowerCase().includes('server') &&
-            !d.model.toLowerCase().startsWith('dms') &&
-            !d.model.toLowerCase().startsWith('nas')
-        );
+    fetch('/api/discovery').then(r => r.json()).then(tvs => {
         if (tvs.length) {
             wzShowTvList(tvs);
         } else if (wzPollCount < 8) {
             wzPollTimer = setTimeout(wzPoll, 2000);
         } else {
-            document.getElementById('wz-scan-status').innerHTML =
-                'No smart TVs found. &nbsp;<a href=”#” onclick=”wzStartScan();return false”>Rescan</a>';
+            document.getElementById('wz-scan-status').innerHTML = 'No smart TVs found.';
             document.getElementById('wz-tv-list').innerHTML =
-                '<p style=”color:#888;font-size:14px”>Make sure your TV is on and connected to the same Wi-Fi.</p>';
+                '<p style=”color:#888;font-size:14px”>Make sure your TV is on and connected to the same network. ' +
+                '<a href=”#” onclick=”wzStartScan();return false”>Try again</a></p>';
         }
     });
 }
 function wzShowTvList(tvs) {
     document.getElementById('wz-scan-status').innerHTML =
-        tvs.length + ' TV' + (tvs.length > 1 ? 's' : '') + ' found &mdash; select yours:' +
-        '&nbsp;<a href=”#” style=”font-size:13px;color:#888” onclick=”wzStartScan();return false”>Rescan</a>';
+        tvs.length + ' TV' + (tvs.length > 1 ? 's' : '') + ' found &mdash; select yours:';
     const list = document.getElementById('wz-tv-list');
     list.innerHTML = '';
     tvs.forEach(tv => {
@@ -512,9 +503,9 @@ function wzSelectTv(tv, card) {
 function wzBuildSensors(tv) {
     const slug = tv.name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').substring(0, 16) || 'tv';
     wzSensors = [
-        {id:slug+'_ping', type:'ping', target_ip:tv.ip,   label:'Ping', desc:'Network reachability \xb7 '+tv.ip,        enabled:true},
-        {id:slug+'_upnp', type:'upnp', target_name:tv.name,label:'UPnP', desc:'Service discovery \xb7 '+tv.name,         enabled:true},
-        {id:slug+'_http', type:'http', url:'http://'+tv.ip+':8001/api/v2/', label:'HTTP', desc:'Samsung SmartThings API', enabled:false},
+        {id: slug+'_ping', type:'ping',  target_ip:   tv.ip,   label:'Ping', desc:'Network reachability · '+tv.ip, enabled:true},
+        {id: slug+'_upnp', type:'upnp',  target_name: tv.name, label:'UPnP', desc:'Service discovery · '+tv.name, enabled:true},
+        {id: slug+'_http', type:'http',  url:'http://'+tv.ip+':8001/api/v2/', label:'HTTP', desc:'Samsung SmartThings API (optional)', enabled:false},
     ];
     const list = document.getElementById('wz-sensor-list');
     list.innerHTML = '';
@@ -522,45 +513,22 @@ function wzBuildSensors(tv) {
         const row = document.createElement('div');
         row.className = 'sensor-preview-row';
         row.innerHTML =
-            '<input type=”checkbox” id=”wsen'+i+'” '+(s.enabled?'checked':'')+
-            ' onchange=”wzSensors['+i+'].enabled=this.checked”>'+
-            '<span class=”s-badge '+s.type+'”>'+s.label+'</span>'+
-            '<div class=”s-id-wrap”>'+
-            '<input type=”text” value=”'+s.id+'” oninput=”wzSensors['+i+'].id=this.value”>'+
-            '<div class=”s-desc”>'+s.desc+'</div></div>';
+            '<input type=”checkbox” id=”wsen' + i + '” ' + (s.enabled ? 'checked' : '') +
+            ' onchange=”wzSensors[' + i + '].enabled=this.checked”>' +
+            '<span class=”s-badge ' + s.type + '”>' + s.label + '</span>' +
+            '<div class=”s-id-wrap”>' +
+            '<input type=”text” value=”' + s.id + '” oninput=”wzSensors[' + i + '].id=this.value”>' +
+            '<div class=”s-desc”>' + s.desc + '</div></div>';
         list.appendChild(row);
     });
 }
-function wzProbeAll() {
-    wzSensors.forEach((s, i) => wzProbeOne(s, i));
-}
-function wzProbeOne(s, i) {
-    const el = document.getElementById('wprobe-' + i);
-    if (!el) return;
-    el.innerHTML = '<span class=”spinner”></span>';
-    const p = {type: s.type};
-    if (s.type === 'ping') p.target_ip   = s.target_ip;
-    if (s.type === 'upnp') p.target_name = s.target_name;
-    if (s.type === 'http') p.url         = s.url;
-    fetch('/api/probe', {method:'POST', headers:{'Content-Type':'application/json','Authorization':'Basic '+btoa('admin:insomnia')}, body:JSON.stringify(p)})
-        .then(r => r.json())
-        .then(d => {
-            const ms = d.latency_ms >= 0 ? ' ' + d.latency_ms + 'ms' : '';
-            el.textContent = d.available ? ('🟢' + ms) : '🔴 fail';
-        })
-        .catch(() => { el.textContent = '🔴 err'; });
-}
 function wzBack() {
-    if (wzPage === 3) {
-        wzShowPage(2);
-        if (wzTv) {
-            document.querySelectorAll('.tv-card').forEach(c => {
-                if (c.querySelector('.tv-name') && c.querySelector('.tv-name').textContent === wzTv.name)
-                    c.classList.add('selected');
-            });
-        }
-    } else if (wzPage === 2) {
-        wzShowPage(1);
+    wzShowPage(2);
+    if (wzTv) {
+        document.querySelectorAll('.tv-card').forEach(c => {
+            if (c.querySelector('.tv-name') && c.querySelector('.tv-name').textContent === wzTv.name)
+                c.classList.add('selected');
+        });
     }
 }
 async function wzCreate() {
