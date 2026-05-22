@@ -469,7 +469,12 @@ function wzStartScan() {
 }
 function wzPoll() {
     wzPollCount++;
-    fetch('/api/discovery').then(r => r.json()).then(tvs => {
+    fetch('/api/discovery').then(r => r.json()).then(all => {
+        const tvs = all.filter(d =>
+            !d.name.toLowerCase().includes('server') &&
+            !d.model.toLowerCase().startsWith('dms') &&
+            !d.model.toLowerCase().startsWith('nas')
+        );
         if (tvs.length) {
             wzShowTvList(tvs);
         } else if (wzPollCount < 8) {
