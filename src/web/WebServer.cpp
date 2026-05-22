@@ -8,6 +8,7 @@
 
 #if defined(ARDUINO)
 #include <AsyncEventSource.h>
+#include <AsyncJson.h>
 #include <ESP32Ping.h>
 #include <HTTPClient.h>
 #include <Update.h>
@@ -95,7 +96,8 @@ void WebServer::setupRoutes() {
         .wz-dot.done { background:#81c784; color:#fff; }
         .wz-line { flex:1; height:2px; background:#ddd; max-width:48px; transition:.3s; }
         .wz-line.done { background:#81c784; }
-        .wz-footer { display:flex; gap:8px; justify-content:flex-end; margin-top:20px; padding-top:15px; border-top:1px solid #eee; }
+        .wz-footer { display:flex; gap:8px; justify-content:space-between; align-items:center; margin-top:20px; padding-top:15px; border-top:1px solid #eee; }
+        .wz-footer-right { display:flex; gap:8px; }
         .tv-card { border:2px solid #ddd; border-radius:8px; padding:12px 16px; margin:8px 0; cursor:pointer; display:flex; align-items:center; gap:14px; transition:.15s; }
         .tv-card:hover { border-color:#4CAF50; background:#f9fff9; }
         .tv-card.selected { border-color:#4CAF50; background:#e8f5e9; }
@@ -115,7 +117,13 @@ void WebServer::setupRoutes() {
         @keyframes spin { to { transform:rotate(360deg); } }
         .btn-tv { background:#1565c0; }
         .btn-gray { background:#757575; }
+        .btn-danger { background:#c62828; }
         .done-icon { font-size:52px; display:block; text-align:center; margin:10px 0 6px; }
+        .sensor-detail-row td { padding:0; border-bottom:2px solid #4CAF50; }
+        .sensor-detail-inner { padding:12px 14px; background:#f9fff9; display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; }
+        .sensor-detail-inner label { display:block; font-size:12px; font-weight:bold; color:#555; margin-bottom:3px; }
+        .sensor-detail-inner input[type=text] { width:220px; padding:6px 8px; border:1px solid #bbb; border-radius:4px; font-size:13px; }
+        .sensor-detail-inner .detail-field { display:flex; flex-direction:column; }
     </style>
 </head>
 <body>
@@ -227,11 +235,13 @@ void WebServer::setupRoutes() {
     </div>
 
     <div class="wz-footer">
-      <button id="wbtn-cancel" class="btn-gray" onclick="closeWizard()">Cancel</button>
-      <button id="wbtn-back"   class="btn-gray" style="display:none" onclick="wzBack()">&#8592; Back</button>
-      <button id="wbtn-scan"   class="btn-tv"   onclick="wzStartScan()">Start Scan</button>
-      <button id="wbtn-add"    class="btn-tv"   style="display:none" onclick="wzCreate()">Add to Sensors &#8594;</button>
-      <button id="wbtn-done"   style="display:none" onclick="closeWizard();loadSensors()">Done</button>
+      <button id="wbtn-cancel" class="btn-danger" onclick="closeWizard()">Cancel</button>
+      <div class="wz-footer-right">
+        <button id="wbtn-back" class="btn-gray" style="display:none" onclick="wzBack()">&#8592; Back</button>
+        <button id="wbtn-scan" class="btn-tv"   onclick="wzStartScan()">Start Scan</button>
+        <button id="wbtn-add"  class="btn-tv"   style="display:none" onclick="wzCreate()">Add to Sensors &#8594;</button>
+        <button id="wbtn-done" style="display:none" onclick="closeWizard();loadSensors()">Done</button>
+      </div>
     </div>
   </div>
 </div>
@@ -266,22 +276,68 @@ function loadStatus() {
 }
 
 // ── Sensor table ────────────────────────────────────────────────────────────
+let sensorData = {};
 function loadSensors() {
     fetch('/api/sensors').then(r => r.json()).then(data => {
+        sensorData = {};
+        data.forEach(s => { sensorData[s.id] = s; });
         const tbody = document.getElementById('sensor-table-body');
         tbody.innerHTML = '';
         data.forEach(s => {
             const tr = document.createElement('tr');
             tr.id = 'sensor-row-' + s.id;
+            tr.style.cursor = 'pointer';
             tr.innerHTML = `<td>${s.id}</td><td>${s.type}</td><td>${s.value}</td>
               <td>${s.available ? '🟢' : '🔴'}</td>
               <td>
-                <button onclick="testSensor('${s.id}')">Test</button>
-                <button class="delete" onclick="deleteSensor('${s.id}')">Delete</button>
+                <button onclick="event.stopPropagation();testSensor('${s.id}')">Test</button>
+                <button class="delete" onclick="event.stopPropagation();deleteSensor('${s.id}')">Delete</button>
               </td>`;
+            tr.onclick = () => toggleSensorDetail(s.id);
             tbody.appendChild(tr);
         });
     });
+}
+
+// ── Sensor expand/edit ────────────────────────────────────────────────────────
+function toggleSensorDetail(id) {
+    const existing = document.getElementById('sensor-detail-' + id);
+    if (existing) { existing.remove(); return; }
+    const s = sensorData[id];
+    if (!s) return;
+    const fields = buildEditFields(s);
+    const detailTr = document.createElement('tr');
+    detailTr.id = 'sensor-detail-' + id;
+    detailTr.className = 'sensor-detail-row';
+    detailTr.innerHTML = '<td colspan="5"><div class="sensor-detail-inner">' + fields +
+        '<div class="detail-field" style="justify-content:flex-end;padding-bottom:2px">' +
+        '<button onclick="saveSensorEdit(\'' + id + '\')" style="height:32px">Save</button></div>' +
+        '</div></td>';
+    const row = document.getElementById('sensor-row-' + id);
+    row.parentNode.insertBefore(detailTr, row.nextSibling);
+}
+function buildEditFields(s) {
+    let html = '';
+    if (s.type === 'ping') {
+        html += '<div class="detail-field"><label>IP / Hostname</label><input type="text" id="ef-target_ip-'+s.id+'" value="'+(s.target_ip||'')+'"></div>';
+    } else if (s.type === 'http') {
+        html += '<div class="detail-field"><label>URL</label><input type="text" id="ef-url-'+s.id+'" value="'+(s.url||'')+'"></div>';
+    } else if (s.type === 'upnp') {
+        html += '<div class="detail-field"><label>Device Name</label><input type="text" id="ef-target_name-'+s.id+'" value="'+(s.target_name||'')+'"></div>';
+    } else if (s.type === 'gpio_input' || s.type === 'gpio_analog') {
+        html += '<div class="detail-field"><label>Pin</label><input type="text" id="ef-pin-'+s.id+'" value="'+(s.pin!=null?s.pin:'')+'"></div>';
+    }
+    return html;
+}
+function saveSensorEdit(id) {
+    const s = Object.assign({}, sensorData[id]);
+    if (s.type === 'ping')        s.target_ip   = document.getElementById('ef-target_ip-'   + id)?.value || s.target_ip;
+    else if (s.type === 'http')   s.url         = document.getElementById('ef-url-'         + id)?.value || s.url;
+    else if (s.type === 'upnp')   s.target_name = document.getElementById('ef-target_name-' + id)?.value || s.target_name;
+    else if (s.type === 'gpio_input' || s.type === 'gpio_analog')
+                                  s.pin         = +document.getElementById('ef-pin-'         + id)?.value;
+    fetch('/api/sensors', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(s)})
+        .then(() => { document.getElementById('sensor-detail-' + id)?.remove(); loadSensors(); });
 }
 
 // ── Add-sensor modal ─────────────────────────────────────────────────────────
@@ -395,7 +451,6 @@ function wzShowPage(n) {
         dot.className = 'wz-dot' + (i < n ? ' done' : i === n ? ' active' : '');
         if (i < 4) document.getElementById('wl' + i).className = 'wz-line' + (i < n ? ' done' : '');
     });
-    document.getElementById('wbtn-cancel').style.display = n < 4 ? '' : 'none';
     document.getElementById('wbtn-back').style.display   = (n === 2 || n === 3) ? '' : 'none';
     document.getElementById('wbtn-scan').style.display   = n === 1 ? '' : 'none';
     document.getElementById('wbtn-add').style.display    = n === 3 ? '' : 'none';
@@ -582,6 +637,12 @@ document.getElementsByClassName('tablinks')[0].click();
       obj["type"] = sensor->getType();
       obj["available"] = sensor->isAvailable();
       obj["value"] = sensor->read();
+      JsonDocument cfg = sensor->getConfig();
+      for (JsonPair kv : cfg.as<JsonObject>()) {
+        const char* k = kv.key().c_str();
+        if (strcmp(k, "id") != 0 && strcmp(k, "type") != 0)
+          obj[k] = kv.value();
+      }
     }
     String response;
     serializeJson(doc, response);
@@ -704,72 +765,50 @@ document.getElementsByClassName('tablinks')[0].click();
       });
 
   // One-shot sensor probe without registering it in SensorManager.
-  // Runs blocking network calls in a dedicated task so the async web server
-  // is not stalled.
+  // Uses AsyncCallbackJsonWebHandler so the body is fully accumulated before
+  // our handler is called — avoids the deferred-send race with _send().
   _server.on(
       "/api/probe", HTTP_POST,
-      [](AsyncWebServerRequest* request) {
+      [this](AsyncWebServerRequest* request, JsonVariant& json) {
         if (!request->authenticate("admin", "insomnia")) {
           return request->requestAuthentication();
         }
-      },
-      NULL,
-      [this](AsyncWebServerRequest* request, uint8_t* data, size_t len,
-             size_t index, size_t total) {
-        JsonDocument doc;
-        deserializeJson(doc, data, len);
+        std::string type = json["type"] | "";
+        bool available = false;
+        int latencyMs = -1;
 
-        struct ProbeCtx {
-          AsyncWebServerRequest* req;
-          std::string type;
-          std::string target;   // ip for ping, friendly name for upnp
-          std::string url;      // for http
-          SamsungTvDiscovery* discovery;
-        };
-        auto* ctx = new ProbeCtx;
-        ctx->req = request;
-        ctx->type = doc["type"] | "";
-        ctx->target = ctx->type == "ping"
-                          ? std::string(doc["target_ip"] | "")
-                          : std::string(doc["target_name"] | "");
-        ctx->url = doc["url"] | "";
-        ctx->discovery = &_discovery;
+        if (type == "ping") {
+          std::string target = json["target_ip"] | "";
+          if (!target.empty()) {
+            uint32_t t = millis();
+            available = Ping.ping(target.c_str(), 1);
+            latencyMs = static_cast<int>(millis() - t);
+          }
+        } else if (type == "http") {
+          std::string url = json["url"] | "";
+          if (!url.empty()) {
+            HTTPClient http;
+            http.begin(url.c_str());
+            http.setTimeout(3000);
+            uint32_t t = millis();
+            int code = http.GET();
+            latencyMs = static_cast<int>(millis() - t);
+            available = (code > 0 && code < 500);
+            http.end();
+          }
+        } else if (type == "upnp") {
+          std::string target = json["target_name"] | "";
+          for (auto& tv : _discovery.getDiscoveredTvs()) {
+            if (tv.name == target) { available = true; break; }
+          }
+          latencyMs = 0;
+        }
 
-        xTaskCreate(
-            [](void* arg) {
-              auto* ctx = static_cast<ProbeCtx*>(arg);
-              bool available = false;
-              int latencyMs = -1;
-
-              if (ctx->type == "ping" && !ctx->target.empty()) {
-                uint32_t t = millis();
-                available = Ping.ping(ctx->target.c_str(), 1);
-                latencyMs = static_cast<int>(millis() - t);
-              } else if (ctx->type == "http" && !ctx->url.empty()) {
-                HTTPClient http;
-                http.begin(ctx->url.c_str());
-                http.setTimeout(3000);
-                uint32_t t = millis();
-                int code = http.GET();
-                latencyMs = static_cast<int>(millis() - t);
-                available = (code > 0 && code < 500);
-                http.end();
-              } else if (ctx->type == "upnp") {
-                for (auto& tv : ctx->discovery->getDiscoveredTvs()) {
-                  if (tv.name == ctx->target) { available = true; break; }
-                }
-                latencyMs = 0;
-              }
-
-              char buf[80];
-              snprintf(buf, sizeof(buf),
-                       "{\"available\":%s,\"latency_ms\":%d}",
-                       available ? "true" : "false", latencyMs);
-              ctx->req->send(200, "application/json", buf);
-              delete ctx;
-              vTaskDelete(NULL);
-            },
-            "probe_task", 6144, ctx, 1, NULL);
+        char buf[80];
+        snprintf(buf, sizeof(buf),
+                 "{\"available\":%s,\"latency_ms\":%d}",
+                 available ? "true" : "false", latencyMs);
+        request->send(200, "application/json", buf);
       });
 
   _server.on("/api/scan", HTTP_POST, [this](AsyncWebServerRequest* request) {
