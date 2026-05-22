@@ -7,7 +7,16 @@ def get_git_revision_short_hash():
     except:
         return 'unknown'
 
+def is_git_dirty():
+    try:
+        subprocess.check_output(['git', 'diff', '--quiet', 'HEAD'], stderr=subprocess.DEVNULL)
+        return False
+    except subprocess.CalledProcessError:
+        return True
+
 revision = get_git_revision_short_hash()
+if is_git_dirty():
+    revision += '-dev'
 print(f"Build Version: {revision}")
 
 # Create data directory if it doesn't exist
