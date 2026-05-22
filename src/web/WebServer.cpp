@@ -96,7 +96,8 @@ void WebServer::setupRoutes() {
         .wz-dot.done { background:#81c784; color:#fff; }
         .wz-line { flex:1; height:2px; background:#ddd; max-width:48px; transition:.3s; }
         .wz-line.done { background:#81c784; }
-        .wz-footer { display:flex; gap:8px; justify-content:flex-end; margin-top:20px; padding-top:15px; border-top:1px solid #eee; }
+        .wz-footer { display:flex; gap:8px; justify-content:space-between; align-items:center; margin-top:20px; padding-top:15px; border-top:1px solid #eee; }
+        .wz-footer-right { display:flex; gap:8px; }
         .tv-card { border:2px solid #ddd; border-radius:8px; padding:12px 16px; margin:8px 0; cursor:pointer; display:flex; align-items:center; gap:14px; transition:.15s; }
         .tv-card:hover { border-color:#90caf9; background:#e3f2fd; }
         .tv-card.selected { border-color:#4CAF50; background:#e8f5e9; }
@@ -233,11 +234,14 @@ void WebServer::setupRoutes() {
     </div>
 
     <div class="wz-footer">
-      <button id="wbtn-cancel" class="btn-gray"  onclick="closeWizard()">Cancel</button>
-      <button id="wbtn-back"   class="btn-gray"  style="display:none" onclick="wzBack()">&#8592; Back</button>
-      <button id="wbtn-scan"   class="btn-tv"    onclick="wzStartScan()">Start Scan</button>
-      <button id="wbtn-add"    class="btn-tv"    style="display:none" onclick="wzCreate()">Add to Sensors &#8594;</button>
-      <button id="wbtn-done"   style="display:none" onclick="closeWizard();loadSensors()">Done</button>
+      <button id="wbtn-cancel" class="btn-gray" onclick="closeWizard()">Cancel</button>
+      <div class="wz-footer-right">
+        <button id="wbtn-back"   class="btn-gray" style="display:none" onclick="wzBack()">&#8592; Back</button>
+        <button id="wbtn-rescan" class="btn-tv"   style="display:none" onclick="wzStartScan()">&#8635; Rescan</button>
+        <button id="wbtn-scan"   class="btn-tv"   onclick="wzStartScan()">Start Scan</button>
+        <button id="wbtn-add"    class="btn-tv"   style="display:none" onclick="wzCreate()">Add to Sensors &#8594;</button>
+        <button id="wbtn-done"   style="display:none" onclick="closeWizard();loadSensors()">Done</button>
+      </div>
     </div>
   </div>
 </div>
@@ -449,6 +453,7 @@ function wzShowPage(n) {
     });
     document.getElementById('wbtn-cancel').style.display = n < 4 ? '' : 'none';
     document.getElementById('wbtn-back').style.display   = n === 3 ? '' : 'none';
+    document.getElementById('wbtn-rescan').style.display = n === 2 ? '' : 'none';
     document.getElementById('wbtn-scan').style.display   = n === 1 ? '' : 'none';
     document.getElementById('wbtn-add').style.display    = n === 3 ? '' : 'none';
     document.getElementById('wbtn-done').style.display   = n === 4 ? '' : 'none';
