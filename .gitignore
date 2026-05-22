@@ -61,3 +61,6 @@ managed_components/
 
 # Build logs
 *.log
+
+# Generated version header (rebuilt each compile)
+src/version.h

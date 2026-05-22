@@ -4,6 +4,8 @@
 #include <ArduinoJson.h>
 #include <string>
 
+#include "../version.h"
+
 #if defined(ARDUINO)
 #include <AsyncEventSource.h>
 #include <Update.h>
@@ -392,7 +394,7 @@ function wzShowPage(n) {
         if (i < 4) document.getElementById('wl' + i).className = 'wz-line' + (i < n ? ' done' : '');
     });
     document.getElementById('wbtn-cancel').style.display = n < 4 ? '' : 'none';
-    document.getElementById('wbtn-back').style.display   = n === 3 ? '' : 'none';
+    document.getElementById('wbtn-back').style.display   = (n === 2 || n === 3) ? '' : 'none';
     document.getElementById('wbtn-scan').style.display   = n === 1 ? '' : 'none';
     document.getElementById('wbtn-add').style.display    = n === 3 ? '' : 'none';
     document.getElementById('wbtn-done').style.display   = n === 4 ? '' : 'none';
@@ -401,39 +403,48 @@ function wzShowPage(n) {
 function wzStartScan() {
     wzShowPage(2);
     document.getElementById('wz-tv-list').innerHTML = '';
-    document.getElementById('wz-scan-status').innerHTML = '<span class="spinner"></span>Scanning network&hellip;';
+    document.getElementById('wz-scan-status').innerHTML =
+        '<span class=”spinner”></span>Scanning network&hellip;' +
+        '&nbsp;<a href=”#” style=”font-size:13px;color:#aaa” onclick=”wzStartScan();return false”>Rescan</a>';
     fetch('/api/scan', {method:'POST'});
     wzPollCount = 0;
     wzPoll();
 }
 function wzPoll() {
     wzPollCount++;
-    fetch('/api/discovery').then(r => r.json()).then(tvs => {
+    fetch('/api/discovery').then(r => r.json()).then(all => {
+        // Filter out non-TV devices (media servers, NAS, etc.)
+        const tvs = all.filter(d =>
+            !d.name.toLowerCase().includes('server') &&
+            !d.model.toLowerCase().startsWith('dms') &&
+            !d.model.toLowerCase().startsWith('nas')
+        );
         if (tvs.length) {
             wzShowTvList(tvs);
         } else if (wzPollCount < 8) {
             wzPollTimer = setTimeout(wzPoll, 2000);
         } else {
-            document.getElementById('wz-scan-status').innerHTML = 'No smart TVs found.';
+            document.getElementById('wz-scan-status').innerHTML =
+                'No smart TVs found. &nbsp;<a href=”#” onclick=”wzStartScan();return false”>Rescan</a>';
             document.getElementById('wz-tv-list').innerHTML =
-                '<p style="color:#888;font-size:14px">Make sure your TV is on and connected to the same network. ' +
-                '<a href="#" onclick="wzStartScan();return false">Try again</a></p>';
+                '<p style=”color:#888;font-size:14px”>Make sure your TV is on and connected to the same Wi-Fi.</p>';
         }
     });
 }
 function wzShowTvList(tvs) {
     document.getElementById('wz-scan-status').innerHTML =
-        tvs.length + ' TV' + (tvs.length > 1 ? 's' : '') + ' found &mdash; select yours:';
+        tvs.length + ' TV' + (tvs.length > 1 ? 's' : '') + ' found &mdash; select yours:' +
+        '&nbsp;<a href=”#” style=”font-size:13px;color:#888” onclick=”wzStartScan();return false”>Rescan</a>';
     const list = document.getElementById('wz-tv-list');
     list.innerHTML = '';
     tvs.forEach(tv => {
         const card = document.createElement('div');
         card.className = 'tv-card';
         card.innerHTML =
-            '<div class="tv-icon">&#128250;</div>' +
-            '<div style="flex:1"><div class="tv-name">' + tv.name + '</div>' +
-            '<div class="tv-meta">' + (tv.model || 'Smart TV') + ' &nbsp;&middot;&nbsp; ' + tv.ip + '</div></div>' +
-            '<span style="color:#bbb;font-size:20px">&#8250;</span>';
+            '<div class=”tv-icon”>&#128250;</div>' +
+            '<div style=”flex:1”><div class=”tv-name”>' + tv.name + '</div>' +
+            '<div class=”tv-meta”>' + (tv.model || 'Smart TV') + ' &nbsp;&middot;&nbsp; ' + tv.ip + '</div></div>' +
+            '<span style=”color:#bbb;font-size:20px”>&#8250;</span>';
         card.onclick = () => wzSelectTv(tv, card);
         list.appendChild(card);
     });
@@ -442,14 +453,14 @@ function wzSelectTv(tv, card) {
     wzTv = tv;
     document.querySelectorAll('.tv-card').forEach(c => c.classList.remove('selected'));
     card.classList.add('selected');
-    setTimeout(() => { wzBuildSensors(tv); wzShowPage(3); }, 250);
+    setTimeout(() => { wzBuildSensors(tv); wzShowPage(3); wzProbeAll(); }, 250);
 }
 function wzBuildSensors(tv) {
     const slug = tv.name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').substring(0, 16) || 'tv';
     wzSensors = [
-        {id: slug+'_ping', type:'ping',  target_ip:   tv.ip,   label:'Ping', desc:'Network reachability · '+tv.ip, enabled:true},
-        {id: slug+'_upnp', type:'upnp',  target_name: tv.name, label:'UPnP', desc:'Service discovery · '+tv.name, enabled:true},
-        {id: slug+'_http', type:'http',  url:'http://'+tv.ip+':8001/api/v2/', label:'HTTP', desc:'Samsung SmartThings API (optional)', enabled:false},
+        {id:slug+'_ping', type:'ping', target_ip:tv.ip,   label:'Ping', desc:'Network reachability \xb7 '+tv.ip,        enabled:true},
+        {id:slug+'_upnp', type:'upnp', target_name:tv.name,label:'UPnP', desc:'Service discovery \xb7 '+tv.name,         enabled:true},
+        {id:slug+'_http', type:'http', url:'http://'+tv.ip+':8001/api/v2/', label:'HTTP', desc:'Samsung SmartThings API', enabled:false},
     ];
     const list = document.getElementById('wz-sensor-list');
     list.innerHTML = '';
@@ -457,22 +468,49 @@ function wzBuildSensors(tv) {
         const row = document.createElement('div');
         row.className = 'sensor-preview-row';
         row.innerHTML =
-            '<input type="checkbox" id="wsen' + i + '" ' + (s.enabled ? 'checked' : '') +
-            ' onchange="wzSensors[' + i + '].enabled=this.checked">' +
-            '<span class="s-badge ' + s.type + '">' + s.label + '</span>' +
-            '<div class="s-id-wrap">' +
-            '<input type="text" value="' + s.id + '" oninput="wzSensors[' + i + '].id=this.value">' +
-            '<div class="s-desc">' + s.desc + '</div></div>';
+            '<input type=”checkbox” id=”wsen'+i+'” '+(s.enabled?'checked':'')+
+            ' onchange=”wzSensors['+i+'].enabled=this.checked”>'+
+            '<span class=”s-badge '+s.type+'”>'+s.label+'</span>'+
+            '<div class=”s-id-wrap”>'+
+              '<input type=”text” value=”'+s.id+'” oninput=”wzSensors['+i+'].id=this.value”>'+
+              '<div class=”s-desc”>'+s.desc+'</div>'+
+            '</div>'+
+            '<span id=”wprobe-'+i+'” style=”min-width:72px;text-align:right;font-size:13px;flex-shrink:0”>'+
+              '<span class=”spinner”></span>'+
+            '</span>';
         list.appendChild(row);
     });
 }
+function wzProbeAll() {
+    wzSensors.forEach((s, i) => wzProbeOne(s, i));
+}
+function wzProbeOne(s, i) {
+    const el = document.getElementById('wprobe-' + i);
+    if (!el) return;
+    el.innerHTML = '<span class=”spinner”></span>';
+    const p = {type: s.type};
+    if (s.type === 'ping') p.target_ip   = s.target_ip;
+    if (s.type === 'upnp') p.target_name = s.target_name;
+    if (s.type === 'http') p.url         = s.url;
+    fetch('/api/probe', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(p)})
+        .then(r => r.json())
+        .then(d => {
+            const ms = d.latency_ms >= 0 ? ' ' + d.latency_ms + 'ms' : '';
+            el.textContent = d.available ? ('🟢' + ms) : '🔴 fail';
+        })
+        .catch(() => { el.textContent = '🔴 err'; });
+}
 function wzBack() {
-    wzShowPage(2);
-    if (wzTv) {
-        document.querySelectorAll('.tv-card').forEach(c => {
-            if (c.querySelector('.tv-name') && c.querySelector('.tv-name').textContent === wzTv.name)
-                c.classList.add('selected');
-        });
+    if (wzPage === 3) {
+        wzShowPage(2);
+        if (wzTv) {
+            document.querySelectorAll('.tv-card').forEach(c => {
+                if (c.querySelector('.tv-name') && c.querySelector('.tv-name').textContent === wzTv.name)
+                    c.classList.add('selected');
+            });
+        }
+    } else if (wzPage === 2) {
+        wzShowPage(1);
     }
 }
 async function wzCreate() {
@@ -661,6 +699,75 @@ document.getElementsByClassName('tablinks')[0].click();
             Update.printError(Serial);
           }
         }
+      });
+
+  // One-shot sensor probe without registering it in SensorManager.
+  // Runs blocking network calls in a dedicated task so the async web server
+  // is not stalled.
+  _server.on(
+      "/api/probe", HTTP_POST,
+      [](AsyncWebServerRequest* request) {
+        if (!request->authenticate("admin", "insomnia")) {
+          return request->requestAuthentication();
+        }
+      },
+      NULL,
+      [this](AsyncWebServerRequest* request, uint8_t* data, size_t len,
+             size_t index, size_t total) {
+        JsonDocument doc;
+        deserializeJson(doc, data, len);
+
+        struct ProbeCtx {
+          AsyncWebServerRequest* req;
+          std::string type;
+          std::string target;   // ip for ping, friendly name for upnp
+          std::string url;      // for http
+          SamsungTvDiscovery* discovery;
+        };
+        auto* ctx = new ProbeCtx;
+        ctx->req = request;
+        ctx->type = doc["type"] | "";
+        ctx->target = ctx->type == "ping"
+                          ? std::string(doc["target_ip"] | "")
+                          : std::string(doc["target_name"] | "");
+        ctx->url = doc["url"] | "";
+        ctx->discovery = &_discovery;
+
+        xTaskCreate(
+            [](void* arg) {
+              auto* ctx = static_cast<ProbeCtx*>(arg);
+              bool available = false;
+              int latencyMs = -1;
+
+              if (ctx->type == "ping" && !ctx->target.empty()) {
+                uint32_t t = millis();
+                available = Ping.ping(ctx->target.c_str(), 1);
+                latencyMs = static_cast<int>(millis() - t);
+              } else if (ctx->type == "http" && !ctx->url.empty()) {
+                HTTPClient http;
+                http.begin(ctx->url.c_str());
+                http.setTimeout(3000);
+                uint32_t t = millis();
+                int code = http.GET();
+                latencyMs = static_cast<int>(millis() - t);
+                available = (code > 0 && code < 500);
+                http.end();
+              } else if (ctx->type == "upnp") {
+                for (auto& tv : ctx->discovery->getDiscoveredTvs()) {
+                  if (tv.name == ctx->target) { available = true; break; }
+                }
+                latencyMs = 0;
+              }
+
+              char buf[80];
+              snprintf(buf, sizeof(buf),
+                       "{\"available\":%s,\"latency_ms\":%d}",
+                       available ? "true" : "false", latencyMs);
+              ctx->req->send(200, "application/json", buf);
+              delete ctx;
+              vTaskDelete(NULL);
+            },
+            "probe_task", 6144, ctx, 1, NULL);
       });
 
   _server.on("/api/scan", HTTP_POST, [this](AsyncWebServerRequest* request) {

@@ -19,4 +19,10 @@ with open("data/version.txt", "w") as f:
     f.write(revision)
 
 Import("env")
-env.Append(CPPDEFINES=[("INSOMNIATV_VERSION", f'\\"{revision}\\"')])
+# Write a generated header instead of injecting via CPPDEFINES.
+# CPPDEFINES changes the compiler invocation for every translation unit,
+# causing ccache to miss on all of them whenever the git hash changes.
+# A generated header limits recompilation to files that include it.
+version_header = os.path.join("src", "version.h")
+with open(version_header, "w") as f:
+    f.write(f'#pragma once\n#define INSOMNIATV_VERSION "{revision}"\n')
