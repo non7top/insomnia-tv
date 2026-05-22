@@ -457,7 +457,7 @@ function wzShowPage(n) {
 function wzStartScan() {
     wzShowPage(2);
     document.getElementById('wz-tv-list').innerHTML = '';
-    document.getElementById('wz-scan-status').innerHTML = '<span class=”spinner”></span>Scanning network&hellip;';
+    document.getElementById('wz-scan-status').innerHTML = '<span class="spinner"></span>Scanning network&hellip;';
     fetch('/api/scan', {method:'POST'});
     wzPollCount = 0;
     wzPoll();
@@ -472,8 +472,8 @@ function wzPoll() {
         } else {
             document.getElementById('wz-scan-status').innerHTML = 'No smart TVs found.';
             document.getElementById('wz-tv-list').innerHTML =
-                '<p style=”color:#888;font-size:14px”>Make sure your TV is on and connected to the same network. ' +
-                '<a href=”#” onclick=”wzStartScan();return false”>Try again</a></p>';
+                '<p style="color:#888;font-size:14px">Make sure your TV is on and connected to the same network. ' +
+                '<a href="#" onclick="wzStartScan();return false">Try again</a></p>';
         }
     });
 }
@@ -486,10 +486,10 @@ function wzShowTvList(tvs) {
         const card = document.createElement('div');
         card.className = 'tv-card';
         card.innerHTML =
-            '<div class=”tv-icon”>&#128250;</div>' +
-            '<div style=”flex:1”><div class=”tv-name”>' + tv.name + '</div>' +
-            '<div class=”tv-meta”>' + (tv.model || 'Smart TV') + ' &nbsp;&middot;&nbsp; ' + tv.ip + '</div></div>' +
-            '<span style=”color:#bbb;font-size:20px”>&#8250;</span>';
+            '<div class="tv-icon">&#128250;</div>' +
+            '<div style="flex:1"><div class="tv-name">' + tv.name + '</div>' +
+            '<div class="tv-meta">' + (tv.model || 'Smart TV') + ' &nbsp;&middot;&nbsp; ' + tv.ip + '</div></div>' +
+            '<span style="color:#bbb;font-size:20px">&#8250;</span>';
         card.onclick = () => wzSelectTv(tv, card);
         list.appendChild(card);
     });
@@ -513,12 +513,12 @@ function wzBuildSensors(tv) {
         const row = document.createElement('div');
         row.className = 'wz-srow';
         row.innerHTML =
-            '<input type=”checkbox” id=”wsen' + i + '” ' + (s.enabled ? 'checked' : '') +
-            ' onchange=”wzSensors[' + i + '].enabled=this.checked”>' +
-            '<span class=”s-badge ' + s.type + '”>' + s.label + '</span>' +
-            '<div class=”wz-srow-info”>' +
-            '<div class=”wz-srow-name”>' + s.desc + '</div>' +
-            '<div class=”wz-srow-id”>' + s.id + '</div>' +
+            '<input type="checkbox" id="wsen' + i + '" ' + (s.enabled ? 'checked' : '') +
+            ' onchange="wzSensors[' + i + '].enabled=this.checked">' +
+            '<span class="s-badge ' + s.type + '">' + s.label + '</span>' +
+            '<div class="wz-srow-info">' +
+            '<div class="wz-srow-name">' + s.desc + '</div>' +
+            '<div class="wz-srow-id">' + s.id + '</div>' +
             '</div>';
         list.appendChild(row);
     });
@@ -544,7 +544,7 @@ async function wzCreate() {
         if (r.ok) created++;
     }
     document.getElementById('wz-done-title').textContent = created + ' sensor' + (created !== 1 ? 's' : '') + ' added!';
-    document.getElementById('wz-done-msg').textContent   = 'Sensors for “' + wzTv.name + '” are now active in the registry.';
+    document.getElementById('wz-done-msg').textContent   = 'Sensors for "' + wzTv.name + '" are now active in the registry.';
     wzShowPage(4);
 }
 
