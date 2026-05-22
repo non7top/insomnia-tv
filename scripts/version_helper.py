@@ -19,5 +19,4 @@ with open("data/version.txt", "w") as f:
     f.write(revision)
 
 Import("env")
-# We no longer append to CPPDEFINES to avoid breaking the build cache
-# env.Append(CPPDEFINES=[("INSOMNIATV_VERSION", f'\\"{revision}\\"')])
+env.Append(CPPDEFINES=[("INSOMNIATV_VERSION", f'\\"{revision}\\"')])
