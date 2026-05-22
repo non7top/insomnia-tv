@@ -91,38 +91,36 @@ void SamsungTvDiscovery::parseSsdpResponse(const std::string& response) {
 
   std::string location = response.substr(locPos + 10, endPos - (locPos + 10));
 
-  // Check if we already have this location
-  bool exists = false;
+  // Extract IP from location URL before the duplicate check
+  std::string ip;
+  size_t ipStart = location.find("//");
+  if (ipStart != std::string::npos) {
+    size_t ipEnd = location.find(":", ipStart + 2);
+    if (ipEnd == std::string::npos)
+      ipEnd = location.find("/", ipStart + 2);
+    if (ipEnd != std::string::npos)
+      ip = location.substr(ipStart + 2, ipEnd - (ipStart + 2));
+  }
+
+  // Deduplicate by IP — a TV may respond multiple times (one per service)
   {
     std::lock_guard<std::mutex> lock(_mutex);
     auto it = std::find_if(_discoveredTvs.begin(), _discoveredTvs.end(),
-                           [&location](const SamsungTvInfo& info) {
-                             return info.location == location;
+                           [&ip](const SamsungTvInfo& info) {
+                             return !ip.empty() && info.ip == ip;
                            });
     if (it != _discoveredTvs.end())
-      exists = true;
+      return;
   }
 
-  if (!exists) {
-    SamsungTvInfo newTv;
-    newTv.location = location;
+  SamsungTvInfo newTv;
+  newTv.location = location;
+  newTv.ip = ip;
 
-    // Extract IP from location
-    size_t ipStart = location.find("//");
-    if (ipStart != std::string::npos) {
-      size_t ipEnd = location.find(":", ipStart + 2);
-      if (ipEnd == std::string::npos)
-        ipEnd = location.find("/", ipStart + 2);
-      if (ipEnd != std::string::npos) {
-        newTv.ip = location.substr(ipStart + 2, ipEnd - (ipStart + 2));
-      }
-    }
-
-    fetchDeviceMetadata(newTv);
-    if (!newTv.name.empty()) {
-      std::lock_guard<std::mutex> lock(_mutex);
-      _discoveredTvs.push_back(newTv);
-    }
+  fetchDeviceMetadata(newTv);
+  if (!newTv.name.empty()) {
+    std::lock_guard<std::mutex> lock(_mutex);
+    _discoveredTvs.push_back(newTv);
   }
 }
 
