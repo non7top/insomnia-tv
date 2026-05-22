@@ -96,8 +96,7 @@ void WebServer::setupRoutes() {
         .wz-dot.done { background:#81c784; color:#fff; }
         .wz-line { flex:1; height:2px; background:#ddd; max-width:48px; transition:.3s; }
         .wz-line.done { background:#81c784; }
-        .wz-footer { display:flex; gap:8px; justify-content:space-between; align-items:center; margin-top:20px; padding-top:15px; border-top:1px solid #eee; }
-        .wz-footer-right { display:flex; gap:8px; }
+        .wz-footer { display:flex; gap:8px; justify-content:flex-end; margin-top:20px; padding-top:15px; border-top:1px solid #eee; }
         .tv-card { border:2px solid #ddd; border-radius:8px; padding:12px 16px; margin:8px 0; cursor:pointer; display:flex; align-items:center; gap:14px; transition:.15s; }
         .tv-card:hover { border-color:#90caf9; background:#e3f2fd; }
         .tv-card.selected { border-color:#4CAF50; background:#e8f5e9; }
@@ -117,7 +116,6 @@ void WebServer::setupRoutes() {
         @keyframes spin { to { transform:rotate(360deg); } }
         .btn-tv { background:#1565c0; }
         .btn-gray { background:#757575; }
-        .btn-danger { background:#c62828; }
         .done-icon { font-size:52px; display:block; text-align:center; margin:10px 0 6px; }
         .sensor-detail-row td { padding:0; border-bottom:2px solid #4CAF50; }
         .sensor-detail-inner { padding:12px 14px; background:#f9fff9; display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; }
@@ -235,13 +233,11 @@ void WebServer::setupRoutes() {
     </div>
 
     <div class="wz-footer">
-      <button id="wbtn-cancel" class="btn-danger" onclick="closeWizard()">Cancel</button>
-      <div class="wz-footer-right">
-        <button id="wbtn-back" class="btn-gray" style="display:none" onclick="wzBack()">&#8592; Back</button>
-        <button id="wbtn-scan" class="btn-tv"   onclick="wzStartScan()">Start Scan</button>
-        <button id="wbtn-add"  class="btn-tv"   style="display:none" onclick="wzCreate()">Add to Sensors &#8594;</button>
-        <button id="wbtn-done" style="display:none" onclick="closeWizard();loadSensors()">Done</button>
-      </div>
+      <button id="wbtn-cancel" class="btn-gray"  onclick="closeWizard()">Cancel</button>
+      <button id="wbtn-back"   class="btn-gray"  style="display:none" onclick="wzBack()">&#8592; Back</button>
+      <button id="wbtn-scan"   class="btn-tv"    onclick="wzStartScan()">Start Scan</button>
+      <button id="wbtn-add"    class="btn-tv"    style="display:none" onclick="wzCreate()">Add to Sensors &#8594;</button>
+      <button id="wbtn-done"   style="display:none" onclick="closeWizard();loadSensors()">Done</button>
     </div>
   </div>
 </div>
@@ -451,7 +447,8 @@ function wzShowPage(n) {
         dot.className = 'wz-dot' + (i < n ? ' done' : i === n ? ' active' : '');
         if (i < 4) document.getElementById('wl' + i).className = 'wz-line' + (i < n ? ' done' : '');
     });
-    document.getElementById('wbtn-back').style.display   = (n === 2 || n === 3) ? '' : 'none';
+    document.getElementById('wbtn-cancel').style.display = n < 4 ? '' : 'none';
+    document.getElementById('wbtn-back').style.display   = n === 3 ? '' : 'none';
     document.getElementById('wbtn-scan').style.display   = n === 1 ? '' : 'none';
     document.getElementById('wbtn-add').style.display    = n === 3 ? '' : 'none';
     document.getElementById('wbtn-done').style.display   = n === 4 ? '' : 'none';
