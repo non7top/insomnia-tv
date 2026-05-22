@@ -5,10 +5,16 @@
 #include <memory>
 #include <string>
 
+#include "../../src/hal/IClock.h"
 #include "../../src/sensors/SensorManager.h"
+#include "../../src/state/SleepStateMachine.h"
 #include "../../src/tv/TvStateMachine.h"
 
-using namespace InsomniaTV;
+using InsomniaTV::IClock;
+using InsomniaTV::Sensor;
+using InsomniaTV::SensorManager;
+using InsomniaTV::SleepStateMachine;
+using InsomniaTV::TvStateMachine;
 
 // ---------------------------------------------------------------------------
 // Controllable sensor mock
@@ -280,16 +286,14 @@ void test_sleep_sm_verifying_tv_on_fires_poweroff() {
   tvSm.onSensorUpdate("s1", true);  // TV is ON
 
   // Now wire into SleepStateMachine
-  InsomniaTV::IClock* clkPtr = nullptr;
-  // Use a simple inline mock
-  class SimpleClock : public InsomniaTV::IClock {
+  class SimpleClock : public IClock {
    public:
     uint32_t nowMs() const override { return ms_; }
     void advanceMs(uint32_t ms) override { ms_ += ms; }
     uint32_t ms_ = 0;
   } clk;
 
-  InsomniaTV::SleepStateMachine sleepSm(clk, 1000);
+  SleepStateMachine sleepSm(clk, 1000);
   sleepSm.setTvStateMachine(&tvSm);
 
   int powerOffCalls = 0;
@@ -316,14 +320,14 @@ void test_sleep_sm_verifying_tv_already_off() {
   tvSm.begin(cfg);
   tvSm.onSensorUpdate("s1", false);  // TV is OFF
 
-  class SimpleClock : public InsomniaTV::IClock {
+  class SimpleClock : public IClock {
    public:
     uint32_t nowMs() const override { return ms_; }
     void advanceMs(uint32_t ms) override { ms_ += ms; }
     uint32_t ms_ = 0;
   } clk;
 
-  InsomniaTV::SleepStateMachine sleepSm(clk, 1000);
+  SleepStateMachine sleepSm(clk, 1000);
   sleepSm.setTvStateMachine(&tvSm);
 
   int powerOffCalls = 0;
@@ -349,14 +353,14 @@ void test_sleep_sm_verifying_tv_unknown_fallback() {
   JsonDocument cfg = makeConfig(99, {{"s1", 5, true}});
   tvSm.begin(cfg);
 
-  class SimpleClock : public InsomniaTV::IClock {
+  class SimpleClock : public IClock {
    public:
     uint32_t nowMs() const override { return ms_; }
     void advanceMs(uint32_t ms) override { ms_ += ms; }
     uint32_t ms_ = 0;
   } clk;
 
-  InsomniaTV::SleepStateMachine sleepSm(clk, 1000);
+  SleepStateMachine sleepSm(clk, 1000);
   sleepSm.setTvStateMachine(&tvSm);
 
   int powerOffCalls = 0;
