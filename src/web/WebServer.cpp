@@ -8,6 +8,8 @@
 
 #if defined(ARDUINO)
 #include <AsyncEventSource.h>
+#include <ESP32Ping.h>
+#include <HTTPClient.h>
 #include <Update.h>
 #include <WiFi.h>
 #endif
