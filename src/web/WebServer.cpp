@@ -104,16 +104,18 @@ void WebServer::setupRoutes() {
         .tv-icon { font-size:32px; line-height:1; }
         .tv-name { font-weight:bold; font-size:15px; }
         .tv-meta { color:#777; font-size:13px; margin-top:2px; }
-        .sensor-preview-row { display:flex; align-items:center; gap:8px; padding:9px 10px; border:1px solid #e8e8e8; border-radius:6px; margin:6px 0; background:#fafafa; }
-        .sensor-preview-row input[type=checkbox] { width:auto; margin:0; flex-shrink:0; }
-        .s-badge { font-size:11px; padding:2px 7px; border-radius:10px; background:#e0e0e0; color:#555; white-space:nowrap; }
+        .sensor-preview-row { display:flex; align-items:flex-start; gap:10px; padding:12px; border:1px solid #e8e8e8; border-radius:6px; margin:6px 0; background:#fafafa; }
+        .sensor-preview-row input[type=checkbox] { width:auto; margin:3px 0 0; flex-shrink:0; }
+        .s-preview-body { flex:1; min-width:0; }
+        .s-preview-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+        .s-probe { font-size:13px; color:#555; white-space:nowrap; }
+        .s-badge { font-size:11px; padding:2px 8px; border-radius:10px; background:#e0e0e0; color:#555; white-space:nowrap; font-weight:600; }
         .s-badge.ping { background:#e3f2fd; color:#1565c0; }
         .s-badge.upnp { background:#f3e5f5; color:#6a1b9a; }
         .s-badge.http { background:#e8f5e9; color:#2e7d32; }
-        .s-id-wrap { flex:1; min-width:0; }
-        .s-id-wrap input { padding:4px 6px; font-size:13px; border:1px solid #ccc; border-radius:4px; width:100%; box-sizing:border-box; }
-        .s-desc { color:#999; font-size:11px; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-        .spinner { display:inline-block; width:18px; height:18px; border:3px solid #ddd; border-top-color:#4CAF50; border-radius:50%; animation:spin .7s linear infinite; vertical-align:middle; margin-right:8px; }
+        .s-preview-body input[type=text] { width:100%; padding:5px 7px; font-size:13px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box; }
+        .s-desc { color:#999; font-size:11px; margin-top:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .spinner { display:inline-block; width:14px; height:14px; border:2px solid #ddd; border-top-color:#4CAF50; border-radius:50%; animation:spin .7s linear infinite; vertical-align:middle; }
         @keyframes spin { to { transform:rotate(360deg); } }
         .btn-tv { background:#1565c0; }
         .btn-gray { background:#757575; }
@@ -527,14 +529,14 @@ function wzBuildSensors(tv) {
         row.innerHTML =
             '<input type=”checkbox” id=”wsen'+i+'” '+(s.enabled?'checked':'')+
             ' onchange=”wzSensors['+i+'].enabled=this.checked”>'+
-            '<span class=”s-badge '+s.type+'”>'+s.label+'</span>'+
-            '<div class=”s-id-wrap”>'+
+            '<div class=”s-preview-body”>'+
+              '<div class=”s-preview-header”>'+
+                '<span class=”s-badge '+s.type+'”>'+s.label+'</span>'+
+                '<span id=”wprobe-'+i+'” class=”s-probe”><span class=”spinner”></span></span>'+
+              '</div>'+
               '<input type=”text” value=”'+s.id+'” oninput=”wzSensors['+i+'].id=this.value”>'+
               '<div class=”s-desc”>'+s.desc+'</div>'+
-            '</div>'+
-            '<span id=”wprobe-'+i+'” style=”min-width:72px;text-align:right;font-size:13px;flex-shrink:0”>'+
-              '<span class=”spinner”></span>'+
-            '</span>';
+            '</div>';
         list.appendChild(row);
     });
 }
