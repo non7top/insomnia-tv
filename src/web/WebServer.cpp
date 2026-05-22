@@ -103,15 +103,14 @@ void WebServer::setupRoutes() {
         .tv-icon { font-size:32px; line-height:1; }
         .tv-name { font-weight:bold; font-size:15px; }
         .tv-meta { color:#777; font-size:13px; margin-top:2px; }
-        .sensor-preview-row { display:flex; align-items:center; gap:8px; padding:9px 10px; border:1px solid #e8e8e8; border-radius:6px; margin:6px 0; background:#fafafa; }
-        .sensor-preview-row input[type=checkbox] { width:auto; margin:0; flex-shrink:0; }
-        .s-badge { font-size:11px; padding:2px 7px; border-radius:10px; background:#e0e0e0; color:#555; white-space:nowrap; }
+        .s-badge { font-size:11px; padding:2px 7px; border-radius:10px; background:#e0e0e0; color:#555; white-space:nowrap; flex-shrink:0; }
         .s-badge.ping { background:#e3f2fd; color:#1565c0; }
         .s-badge.upnp { background:#f3e5f5; color:#6a1b9a; }
         .s-badge.http { background:#e8f5e9; color:#2e7d32; }
-        .s-id-wrap { flex:1; min-width:0; }
-        .s-id-wrap input { padding:4px 6px; font-size:13px; border:1px solid #ccc; border-radius:4px; width:100%; box-sizing:border-box; }
-        .s-desc { color:#999; font-size:11px; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .wz-srow { display:flex; align-items:center; gap:10px; padding:8px 12px; border:1px solid #ddd; border-radius:6px; margin:5px 0; background:#fafafa; }
+        .wz-srow input[type=checkbox] { width:auto; flex-shrink:0; margin:0; }
+        .wz-srow .wz-sid { flex:1; min-width:0; width:auto; box-sizing:border-box; padding:5px 8px; font-size:13px; border:1px solid #ccc; border-radius:4px; }
+        .wz-sdesc { color:#888; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex-shrink:1; max-width:180px; }
         .spinner { display:inline-block; width:18px; height:18px; border:3px solid #ddd; border-top-color:#4CAF50; border-radius:50%; animation:spin .7s linear infinite; vertical-align:middle; margin-right:8px; }
         @keyframes spin { to { transform:rotate(360deg); } }
         .btn-tv { background:#1565c0; }
@@ -511,14 +510,13 @@ function wzBuildSensors(tv) {
     list.innerHTML = '';
     wzSensors.forEach((s, i) => {
         const row = document.createElement('div');
-        row.className = 'sensor-preview-row';
+        row.className = 'wz-srow';
         row.innerHTML =
             '<input type=”checkbox” id=”wsen' + i + '” ' + (s.enabled ? 'checked' : '') +
             ' onchange=”wzSensors[' + i + '].enabled=this.checked”>' +
             '<span class=”s-badge ' + s.type + '”>' + s.label + '</span>' +
-            '<div class=”s-id-wrap”>' +
-            '<input type=”text” value=”' + s.id + '” oninput=”wzSensors[' + i + '].id=this.value”>' +
-            '<div class=”s-desc”>' + s.desc + '</div></div>';
+            '<input type=”text” class=”wz-sid” value=”' + s.id + '” oninput=”wzSensors[' + i + '].id=this.value”>' +
+            '<span class=”wz-sdesc”>' + s.desc + '</span>';
         list.appendChild(row);
     });
 }
