@@ -58,6 +58,7 @@ void WebServer::setupRoutes() {
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>insomniaTV</title>
     <style>
@@ -73,24 +74,52 @@ void WebServer::setupRoutes() {
         th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
         tr:nth-child(even) { background-color: #f9f9f9; }
         button { cursor: pointer; padding: 8px 12px; border: none; border-radius: 4px; background: #4CAF50; color: white; }
-        button:hover { background: #45a049; }
+        button:hover { opacity: .88; }
         button.delete { background: #f44336; }
-        button.delete:hover { background: #da190b; }
         .modal { display:none; position:fixed; z-index:100; left:0; top:0; width:100%; height:100%; background-color:rgba(0,0,0,0.5); }
-        .modal-content { background-color:#fefefe; margin:10% auto; padding:25px; border:1px solid #888; width:80%; max-width: 500px; border-radius: 8px; }
-        .close { float:right; cursor:pointer; font-size: 24px; }
-        label { display: block; margin: 10px 0 5px; font-weight: bold; }
-        input[type=text], input[type=number], select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        .discovery-item { padding: 8px; border-bottom: 1px solid #eee; cursor: pointer; }
-        .discovery-item:hover { background: #f0f0f0; }
+        .modal-content { background-color:#fefefe; margin:10% auto; padding:25px; border:1px solid #888; width:80%; max-width:500px; border-radius:8px; }
+        .close { float:right; cursor:pointer; font-size:24px; line-height:1; }
+        label { display:block; margin:10px 0 5px; font-weight:bold; }
+        input[type=text], input[type=number], select { width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box; }
+        .discovery-item { padding:8px; border-bottom:1px solid #eee; cursor:pointer; }
+        .discovery-item:hover { background:#f0f0f0; }
+        /* ── Wizard ───────────────────────────────────────────────── */
+        .wizard-modal { max-width:560px; }
+        .wz-progress { display:flex; align-items:center; justify-content:center; margin:4px 0 22px; gap:4px; }
+        .wz-dot { width:26px; height:26px; border-radius:50%; background:#ddd; color:#aaa; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:bold; flex-shrink:0; transition:.3s; }
+        .wz-dot.active { background:#4CAF50; color:#fff; }
+        .wz-dot.done { background:#81c784; color:#fff; }
+        .wz-line { flex:1; height:2px; background:#ddd; max-width:48px; transition:.3s; }
+        .wz-line.done { background:#81c784; }
+        .wz-footer { display:flex; gap:8px; justify-content:flex-end; margin-top:20px; padding-top:15px; border-top:1px solid #eee; }
+        .tv-card { border:2px solid #ddd; border-radius:8px; padding:12px 16px; margin:8px 0; cursor:pointer; display:flex; align-items:center; gap:14px; transition:.15s; }
+        .tv-card:hover { border-color:#4CAF50; background:#f9fff9; }
+        .tv-card.selected { border-color:#4CAF50; background:#e8f5e9; }
+        .tv-icon { font-size:32px; line-height:1; }
+        .tv-name { font-weight:bold; font-size:15px; }
+        .tv-meta { color:#777; font-size:13px; margin-top:2px; }
+        .sensor-preview-row { display:flex; align-items:center; gap:8px; padding:9px 10px; border:1px solid #e8e8e8; border-radius:6px; margin:6px 0; background:#fafafa; }
+        .sensor-preview-row input[type=checkbox] { width:auto; margin:0; flex-shrink:0; }
+        .s-badge { font-size:11px; padding:2px 7px; border-radius:10px; background:#e0e0e0; color:#555; white-space:nowrap; }
+        .s-badge.ping { background:#e3f2fd; color:#1565c0; }
+        .s-badge.upnp { background:#f3e5f5; color:#6a1b9a; }
+        .s-badge.http { background:#e8f5e9; color:#2e7d32; }
+        .s-id-wrap { flex:1; min-width:0; }
+        .s-id-wrap input { padding:4px 6px; font-size:13px; border:1px solid #ccc; border-radius:4px; width:100%; box-sizing:border-box; }
+        .s-desc { color:#999; font-size:11px; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .spinner { display:inline-block; width:18px; height:18px; border:3px solid #ddd; border-top-color:#4CAF50; border-radius:50%; animation:spin .7s linear infinite; vertical-align:middle; margin-right:8px; }
+        @keyframes spin { to { transform:rotate(360deg); } }
+        .btn-tv { background:#1565c0; }
+        .btn-gray { background:#757575; }
+        .done-icon { font-size:52px; display:block; text-align:center; margin:10px 0 6px; }
     </style>
 </head>
 <body>
 
 <div class="tab">
-  <button class="tablinks" onclick="openTab(event, 'Status')">Status</button>
-  <button class="tablinks" onclick="openTab(event, 'Config')">Config</button>
-  <button class="tablinks" onclick="openTab(event, 'Sensors')">Sensors</button>
+  <button class="tablinks" onclick="openTab(event,'Status')">Status</button>
+  <button class="tablinks" onclick="openTab(event,'Config')">Config</button>
+  <button class="tablinks" onclick="openTab(event,'Sensors')">Sensors</button>
 </div>
 
 <div id="Status" class="tabcontent">
@@ -117,80 +146,122 @@ void WebServer::setupRoutes() {
 
 <div id="Sensors" class="tabcontent">
   <h3>Sensor Registry</h3>
-  <button onclick="openModal()" style="margin-bottom: 15px;">Add New Sensor</button>
+  <div style="display:flex;gap:8px;margin-bottom:15px;flex-wrap:wrap;">
+    <button class="btn-tv" onclick="openWizard()">&#128250; Add Smart TV</button>
+    <button onclick="openModal()">+ Add Sensor</button>
+  </div>
   <table>
     <thead>
-      <tr>
-        <th>ID</th>
-        <th>Type</th>
-        <th>Value</th>
-        <th>Status</th>
-        <th>Actions</th>
-      </tr>
+      <tr><th>ID</th><th>Type</th><th>Value</th><th>Status</th><th>Actions</th></tr>
     </thead>
-    <tbody id="sensor-table-body">
-    </tbody>
+    <tbody id="sensor-table-body"></tbody>
   </table>
 </div>
 
+<!-- ── Add Sensor modal ─────────────────────────────────────────── -->
 <div id="sensorModal" class="modal">
   <div class="modal-content">
     <span onclick="closeModal()" class="close">&times;</span>
     <h3>Add Sensor</h3>
-    <form id="sensorForm">
-      <label>Unique ID:</label>
-      <input type="text" id="sensorId" placeholder="e.g., room_motion" required>
+    <label>Unique ID:</label>
+    <input type="text" id="sensorId" placeholder="e.g., room_motion" required>
+    <label>Sensor Type:</label>
+    <select id="sensorType" onchange="updateFormFields()">
+      <option value="gpio_input">GPIO Input (Digital)</option>
+      <option value="gpio_analog">GPIO Analog (ADC)</option>
+      <option value="ping">Ping (ICMP)</option>
+      <option value="http">HTTP (GET)</option>
+      <option value="upnp">UPnP (Discovery)</option>
+    </select>
+    <div id="dynamicFields"></div>
+    <button type="button" onclick="saveSensor()" style="margin-top:20px;width:100%;">Save Sensor</button>
+  </div>
+</div>
 
-      <label>Sensor Type:</label>
-      <select id="sensorType" onchange="updateFormFields()">
-        <option value="gpio_input">GPIO Input (Digital)</option>
-        <option value="gpio_analog">GPIO Analog (ADC)</option>
-        <option value="ping">Ping (ICMP)</option>
-        <option value="http">HTTP (GET)</option>
-        <option value="upnp">UPnP (Discovery)</option>
-      </select>
+<!-- ── Add Smart TV wizard ──────────────────────────────────────── -->
+<div id="tvWizardModal" class="modal">
+  <div class="modal-content wizard-modal">
+    <span onclick="closeWizard()" class="close">&times;</span>
+    <h3 style="margin-top:0">&#128250; Add Smart TV</h3>
 
-      <div id="dynamicFields"></div>
+    <div class="wz-progress">
+      <div class="wz-dot active" id="wd1">1</div>
+      <div class="wz-line" id="wl1"></div>
+      <div class="wz-dot" id="wd2">2</div>
+      <div class="wz-line" id="wl2"></div>
+      <div class="wz-dot" id="wd3">3</div>
+      <div class="wz-line" id="wl3"></div>
+      <div class="wz-dot" id="wd4">&#10003;</div>
+    </div>
 
-      <button type="button" onclick="saveSensor()" style="margin-top: 20px; width: 100%;">Save Sensor</button>
-    </form>
+    <!-- Step 1: intro / scan -->
+    <div id="wpage1">
+      <h4 style="margin-top:0">Scan Your Network</h4>
+      <p>Click <b>Start Scan</b> to search your network for smart TVs. Samsung, Sony, LG and other UPnP-enabled TVs will be detected automatically.</p>
+      <p style="color:#888;font-size:13px">Make sure your TV is powered on and connected to the same Wi-Fi network.</p>
+    </div>
+
+    <!-- Step 2: results -->
+    <div id="wpage2" style="display:none">
+      <h4 style="margin-top:0">Select Your TV</h4>
+      <div id="wz-scan-status"><span class="spinner"></span>Scanning network&hellip;</div>
+      <div id="wz-tv-list"></div>
+    </div>
+
+    <!-- Step 3: sensor preview -->
+    <div id="wpage3" style="display:none">
+      <h4 style="margin-top:0">Sensors to Create</h4>
+      <p style="color:#555;font-size:14px;margin-top:0">The following sensors will monitor your TV. Edit the IDs or uncheck any you don&apos;t need.</p>
+      <div id="wz-sensor-list"></div>
+    </div>
+
+    <!-- Step 4: done -->
+    <div id="wpage4" style="display:none;text-align:center;padding:10px 0 6px">
+      <span class="done-icon">&#9989;</span>
+      <h4 id="wz-done-title" style="margin:4px 0 8px"></h4>
+      <p id="wz-done-msg" style="color:#666;margin:0"></p>
+    </div>
+
+    <div class="wz-footer">
+      <button id="wbtn-cancel" class="btn-gray" onclick="closeWizard()">Cancel</button>
+      <button id="wbtn-back"   class="btn-gray" style="display:none" onclick="wzBack()">&#8592; Back</button>
+      <button id="wbtn-scan"   class="btn-tv"   onclick="wzStartScan()">Start Scan</button>
+      <button id="wbtn-add"    class="btn-tv"   style="display:none" onclick="wzCreate()">Add to Sensors &#8594;</button>
+      <button id="wbtn-done"   style="display:none" onclick="closeWizard();loadSensors()">Done</button>
+    </div>
   </div>
 </div>
 
 <script>
+// ── SSE live updates ────────────────────────────────────────────────────────
 const source = new EventSource('/events');
 source.addEventListener('sensor_update', function(e) {
-    const data = JSON.parse(e.data);
-    const row = document.getElementById('sensor-row-' + data.id);
-    if (row) {
-        row.cells[2].textContent = data.value;
-        row.cells[3].textContent = data.available ? '🟢' : '🔴';
-    }
+    const d = JSON.parse(e.data);
+    const row = document.getElementById('sensor-row-' + d.id);
+    if (row) { row.cells[2].textContent = d.value; row.cells[3].textContent = d.available ? '🟢' : '🔴'; }
 }, false);
 
-function openTab(evt, tabName) {
-    var i, tabcontent, tablinks;
-    tabcontent = document.getElementsByClassName("tabcontent");
-    for (i = 0; i < tabcontent.length; i++) { tabcontent[i].style.display = "none"; }
-    tablinks = document.getElementsByClassName("tablinks");
-    for (i = 0; i < tablinks.length; i++) { tablinks[i].className = tablinks[i].className.replace(" active", ""); }
-
-    document.getElementById(tabName).style.display = "block";
-    evt.currentTarget.className += " active";
-
-    if (tabName === 'Status') loadStatus();
-    if (tabName === 'Sensors') loadSensors();
+// ── Tab routing ─────────────────────────────────────────────────────────────
+function openTab(evt, name) {
+    document.querySelectorAll('.tabcontent').forEach(t => t.style.display = 'none');
+    document.querySelectorAll('.tablinks').forEach(b => b.classList.remove('active'));
+    document.getElementById(name).style.display = 'block';
+    evt.currentTarget.classList.add('active');
+    if (name === 'Status')  loadStatus();
+    if (name === 'Sensors') loadSensors();
 }
 
+// ── Status ──────────────────────────────────────────────────────────────────
 function loadStatus() {
     fetch('/api/status').then(r => r.json()).then(data => {
-        for (const [key, value] of Object.entries(data)) {
-            const el = document.getElementById('sys-' + key);
-            if (el) el.textContent = value;
+        for (const [k, v] of Object.entries(data)) {
+            const el = document.getElementById('sys-' + k);
+            if (el) el.textContent = v;
         }
     });
 }
 
+// ── Sensor table ────────────────────────────────────────────────────────────
 function loadSensors() {
     fetch('/api/sensors').then(r => r.json()).then(data => {
         const tbody = document.getElementById('sensor-table-body');
@@ -198,137 +269,226 @@ function loadSensors() {
         data.forEach(s => {
             const tr = document.createElement('tr');
             tr.id = 'sensor-row-' + s.id;
-            tr.innerHTML = `
-                <td>${s.id}</td>
-                <td>${s.type}</td>
-                <td>${s.value}</td>
-                <td>${s.available ? '🟢' : '🔴'}</td>
-                <td>
-                    <button onclick="testSensor('${s.id}')">Test</button>
-                    <button class="delete" onclick="deleteSensor('${s.id}')">Delete</button>
-                </td>`;
+            tr.innerHTML = `<td>${s.id}</td><td>${s.type}</td><td>${s.value}</td>
+              <td>${s.available ? '🟢' : '🔴'}</td>
+              <td>
+                <button onclick="testSensor('${s.id}')">Test</button>
+                <button class="delete" onclick="deleteSensor('${s.id}')">Delete</button>
+              </td>`;
             tbody.appendChild(tr);
         });
     });
 }
 
-function openModal() { document.getElementById('sensorModal').style.display = 'block'; updateFormFields(); }
+// ── Add-sensor modal ─────────────────────────────────────────────────────────
+function openModal()  { document.getElementById('sensorModal').style.display = 'block'; updateFormFields(); }
 function closeModal() { document.getElementById('sensorModal').style.display = 'none'; }
 
 function updateFormFields() {
     const type = document.getElementById('sensorType').value;
-    const fields = document.getElementById('dynamicFields');
-    fields.innerHTML = '';
-
+    const f = document.getElementById('dynamicFields');
+    f.innerHTML = '';
     if (type === 'gpio_input') {
-        fields.innerHTML = `
-            <label>Pin Number:</label><input type="number" id="s_pin" value="0">
-            <label>Pullup:</label><input type="checkbox" id="s_pullup" checked>
-            <label>Debounce (ms):</label><input type="number" id="s_debounce" value="50">`;
+        f.innerHTML = `<label>Pin:</label><input type="number" id="s_pin" value="0">
+          <label>Pullup:</label><input type="checkbox" id="s_pullup" checked>
+          <label>Debounce (ms):</label><input type="number" id="s_debounce" value="50">`;
     } else if (type === 'gpio_analog') {
-        fields.innerHTML = `
-            <label>Pin Number:</label><input type="number" id="s_pin" value="0">
-            <label>Scale:</label><input type="number" id="s_scale" step="0.001" value="1.0">
-            <label>Offset:</label><input type="number" id="s_offset" step="0.001" value="0.0">`;
+        f.innerHTML = `<label>Pin:</label><input type="number" id="s_pin" value="0">
+          <label>Scale:</label><input type="number" id="s_scale" step="0.001" value="1.0">
+          <label>Offset:</label><input type="number" id="s_offset" step="0.001" value="0.0">`;
     } else if (type === 'ping') {
-        fields.innerHTML = `<label>Target IP/Host:</label><input type="text" id="s_target" placeholder="192.168.1.1">`;
+        f.innerHTML = `<label>Target IP/Host:</label><input type="text" id="s_target" placeholder="192.168.1.1">`;
     } else if (type === 'http') {
-        fields.innerHTML = `<label>URL:</label><input type="text" id="s_url" placeholder="http://api.local/status">`;
+        f.innerHTML = `<label>URL:</label><input type="text" id="s_url" placeholder="http://api.local/status">`;
     } else if (type === 'upnp') {
-        fields.innerHTML = `
-            <label>Select Device:</label>
-            <div id="upnp-list" style="border: 1px solid #ccc; max-height: 100px; overflow-y: auto; margin-bottom: 10px;">Scanning...</div>
-            <button type="button" onclick="scanTVForModal()" style="width: 100%; margin-bottom: 10px; background: #2196F3;">Scan Network</button>
-            <input type="hidden" id="s_target_name">`;
+        f.innerHTML = `<label>Select Device:</label>
+          <div id="upnp-list" style="border:1px solid #ccc;max-height:100px;overflow-y:auto;margin-bottom:10px;">Scanning...</div>
+          <button type="button" onclick="scanTVForModal()" style="width:100%;margin-bottom:10px;background:#2196F3;">Scan Network</button>
+          <input type="hidden" id="s_target_name">`;
         fetchUpnpDevices();
     }
 }
-
 function scanTVForModal() {
     document.getElementById('upnp-list').innerHTML = '<div class="discovery-item">Scanning...</div>';
-    fetch('/api/scan', {method: 'POST'}).then(() => setTimeout(fetchUpnpDevices, 3000));
+    fetch('/api/scan', {method:'POST'}).then(() => setTimeout(fetchUpnpDevices, 3000));
 }
-
 function fetchUpnpDevices() {
     fetch('/api/discovery').then(r => r.json()).then(data => {
         const list = document.getElementById('upnp-list');
         list.innerHTML = '';
-        if (data.length === 0) list.innerHTML = '<div class="discovery-item">No TVs found. Scan in Config tab first.</div>';
+        if (!data.length) { list.innerHTML = '<div class="discovery-item">No TVs found.</div>'; return; }
         data.forEach(tv => {
             const div = document.createElement('div');
             div.className = 'discovery-item';
-            div.textContent = `${tv.name} (${tv.ip})`;
+            div.textContent = tv.name + ' (' + tv.ip + ')';
             div.onclick = () => {
                 document.getElementById('s_target_name').value = tv.name;
-                Array.from(list.children).forEach(c => c.style.background = '');
+                list.querySelectorAll('.discovery-item').forEach(c => c.style.background = '');
                 div.style.background = '#e0e0e0';
             };
             list.appendChild(div);
         });
     });
 }
-
 function saveSensor() {
     const id = document.getElementById('sensorId').value;
     const type = document.getElementById('sensorType').value;
-    if (!id) return alert('ID is required');
-
-    const config = { id, type };
-    if (type === 'gpio_input') {
-        config.pin = parseInt(document.getElementById('s_pin').value);
-        config.pullup = document.getElementById('s_pullup').checked;
-        config.debounce_ms = parseInt(document.getElementById('s_debounce').value);
-    } else if (type === 'gpio_analog') {
-        config.pin = parseInt(document.getElementById('s_pin').value);
-        config.scale = parseFloat(document.getElementById('s_scale').value);
-        config.offset = parseFloat(document.getElementById('s_offset').value);
-    } else if (type === 'ping') {
-        config.target_ip = document.getElementById('s_target').value;
-    } else if (type === 'http') {
-        config.url = document.getElementById('s_url').value;
-    } else if (type === 'upnp') {
-        config.target_name = document.getElementById('s_target_name').value;
-    }
-
-    fetch('/api/sensors', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(config)
-    }).then(r => {
-        if (r.ok) { closeModal(); loadSensors(); }
-        else alert('Failed to save');
-    });
+    if (!id) { alert('ID is required'); return; }
+    const cfg = {id, type};
+    if (type === 'gpio_input')  { cfg.pin = +document.getElementById('s_pin').value; cfg.pullup = document.getElementById('s_pullup').checked; cfg.debounce_ms = +document.getElementById('s_debounce').value; }
+    else if (type === 'gpio_analog') { cfg.pin = +document.getElementById('s_pin').value; cfg.scale = +document.getElementById('s_scale').value; cfg.offset = +document.getElementById('s_offset').value; }
+    else if (type === 'ping')   { cfg.target_ip = document.getElementById('s_target').value; }
+    else if (type === 'http')   { cfg.url = document.getElementById('s_url').value; }
+    else if (type === 'upnp')   { cfg.target_name = document.getElementById('s_target_name').value; }
+    fetch('/api/sensors', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(cfg)})
+      .then(r => { if (r.ok) { closeModal(); loadSensors(); } else alert('Failed to save'); });
 }
-
 function deleteSensor(id) {
     if (!confirm('Delete sensor ' + id + '?')) return;
-    fetch('/api/sensors?id=' + id, { method: 'DELETE' }).then(() => loadSensors());
+    fetch('/api/sensors?id=' + id, {method:'DELETE'}).then(() => loadSensors());
 }
-
 function testSensor(id) {
-    fetch('/api/sensors/test', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: 'id=' + id
-    }).then(r => r.json()).then(data => {
-        alert('Test result for ' + data.id + ': ' + (data.value ? 'HIGH/OK' : 'LOW/FAIL'));
-    });
+    fetch('/api/sensors/test', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'id='+id})
+      .then(r => r.json()).then(d => alert('Test: ' + d.id + ' = ' + (d.value ? 'HIGH / OK' : 'LOW / FAIL')));
 }
 
+// ── Config tab ───────────────────────────────────────────────────────────────
 function scanTV() {
     document.getElementById('tv-list').innerHTML = '<li>Scanning...</li>';
-    fetch('/api/scan', {method: 'POST'}).then(() => setTimeout(loadDiscovery, 3000));
+    fetch('/api/scan', {method:'POST'}).then(() => setTimeout(loadDiscovery, 3000));
 }
 function loadDiscovery() {
     fetch('/api/discovery').then(r => r.json()).then(data => {
-        let list = document.getElementById('tv-list');
+        const list = document.getElementById('tv-list');
         list.innerHTML = '';
         data.forEach(tv => {
-            let li = document.createElement('li');
-            li.innerHTML = `<b>${tv.name}</b> (${tv.ip}) - ${tv.model}`;
+            const li = document.createElement('li');
+            li.innerHTML = '<b>' + tv.name + '</b> (' + tv.ip + ') - ' + tv.model;
             list.appendChild(li);
         });
     });
+}
+
+// ── Add Smart TV wizard ──────────────────────────────────────────────────────
+let wzTv = null, wzSensors = [], wzPage = 1, wzPollTimer = null, wzPollCount = 0;
+
+function openWizard() {
+    wzTv = null; wzSensors = []; wzPage = 1; wzPollCount = 0;
+    if (wzPollTimer) { clearTimeout(wzPollTimer); wzPollTimer = null; }
+    document.getElementById('tvWizardModal').style.display = 'block';
+    wzShowPage(1);
+}
+function closeWizard() {
+    if (wzPollTimer) { clearTimeout(wzPollTimer); wzPollTimer = null; }
+    document.getElementById('tvWizardModal').style.display = 'none';
+}
+
+function wzShowPage(n) {
+    wzPage = n;
+    [1,2,3,4].forEach(i => {
+        document.getElementById('wpage' + i).style.display = i === n ? 'block' : 'none';
+        const dot = document.getElementById('wd' + i);
+        dot.className = 'wz-dot' + (i < n ? ' done' : i === n ? ' active' : '');
+        if (i < 4) document.getElementById('wl' + i).className = 'wz-line' + (i < n ? ' done' : '');
+    });
+    document.getElementById('wbtn-cancel').style.display = n < 4 ? '' : 'none';
+    document.getElementById('wbtn-back').style.display   = n === 3 ? '' : 'none';
+    document.getElementById('wbtn-scan').style.display   = n === 1 ? '' : 'none';
+    document.getElementById('wbtn-add').style.display    = n === 3 ? '' : 'none';
+    document.getElementById('wbtn-done').style.display   = n === 4 ? '' : 'none';
+}
+
+function wzStartScan() {
+    wzShowPage(2);
+    document.getElementById('wz-tv-list').innerHTML = '';
+    document.getElementById('wz-scan-status').innerHTML = '<span class="spinner"></span>Scanning network&hellip;';
+    fetch('/api/scan', {method:'POST'});
+    wzPollCount = 0;
+    wzPoll();
+}
+function wzPoll() {
+    wzPollCount++;
+    fetch('/api/discovery').then(r => r.json()).then(tvs => {
+        if (tvs.length) {
+            wzShowTvList(tvs);
+        } else if (wzPollCount < 8) {
+            wzPollTimer = setTimeout(wzPoll, 2000);
+        } else {
+            document.getElementById('wz-scan-status').innerHTML = 'No smart TVs found.';
+            document.getElementById('wz-tv-list').innerHTML =
+                '<p style="color:#888;font-size:14px">Make sure your TV is on and connected to the same network. ' +
+                '<a href="#" onclick="wzStartScan();return false">Try again</a></p>';
+        }
+    });
+}
+function wzShowTvList(tvs) {
+    document.getElementById('wz-scan-status').innerHTML =
+        tvs.length + ' TV' + (tvs.length > 1 ? 's' : '') + ' found &mdash; select yours:';
+    const list = document.getElementById('wz-tv-list');
+    list.innerHTML = '';
+    tvs.forEach(tv => {
+        const card = document.createElement('div');
+        card.className = 'tv-card';
+        card.innerHTML =
+            '<div class="tv-icon">&#128250;</div>' +
+            '<div style="flex:1"><div class="tv-name">' + tv.name + '</div>' +
+            '<div class="tv-meta">' + (tv.model || 'Smart TV') + ' &nbsp;&middot;&nbsp; ' + tv.ip + '</div></div>' +
+            '<span style="color:#bbb;font-size:20px">&#8250;</span>';
+        card.onclick = () => wzSelectTv(tv, card);
+        list.appendChild(card);
+    });
+}
+function wzSelectTv(tv, card) {
+    wzTv = tv;
+    document.querySelectorAll('.tv-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    setTimeout(() => { wzBuildSensors(tv); wzShowPage(3); }, 250);
+}
+function wzBuildSensors(tv) {
+    const slug = tv.name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').substring(0, 16) || 'tv';
+    wzSensors = [
+        {id: slug+'_ping', type:'ping',  target_ip:   tv.ip,   label:'Ping', desc:'Network reachability · '+tv.ip, enabled:true},
+        {id: slug+'_upnp', type:'upnp',  target_name: tv.name, label:'UPnP', desc:'Service discovery · '+tv.name, enabled:true},
+        {id: slug+'_http', type:'http',  url:'http://'+tv.ip+':8001/api/v2/', label:'HTTP', desc:'Samsung SmartThings API (optional)', enabled:false},
+    ];
+    const list = document.getElementById('wz-sensor-list');
+    list.innerHTML = '';
+    wzSensors.forEach((s, i) => {
+        const row = document.createElement('div');
+        row.className = 'sensor-preview-row';
+        row.innerHTML =
+            '<input type="checkbox" id="wsen' + i + '" ' + (s.enabled ? 'checked' : '') +
+            ' onchange="wzSensors[' + i + '].enabled=this.checked">' +
+            '<span class="s-badge ' + s.type + '">' + s.label + '</span>' +
+            '<div class="s-id-wrap">' +
+            '<input type="text" value="' + s.id + '" oninput="wzSensors[' + i + '].id=this.value">' +
+            '<div class="s-desc">' + s.desc + '</div></div>';
+        list.appendChild(row);
+    });
+}
+function wzBack() {
+    wzShowPage(2);
+    if (wzTv) {
+        document.querySelectorAll('.tv-card').forEach(c => {
+            if (c.querySelector('.tv-name') && c.querySelector('.tv-name').textContent === wzTv.name)
+                c.classList.add('selected');
+        });
+    }
+}
+async function wzCreate() {
+    const toCreate = wzSensors.filter(s => s.enabled && s.id.trim());
+    let created = 0;
+    for (const s of toCreate) {
+        const p = {id: s.id.trim(), type: s.type};
+        if (s.type === 'ping') p.target_ip   = s.target_ip;
+        if (s.type === 'upnp') p.target_name = s.target_name;
+        if (s.type === 'http') p.url         = s.url;
+        const r = await fetch('/api/sensors', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(p)});
+        if (r.ok) created++;
+    }
+    document.getElementById('wz-done-title').textContent = created + ' sensor' + (created !== 1 ? 's' : '') + ' added!';
+    document.getElementById('wz-done-msg').textContent   = 'Sensors for “' + wzTv.name + '” are now active in the registry.';
+    wzShowPage(4);
 }
 
 document.getElementsByClassName('tablinks')[0].click();
