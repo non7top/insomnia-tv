@@ -104,17 +104,16 @@ void WebServer::setupRoutes() {
         .tv-icon { font-size:32px; line-height:1; }
         .tv-name { font-weight:bold; font-size:15px; }
         .tv-meta { color:#777; font-size:13px; margin-top:2px; }
-        .sensor-preview-row { display:flex; align-items:flex-start; gap:10px; padding:12px; border:1px solid #e8e8e8; border-radius:6px; margin:6px 0; background:#fafafa; }
-        .sensor-preview-row input[type=checkbox] { width:auto; margin:3px 0 0; flex-shrink:0; }
-        .s-preview-body { flex:1; min-width:0; }
-        .s-preview-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
-        .s-probe { font-size:13px; color:#555; white-space:nowrap; }
-        .s-badge { font-size:11px; padding:2px 8px; border-radius:10px; background:#e0e0e0; color:#555; white-space:nowrap; font-weight:600; }
+        .s3-sensor { margin:5px 0 8px; }
+        .s3-row { display:flex; align-items:center; gap:8px; padding:8px 12px; background:#fafafa; border:1px solid #ddd; border-radius:6px 6px 0 0; }
+        .s3-check { flex-shrink:0; width:15px !important; height:15px; margin:0; cursor:pointer; accent-color:#4CAF50; }
+        .s-badge { font-size:11px; padding:2px 8px; border-radius:10px; background:#e0e0e0; color:#555; white-space:nowrap; font-weight:600; flex-shrink:0; }
         .s-badge.ping { background:#e3f2fd; color:#1565c0; }
         .s-badge.upnp { background:#f3e5f5; color:#6a1b9a; }
         .s-badge.http { background:#e8f5e9; color:#2e7d32; }
-        .s-preview-body input[type=text] { width:100%; padding:5px 7px; font-size:13px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box; }
-        .s-desc { color:#999; font-size:11px; margin-top:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .s3-id { flex:1 1 0 !important; width:0 !important; min-width:0; padding:4px 7px !important; font-size:13px; border:1px solid #ddd; border-radius:4px; box-sizing:border-box; }
+        .s3-status { flex-shrink:0; width:72px; text-align:right; font-size:13px; color:#444; white-space:nowrap; }
+        .s3-desc { font-size:11px; color:#888; padding:3px 12px 5px; background:#fafafa; border:1px solid #ddd; border-top:none; border-radius:0 0 6px 6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         .spinner { display:inline-block; width:14px; height:14px; border:2px solid #ddd; border-top-color:#4CAF50; border-radius:50%; animation:spin .7s linear infinite; vertical-align:middle; }
         @keyframes spin { to { transform:rotate(360deg); } }
         .btn-tv { background:#1565c0; }
@@ -524,20 +523,18 @@ function wzBuildSensors(tv) {
     const list = document.getElementById('wz-sensor-list');
     list.innerHTML = '';
     wzSensors.forEach((s, i) => {
-        const row = document.createElement('div');
-        row.className = 'sensor-preview-row';
-        row.innerHTML =
-            '<input type=”checkbox” id=”wsen'+i+'” '+(s.enabled?'checked':'')+
-            ' onchange=”wzSensors['+i+'].enabled=this.checked”>'+
-            '<div class=”s-preview-body”>'+
-              '<div class=”s-preview-header”>'+
-                '<span class=”s-badge '+s.type+'”>'+s.label+'</span>'+
-                '<span id=”wprobe-'+i+'” class=”s-probe”><span class=”spinner”></span></span>'+
-              '</div>'+
-              '<input type=”text” value=”'+s.id+'” oninput=”wzSensors['+i+'].id=this.value”>'+
-              '<div class=”s-desc”>'+s.desc+'</div>'+
-            '</div>';
-        list.appendChild(row);
+        const wrap = document.createElement('div');
+        wrap.className = 's3-sensor';
+        wrap.innerHTML =
+            '<div class=”s3-row”>'+
+              '<input type=”checkbox” class=”s3-check” id=”wsen'+i+'” '+(s.enabled?'checked':'')+
+              ' onchange=”wzSensors['+i+'].enabled=this.checked”>'+
+              '<span class=”s-badge '+s.type+'”>'+s.label+'</span>'+
+              '<input type=”text” class=”s3-id” value=”'+s.id+'” oninput=”wzSensors['+i+'].id=this.value”>'+
+              '<span id=”wprobe-'+i+'” class=”s3-status”><span class=”spinner”></span></span>'+
+            '</div>'+
+            '<div class=”s3-desc”>'+s.desc+'</div>';
+        list.appendChild(wrap);
     });
 }
 function wzProbeAll() {
@@ -551,7 +548,7 @@ function wzProbeOne(s, i) {
     if (s.type === 'ping') p.target_ip   = s.target_ip;
     if (s.type === 'upnp') p.target_name = s.target_name;
     if (s.type === 'http') p.url         = s.url;
-    fetch('/api/probe', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(p)})
+    fetch('/api/probe', {method:'POST', headers:{'Content-Type':'application/json','Authorization':'Basic '+btoa('admin:insomnia')}, body:JSON.stringify(p)})
         .then(r => r.json())
         .then(d => {
             const ms = d.latency_ms >= 0 ? ' ' + d.latency_ms + 'ms' : '';
