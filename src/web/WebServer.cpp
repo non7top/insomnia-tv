@@ -99,7 +99,7 @@ void WebServer::setupRoutes() {
         .wz-footer { display:flex; gap:8px; justify-content:space-between; align-items:center; margin-top:20px; padding-top:15px; border-top:1px solid #eee; }
         .wz-footer-right { display:flex; gap:8px; }
         .tv-card { border:2px solid #ddd; border-radius:8px; padding:12px 16px; margin:8px 0; cursor:pointer; display:flex; align-items:center; gap:14px; transition:.15s; }
-        .tv-card:hover { border-color:#4CAF50; background:#f9fff9; }
+        .tv-card:hover { border-color:#90caf9; background:#e3f2fd; }
         .tv-card.selected { border-color:#4CAF50; background:#e8f5e9; }
         .tv-icon { font-size:32px; line-height:1; }
         .tv-name { font-weight:bold; font-size:15px; }
