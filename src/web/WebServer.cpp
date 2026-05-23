@@ -952,41 +952,10 @@ document.getElementsByClassName('tablinks')[0].click();
         request->send(200, "application/json", response);
       });
 
-  // GET /api/files — recursive LittleFS listing
-  _server.on("/api/files", HTTP_GET, [](AsyncWebServerRequest* request) {
-    if (!request->authenticate("admin", "insomnia")) {
-      return request->requestAuthentication();
-    }
-    JsonDocument doc;
-    JsonArray array = doc.to<JsonArray>();
-    std::function<void(const String&)> walk;
-    walk = [&walk, &array](const String& dir) {
-      File d = LittleFS.open(dir);
-      if (!d || !d.isDirectory()) {
-        Serial.printf("[WebServer] files: failed to open dir: %s\n",
-                      dir.c_str());
-        return;
-      }
-      File f = d.openNextFile();
-      while (f) {
-        String p = (dir == "/") ? String("/") + f.name() : dir + "/" + f.name();
-        if (f.isDirectory()) {
-          walk(p);
-        } else {
-          JsonObject o = array.add<JsonObject>();
-          o["name"] = p;
-          o["size"] = static_cast<uint32_t>(f.size());
-        }
-        f = d.openNextFile();
-      }
-    };
-    walk("/");
-    String response;
-    serializeJson(doc, response);
-    request->send(200, "application/json", response);
-  });
-
   // GET /api/files/download?path=<path>
+  // NOTE: specific sub-routes must be registered before GET /api/files because
+  // ESPAsyncWebServer matches by prefix — /api/files would capture /api/files/*
+  // if registered first.
   _server.on("/api/files/download", HTTP_GET,
              [](AsyncWebServerRequest* request) {
                if (!request->authenticate("admin", "insomnia")) {
@@ -1074,6 +1043,41 @@ document.getElementsByClassName('tablinks')[0].click();
         }
         request->send(200, "application/json", "{\"status\":\"ok\"}");
       });
+
+  // GET /api/files — recursive LittleFS listing (must come after /api/files/*)
+  _server.on("/api/files", HTTP_GET, [](AsyncWebServerRequest* request) {
+    if (!request->authenticate("admin", "insomnia")) {
+      return request->requestAuthentication();
+    }
+    JsonDocument doc;
+    JsonArray array = doc.to<JsonArray>();
+    std::function<void(const String&)> walk;
+    walk = [&walk, &array](const String& dir) {
+      File d = LittleFS.open(dir);
+      if (!d || !d.isDirectory()) {
+        Serial.printf("[WebServer] files: failed to open dir: %s\n",
+                      dir.c_str());
+        return;
+      }
+      File f = d.openNextFile();
+      while (f) {
+        String p =
+            (dir == "/") ? String("/") + f.name() : dir + "/" + f.name();
+        if (f.isDirectory()) {
+          walk(p);
+        } else {
+          JsonObject o = array.add<JsonObject>();
+          o["name"] = p;
+          o["size"] = static_cast<uint32_t>(f.size());
+        }
+        f = d.openNextFile();
+      }
+    };
+    walk("/");
+    String response;
+    serializeJson(doc, response);
+    request->send(200, "application/json", response);
+  });
 
   // DELETE /api/files?path=<path>
   _server.on("/api/files", HTTP_DELETE, [](AsyncWebServerRequest* request) {
