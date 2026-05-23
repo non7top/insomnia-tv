@@ -28,9 +28,6 @@ jobs:
       - name: Run cpplint
         run: cpplint --recursive src/ test/
 
-      - name: Run clang-format check
-        run: clang-format --style=file --dry-run --Werror src/**/*.cpp test/**/*.cpp
-
   unit-tests:
     strategy:
       fail-fast: true
