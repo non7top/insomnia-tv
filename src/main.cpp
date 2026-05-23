@@ -10,6 +10,7 @@
 #include <Arduino.h>
 #include <Ticker.h>
 
+#include <LittleFS.h>
 #include <cstring>
 #include <string>
 
@@ -51,6 +52,11 @@ void setup() {
   pinMode(STATUS_LED_PIN, OUTPUT);
   digitalWrite(STATUS_LED_PIN, HIGH);  // Off
   heartbeat.attach(0.5, toggleStatusLed);
+
+  // Filesystem — must be mounted before any config or file-manager access
+  if (!LittleFS.begin(true)) {
+    Serial.println("[insomniaTV] LittleFS mount failed");
+  }
 
   // Configuration
   Serial.println("[insomniaTV] Loading configuration...");
