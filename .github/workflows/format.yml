@@ -2,9 +2,6 @@ name: Auto Format
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - 'feature/**'
 
 jobs:
   format:
