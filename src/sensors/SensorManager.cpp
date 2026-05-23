@@ -1,7 +1,12 @@
 // Copyright 2026 insomniaTV Contributors. All rights reserved.
 
 #include "SensorManager.h"
+
 #include <ArduinoJson.h>
+
+#include <memory>
+#include <string>
+#include <vector>
 
 #include "GpioAnalogSensor.h"
 #include "GpioInputSensor.h"
@@ -16,7 +21,8 @@ SensorManager& SensorManager::instance() {
   return instance;
 }
 
-void SensorManager::registerFactory(const std::string& type, SensorFactory factory) {
+void SensorManager::registerFactory(const std::string& type,
+                                    SensorFactory factory) {
   std::lock_guard<std::mutex> lock(mutex_);
   factories_[type] = factory;
 }
@@ -72,7 +78,8 @@ void SensorManager::removeSensor(const std::string& id) {
   sensors_.erase(id);
 }
 
-void SensorManager::init(const std::string& configJson, SamsungTvDiscovery& discovery) {
+void SensorManager::init(const std::string& configJson,
+                         SamsungTvDiscovery& discovery) {
   // Register built-in factories if map is empty
   if (factories_.empty()) {
     registerFactory("gpio_input", [](const JsonDocument& cfg) {
@@ -81,10 +88,12 @@ void SensorManager::init(const std::string& configJson, SamsungTvDiscovery& disc
     registerFactory("gpio_analog", [](const JsonDocument& cfg) {
       return GpioAnalogSensor::create(cfg);
     });
-    registerFactory("ping",
-                    [](const JsonDocument& cfg) { return PingSensor::create(cfg); });
-    registerFactory("http",
-                    [](const JsonDocument& cfg) { return HttpSensor::create(cfg); });
+    registerFactory("ping", [](const JsonDocument& cfg) {
+      return PingSensor::create(cfg);
+    });
+    registerFactory("http", [](const JsonDocument& cfg) {
+      return HttpSensor::create(cfg);
+    });
     registerFactory("upnp", [&discovery](const JsonDocument& cfg) {
       return UpnpSensor::create(cfg, discovery);
     });
@@ -97,9 +106,8 @@ void SensorManager::init(const std::string& configJson, SamsungTvDiscovery& disc
   if (error) return;
 
   if (doc.is<JsonArray>()) {
-    // We clear current sensors before re-loading from config to avoid orphaned sensors
-    // Note: If some sensors are "active" (e.g. registered manually and not in config),
-    // they will be lost. This is intended for config sync.
+    // Clear before re-loading to avoid orphaned sensors. Sensors registered
+    // manually and absent from config will be lost (intended for config sync).
     clear();
 
     for (JsonObject sensorCfg : doc.as<JsonArray>()) {
@@ -136,7 +144,7 @@ void SensorManager::tick() {
     }
     cbs = valueChangeSubscribers_;
   }
-  // Notify outside the lock to avoid deadlock with subscribers that call back in
+  // Notify outside the lock to avoid deadlock with re-entrant subscribers.
   for (auto const& [id, value] : changes) {
     for (auto& cb : cbs) {
       cb(id, value);

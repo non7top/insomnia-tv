@@ -49,8 +49,8 @@ class TvStateMachine {
                           int hysteresisCount = 2);
 
   // Load detection sensor list from JSON config.
-  // Expected shape: {"hysteresis_count": 2,
-  //                  "detection_sensors": [{"sensor_id":"..","weight":3,"enabled":true}]}
+  // Expected: {"hysteresis_count":2,
+  //            "detection_sensors":[{"sensor_id":"..","weight":3,"enabled":true}]}
   void begin(const JsonDocument& config);
 
   PowerState getPowerState() const;

@@ -44,7 +44,8 @@ public:
   // Subscribe to sensor registration events
   void subscribe(SensorCallback callback);
 
-  // Subscribe to sensor value changes (fires only when value differs from last read)
+  // Subscribe to sensor value changes (fires only when value differs from
+  // last read)
   void subscribeValueChange(ValueChangeCallback callback);
 
   // Thread-safe access to all sensors
@@ -54,7 +55,6 @@ public:
   void removeSensor(const std::string& id);
 
  private:
-
   SensorManager() = default;
   ~SensorManager() = default;
   SensorManager(const SensorManager&) = delete;

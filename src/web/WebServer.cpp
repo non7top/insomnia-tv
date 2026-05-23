@@ -1,7 +1,10 @@
 // Copyright 2026 insomniaTV Contributors. All rights reserved.
 
 #include "WebServer.h"
+
 #include <ArduinoJson.h>
+
+#include <cstdio>
 #include <string>
 
 #include "../version.h"
@@ -656,7 +659,8 @@ document.getElementsByClassName('tablinks')[0].click();
     request->send(200, "application/json", "{\"status\":\"ok\"}");
   });
 
-  _server.on("/api/sensors", HTTP_DELETE, [this](AsyncWebServerRequest* request) {
+  _server.on("/api/sensors", HTTP_DELETE,
+      [this](AsyncWebServerRequest* request) {
     if (!request->authenticate("admin", "insomnia")) {
       return request->requestAuthentication();
     }
@@ -680,7 +684,7 @@ document.getElementsByClassName('tablinks')[0].click();
       _configMgr.set(cfg);
       _configMgr.save();
 
-      // For now, simple re-init (might need a clear() in SensorManager if instances linger)
+      // Re-init so the running SensorManager reflects the updated config.
       SensorManager::instance().init(cfg.sensorsJson, _discovery);
 
       request->send(200, "application/json", "{\"status\":\"ok\"}");
@@ -771,7 +775,10 @@ document.getElementsByClassName('tablinks')[0].click();
         } else if (type == "upnp") {
           std::string target = json["target_name"] | "";
           for (auto& tv : _discovery.getDiscoveredTvs()) {
-            if (tv.name == target) { available = true; break; }
+            if (tv.name == target) {
+              available = true;
+              break;
+            }
           }
           latencyMs = 0;
         }

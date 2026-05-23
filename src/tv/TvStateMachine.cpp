@@ -2,6 +2,9 @@
 
 #include "TvStateMachine.h"
 
+#include <string>
+#include <vector>
+
 namespace InsomniaTV {
 
 TvStateMachine::TvStateMachine(SensorManager& sensorManager,
@@ -60,7 +63,8 @@ bool TvStateMachine::sendPowerCommand(bool on) {
   return true;
 }
 
-void TvStateMachine::setPowerCommandCallback(std::function<void(bool)> callback) {
+void TvStateMachine::setPowerCommandCallback(
+    std::function<void(bool)> callback) {
   std::lock_guard<std::mutex> lock(mutex_);
   powerCommandCallback_ = callback;
 }
