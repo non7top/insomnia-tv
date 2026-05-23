@@ -22,23 +22,28 @@ ConfigManager::ConfigManager() {
 ConfigStatus ConfigManager::load() {
 #if defined(ARDUINO)
   if (!LittleFS.exists(kConfigPath)) {
+    Serial.printf("[ConfigManager] load: file not found: %s\n", kConfigPath);
     applyDefaults_();
     return ConfigStatus::FileNotFound;
   }
 
   File file = LittleFS.open(kConfigPath, "r");
-  if (!file)
+  if (!file) {
+    Serial.printf("[ConfigManager] load: open failed: %s\n", kConfigPath);
     return ConfigStatus::FileNotFound;
+  }
 
   std::string json = file.readString().c_str();
   file.close();
 
   Config next;
   if (!parseJson_(json, next)) {
+    Serial.printf("[ConfigManager] load: JSON parse error in %s\n", kConfigPath);
     return ConfigStatus::InvalidJson;
   }
 
   current_ = next;
+  Serial.printf("[ConfigManager] load: OK (%zu bytes)\n", json.size());
   return ConfigStatus::Ok;
 #else
   applyDefaults_();
@@ -50,21 +55,30 @@ ConfigStatus ConfigManager::save() {
   std::string json = toJson_(current_);
 #if defined(ARDUINO)
   if (!LittleFS.exists("/config")) {
-    LittleFS.mkdir("/config");
+    if (!LittleFS.mkdir("/config")) {
+      Serial.println("[ConfigManager] save: failed to create /config directory");
+      return ConfigStatus::WriteFailed;
+    }
   }
   // Write to a temp file then rename for atomicity — a power cut during
   // the write leaves the old file intact rather than a partial corrupt one.
   static const char* kTmpPath = "/config/insomnia_tv.json.tmp";
   File file = LittleFS.open(kTmpPath, "w");
   if (!file) {
+    Serial.printf("[ConfigManager] save: failed to open temp file: %s\n",
+                  kTmpPath);
     return ConfigStatus::WriteFailed;
   }
   file.print(json.c_str());
   file.close();
   LittleFS.remove(kConfigPath);
   if (!LittleFS.rename(kTmpPath, kConfigPath)) {
+    Serial.printf("[ConfigManager] save: rename failed: %s -> %s\n", kTmpPath,
+                  kConfigPath);
     return ConfigStatus::WriteFailed;
   }
+  Serial.printf("[ConfigManager] save: OK (%zu bytes) -> %s\n", json.size(),
+                kConfigPath);
   return ConfigStatus::Ok;
 #else
   (void)json;

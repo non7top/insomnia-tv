@@ -963,6 +963,8 @@ document.getElementsByClassName('tablinks')[0].click();
     walk = [&walk, &array](const String& dir) {
       File d = LittleFS.open(dir);
       if (!d || !d.isDirectory()) {
+        Serial.printf("[WebServer] files: failed to open dir: %s\n",
+                      dir.c_str());
         return;
       }
       File f = d.openNextFile();
@@ -1053,6 +1055,8 @@ document.getElementsByClassName('tablinks')[0].click();
         String tmp = path + ".tmp";
         File f = LittleFS.open(tmp, "w");
         if (!f) {
+          Serial.printf("[WebServer] edit: failed to open %s for writing\n",
+                        tmp.c_str());
           request->send(500);
           return;
         }
@@ -1060,6 +1064,8 @@ document.getElementsByClassName('tablinks')[0].click();
         f.close();
         LittleFS.remove(path);
         if (!LittleFS.rename(tmp, path)) {
+          Serial.printf("[WebServer] edit: rename failed: %s -> %s\n",
+                        tmp.c_str(), path.c_str());
           request->send(500);
           return;
         }
@@ -1082,6 +1088,8 @@ document.getElementsByClassName('tablinks')[0].click();
     if (LittleFS.remove(path)) {
       request->send(200, "application/json", "{\"status\":\"ok\"}");
     } else {
+      Serial.printf("[WebServer] delete: LittleFS.remove failed: %s\n",
+                    path.c_str());
       request->send(404);
     }
   });
@@ -1103,6 +1111,10 @@ document.getElementsByClassName('tablinks')[0].click();
           String tmp = uploadPath + ".tmp";
           LittleFS.remove(tmp);
           uploadFile = LittleFS.open(tmp, "w");
+          if (!uploadFile) {
+            Serial.printf("[WebServer] upload: failed to open %s for writing\n",
+                          tmp.c_str());
+          }
         }
         if (uploadFile) {
           uploadFile.write(data, len);
@@ -1112,7 +1124,13 @@ document.getElementsByClassName('tablinks')[0].click();
             uploadFile.close();
             String tmp = uploadPath + ".tmp";
             LittleFS.remove(uploadPath);
-            LittleFS.rename(tmp, uploadPath);
+            if (!LittleFS.rename(tmp, uploadPath)) {
+              Serial.printf("[WebServer] upload: rename failed: %s -> %s\n",
+                            tmp.c_str(), uploadPath.c_str());
+            }
+          } else {
+            Serial.printf("[WebServer] upload: no file handle at final for %s\n",
+                          uploadPath.c_str());
           }
         }
       });
