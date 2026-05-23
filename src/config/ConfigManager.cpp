@@ -294,7 +294,7 @@ std::string ConfigManager::toJson_(const Config& cfg) {
   doc["config_version"] = cfg.configVersion;
 
   std::string out;
-  serializeJson(doc, out);
+  serializeJsonPretty(doc, out);
   return out;
 }
 
