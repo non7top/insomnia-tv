@@ -8,7 +8,12 @@
 #include "../../src/sensors/PingSensor.h"
 #include "../../src/sensors/HttpSensor.h"
 
-using namespace InsomniaTV;
+using InsomniaTV::GpioAnalogSensor;
+using InsomniaTV::GpioInputSensor;
+using InsomniaTV::HttpSensor;
+using InsomniaTV::PingSensor;
+using InsomniaTV::Sensor;
+using InsomniaTV::SensorManager;
 
 void test_sensor_manager_registry() {
     auto& mgr = SensorManager::instance();

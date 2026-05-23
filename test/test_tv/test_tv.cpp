@@ -301,7 +301,7 @@ void test_sleep_sm_verifying_tv_on_fires_poweroff() {
 
   clk.advanceMs(2000);
   sleepSm.tick();          // MONITORING → RAMPING
-  sleepSm.onRampComplete(); // RAMPING → VERIFYING
+  sleepSm.onRampComplete();  // RAMPING → VERIFYING
   sleepSm.tick();          // VERIFYING → POWERING_OFF → MONITORING
 
   TEST_ASSERT_EQUAL(1, powerOffCalls);
