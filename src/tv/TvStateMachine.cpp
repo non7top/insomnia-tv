@@ -8,7 +8,7 @@
 namespace InsomniaTV {
 
 TvStateMachine::TvStateMachine(SensorManager& sensorManager,
-                                int hysteresisCount)
+                               int hysteresisCount)
     : sensorManager_(sensorManager),
       hysteresisCount_(hysteresisCount),
       currentState_(PowerState::UNKNOWN),
@@ -55,7 +55,8 @@ bool TvStateMachine::sendPowerCommand(bool on) {
   std::function<void(bool)> cb;
   {
     std::lock_guard<std::mutex> lock(mutex_);
-    if (!powerCommandCallback_) return false;
+    if (!powerCommandCallback_)
+      return false;
     currentState_ = PowerState::TRANSITIONING;
     cb = powerCommandCallback_;
   }
@@ -85,10 +86,9 @@ TvStateMachine::getContributions() const {
     auto it = sensorValues_.find(sc.sensorId);
     contrib.available = (it != sensorValues_.end());
     contrib.rawValue = contrib.available ? it->second : false;
-    contrib.weightedVote =
-        (sc.enabled && contrib.available)
-            ? sc.weight * (contrib.rawValue ? +1 : -1)
-            : 0;
+    contrib.weightedVote = (sc.enabled && contrib.available)
+                               ? sc.weight * (contrib.rawValue ? +1 : -1)
+                               : 0;
     result.push_back(contrib);
   }
   return result;
@@ -104,7 +104,8 @@ void TvStateMachine::onSensorUpdate(const std::string& sensorId, bool value) {
     newState = currentState_;
   }
   if (changed) {
-    for (auto& cb : subscribers_) cb(newState);
+    for (auto& cb : subscribers_)
+      cb(newState);
   }
 }
 
@@ -112,13 +113,16 @@ float TvStateMachine::calculateConfidence() const {
   int votes = 0;
   int maxVotes = 0;
   for (const auto& sc : detectionSensors_) {
-    if (!sc.enabled) continue;
+    if (!sc.enabled)
+      continue;
     auto it = sensorValues_.find(sc.sensorId);
-    if (it == sensorValues_.end()) continue;
+    if (it == sensorValues_.end())
+      continue;
     votes += sc.weight * (it->second ? +1 : -1);
     maxVotes += sc.weight;
   }
-  if (maxVotes == 0) return 0.0f;
+  if (maxVotes == 0)
+    return 0.0f;
   return static_cast<float>(votes) / maxVotes * 10.0f;
 }
 

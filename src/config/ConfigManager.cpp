@@ -1,7 +1,9 @@
 // Copyright 2026 insomniaTV Contributors. All rights reserved.
 
 #include "config/ConfigManager.h"
+
 #include <ArduinoJson.h>
+
 #include <string>
 
 #if defined(ARDUINO)
@@ -25,7 +27,8 @@ ConfigStatus ConfigManager::load() {
   }
 
   File file = LittleFS.open(kConfigPath, "r");
-  if (!file) return ConfigStatus::FileNotFound;
+  if (!file)
+    return ConfigStatus::FileNotFound;
 
   std::string json = file.readString().c_str();
   file.close();
@@ -48,10 +51,11 @@ ConfigStatus ConfigManager::save() {
 #if defined(ARDUINO)
   // Ensure directory exists
   if (!LittleFS.exists("/config")) {
-      LittleFS.mkdir("/config");
+    LittleFS.mkdir("/config");
   }
   File file = LittleFS.open(kConfigPath, "w");
-  if (!file) return ConfigStatus::WriteFailed;
+  if (!file)
+    return ConfigStatus::WriteFailed;
   file.print(json.c_str());
   file.close();
   return ConfigStatus::Ok;

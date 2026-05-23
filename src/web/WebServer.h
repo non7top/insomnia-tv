@@ -17,7 +17,7 @@ namespace InsomniaTV {
  * @brief Handles web interface and API routes for insomniaTV.
  */
 class WebServer {
- public:
+public:
   /**
    * @brief Constructs the WebServer.
    * @param port The server port.
@@ -32,7 +32,7 @@ class WebServer {
    */
   void begin();
 
- private:
+private:
 #if defined(ARDUINO)
   AsyncWebServer _server;
 #endif

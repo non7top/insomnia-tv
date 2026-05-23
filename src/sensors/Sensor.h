@@ -13,13 +13,8 @@ namespace InsomniaTV {
  * @brief Abstract base class for all sensors (hardware and software).
  */
 class Sensor {
- public:
-  enum class State {
-    UNINITIALIZED,
-    READY,
-    ERROR,
-    RETRYING
-  };
+public:
+  enum class State { UNINITIALIZED, READY, ERROR, RETRYING };
 
   virtual std::string getId() const = 0;
   virtual std::string getType() const = 0;
@@ -33,10 +28,9 @@ class Sensor {
   virtual bool isAvailable() const { return state_ == State::READY; }
   virtual ~Sensor() = default;
 
- protected:
+protected:
   State state_ = State::UNINITIALIZED;
 };
-
 
 }  // namespace InsomniaTV
 

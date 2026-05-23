@@ -26,9 +26,11 @@ bool FileSystemManager::mount() {
 
 std::string FileSystemManager::readJson(const std::string& path) {
 #if defined(ARDUINO)
-  if (!_fs) return "";
+  if (!_fs)
+    return "";
   File file = _fs->open(path.c_str(), "r");
-  if (!file) return "";
+  if (!file)
+    return "";
   String content = file.readString();
   file.close();
   return content.c_str();
@@ -40,9 +42,11 @@ std::string FileSystemManager::readJson(const std::string& path) {
 bool FileSystemManager::writeJson(const std::string& path,
                                   const std::string& json) {
 #if defined(ARDUINO)
-  if (!_fs) return false;
+  if (!_fs)
+    return false;
   File file = _fs->open(path.c_str(), "w");
-  if (!file) return false;
+  if (!file)
+    return false;
   file.print(json.c_str());
   file.close();
   return true;
@@ -54,9 +58,11 @@ bool FileSystemManager::writeJson(const std::string& path,
 bool FileSystemManager::uploadFile(const std::string& path, const uint8_t* data,
                                    size_t len) {
 #if defined(ARDUINO)
-  if (!_fs) return false;
+  if (!_fs)
+    return false;
   File file = _fs->open(path.c_str(), "w");
-  if (!file) return false;
+  if (!file)
+    return false;
   file.write(data, len);
   file.close();
   return true;
@@ -68,9 +74,11 @@ bool FileSystemManager::uploadFile(const std::string& path, const uint8_t* data,
 int32_t FileSystemManager::downloadFile(const std::string& path,
                                         uint8_t* outBuf, size_t bufSize) {
 #if defined(ARDUINO)
-  if (!_fs) return -1;
+  if (!_fs)
+    return -1;
   File file = _fs->open(path.c_str(), "r");
-  if (!file) return -1;
+  if (!file)
+    return -1;
   size_t len = file.read(outBuf, bufSize);
   file.close();
   return static_cast<int32_t>(len);
@@ -81,7 +89,8 @@ int32_t FileSystemManager::downloadFile(const std::string& path,
 
 bool FileSystemManager::exists(const std::string& path) const {
 #if defined(ARDUINO)
-  if (!_fs) return false;
+  if (!_fs)
+    return false;
   return _fs->exists(path.c_str());
 #else
   return false;
@@ -90,7 +99,8 @@ bool FileSystemManager::exists(const std::string& path) const {
 
 bool FileSystemManager::remove(const std::string& path) {
 #if defined(ARDUINO)
-  if (!_fs) return false;
+  if (!_fs)
+    return false;
   return _fs->remove(path.c_str());
 #else
   return false;

@@ -20,7 +20,7 @@ using InsomniaTV::TvStateMachine;
 // Controllable sensor mock
 // ---------------------------------------------------------------------------
 class MockSensor : public Sensor {
- public:
+public:
   MockSensor(const std::string& id, const std::string& type, bool value = false)
       : id_(id), type_(type), value_(value) {
     state_ = State::READY;
@@ -34,7 +34,7 @@ class MockSensor : public Sensor {
 
   void setValue(bool v) { value_ = v; }
 
- private:
+private:
   std::string id_;
   std::string type_;
   bool value_;
@@ -201,8 +201,7 @@ void test_tv_sm_get_contributions() {
   mgr.clear();
   TvStateMachine sm(mgr, 1);
 
-  JsonDocument cfg =
-      makeConfig(1, {{"ping1", 3, true}, {"upnp1", 5, false}});
+  JsonDocument cfg = makeConfig(1, {{"ping1", 3, true}, {"upnp1", 5, false}});
   sm.begin(cfg);
 
   sm.onSensorUpdate("ping1", true);
@@ -287,7 +286,7 @@ void test_sleep_sm_verifying_tv_on_fires_poweroff() {
 
   // Now wire into SleepStateMachine
   class SimpleClock : public IClock {
-   public:
+  public:
     uint32_t nowMs() const override { return ms_; }
     void advanceMs(uint32_t ms) override { ms_ += ms; }
     uint32_t ms_ = 0;
@@ -300,9 +299,9 @@ void test_sleep_sm_verifying_tv_on_fires_poweroff() {
   sleepSm.setPowerOffCallback([&] { powerOffCalls++; });
 
   clk.advanceMs(2000);
-  sleepSm.tick();          // MONITORING → RAMPING
+  sleepSm.tick();            // MONITORING → RAMPING
   sleepSm.onRampComplete();  // RAMPING → VERIFYING
-  sleepSm.tick();          // VERIFYING → POWERING_OFF → MONITORING
+  sleepSm.tick();            // VERIFYING → POWERING_OFF → MONITORING
 
   TEST_ASSERT_EQUAL(1, powerOffCalls);
   TEST_ASSERT_EQUAL(InsomniaTV::State::MONITORING, sleepSm.getCurrentState());
@@ -321,7 +320,7 @@ void test_sleep_sm_verifying_tv_already_off() {
   tvSm.onSensorUpdate("s1", false);  // TV is OFF
 
   class SimpleClock : public IClock {
-   public:
+  public:
     uint32_t nowMs() const override { return ms_; }
     void advanceMs(uint32_t ms) override { ms_ += ms; }
     uint32_t ms_ = 0;
@@ -354,7 +353,7 @@ void test_sleep_sm_verifying_tv_unknown_fallback() {
   tvSm.begin(cfg);
 
   class SimpleClock : public IClock {
-   public:
+  public:
     uint32_t nowMs() const override { return ms_; }
     void advanceMs(uint32_t ms) override { ms_ += ms; }
     uint32_t ms_ = 0;

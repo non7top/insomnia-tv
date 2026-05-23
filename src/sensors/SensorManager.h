@@ -54,7 +54,7 @@ public:
   void clear();
   void removeSensor(const std::string& id);
 
- private:
+private:
   SensorManager() = default;
   ~SensorManager() = default;
   SensorManager(const SensorManager&) = delete;

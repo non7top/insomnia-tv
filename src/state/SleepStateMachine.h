@@ -29,7 +29,7 @@ enum class State { MONITORING, RAMPING, VERIFYING, POWERING_OFF, FALLBACK_OFF };
  *   Any state  ──(onIrActivity)─────────► MONITORING
  */
 class SleepStateMachine {
- public:
+public:
   explicit SleepStateMachine(IClock& clock,
                              uint32_t inactivityTimeoutMs = 30000);
 
@@ -45,7 +45,7 @@ class SleepStateMachine {
   // Callback invoked when a power-off command should be sent.
   void setPowerOffCallback(std::function<void()> callback);
 
- private:
+private:
   void resetToMonitoring();
 
   IClock& clock_;

@@ -41,18 +41,21 @@ void SleepStateMachine::tick() {
       }
       current_ = next;
       // Fall through to execute the power-off action immediately.
-      if (powerOffCallback_) powerOffCallback_();
+      if (powerOffCallback_)
+        powerOffCallback_();
       resetToMonitoring();
       break;
     }
 
     case State::POWERING_OFF:
-      if (powerOffCallback_) powerOffCallback_();
+      if (powerOffCallback_)
+        powerOffCallback_();
       resetToMonitoring();
       break;
 
     case State::FALLBACK_OFF:
-      if (powerOffCallback_) powerOffCallback_();
+      if (powerOffCallback_)
+        powerOffCallback_();
       resetToMonitoring();
       break;
   }

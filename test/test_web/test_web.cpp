@@ -19,7 +19,8 @@ static std::string projectRoot() {
 // Returns true if any are found.
 static bool hasCurlyQuotes(const std::string& filePath) {
   std::ifstream f(filePath, std::ios::binary);
-  if (!f.is_open()) return false;
+  if (!f.is_open())
+    return false;
   uint8_t b0 = 0, b1 = 0;
   char ch;
   while (f.get(ch)) {

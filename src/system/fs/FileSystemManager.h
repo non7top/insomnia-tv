@@ -15,7 +15,7 @@
 namespace InsomniaTV {
 
 class FileSystemManager : public IFileSystem {
- public:
+public:
   FileSystemManager();
   bool mount() override;
   std::string readJson(const std::string& path) override;
@@ -27,7 +27,7 @@ class FileSystemManager : public IFileSystem {
   bool exists(const std::string& path) const override;
   bool remove(const std::string& path) override;
 
- private:
+private:
 #if defined(ARDUINO)
   fs::FS* _fs;
 #endif

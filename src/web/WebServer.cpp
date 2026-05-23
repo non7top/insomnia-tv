@@ -624,74 +624,80 @@ document.getElementsByClassName('tablinks')[0].click();
     request->send(200, "application/json", response);
   });
 
-  _server.on("/api/sensors", HTTP_POST, [](AsyncWebServerRequest* request) {
-    if (!request->authenticate("admin", "insomnia")) {
-      return request->requestAuthentication();
-    }
-  }, NULL, [this](AsyncWebServerRequest* request, uint8_t* data, size_t len,
-              size_t index, size_t total) {
-    JsonDocument doc;
-    deserializeJson(doc, data, len);
+  _server.on(
+      "/api/sensors", HTTP_POST,
+      [](AsyncWebServerRequest* request) {
+        if (!request->authenticate("admin", "insomnia")) {
+          return request->requestAuthentication();
+        }
+      },
+      NULL,
+      [this](AsyncWebServerRequest* request, uint8_t* data, size_t len,
+             size_t index, size_t total) {
+        JsonDocument doc;
+        deserializeJson(doc, data, len);
 
-    // Save to configuration
-    Config cfg = _configMgr.get();
-    JsonDocument sensorDoc;
-    deserializeJson(sensorDoc, cfg.sensorsJson);
+        // Save to configuration
+        Config cfg = _configMgr.get();
+        JsonDocument sensorDoc;
+        deserializeJson(sensorDoc, cfg.sensorsJson);
 
-    // Check if it already exists to avoid duplicates
-    bool found = false;
-    for (JsonObject s : sensorDoc.as<JsonArray>()) {
-        if (s["id"] == doc["id"]) {
+        // Check if it already exists to avoid duplicates
+        bool found = false;
+        for (JsonObject s : sensorDoc.as<JsonArray>()) {
+          if (s["id"] == doc["id"]) {
             s.set(doc.as<JsonObject>());
             found = true;
             break;
+          }
         }
-    }
-    if (!found) sensorDoc.add(doc);
+        if (!found)
+          sensorDoc.add(doc);
 
-    serializeJson(sensorDoc, cfg.sensorsJson);
-    _configMgr.set(cfg);
-    _configMgr.save();
+        serializeJson(sensorDoc, cfg.sensorsJson);
+        _configMgr.set(cfg);
+        _configMgr.save();
 
-    // Re-register immediately
-    SensorManager::instance().init(cfg.sensorsJson, _discovery);
+        // Re-register immediately
+        SensorManager::instance().init(cfg.sensorsJson, _discovery);
 
-    request->send(200, "application/json", "{\"status\":\"ok\"}");
-  });
+        request->send(200, "application/json", "{\"status\":\"ok\"}");
+      });
 
   _server.on("/api/sensors", HTTP_DELETE,
-      [this](AsyncWebServerRequest* request) {
-    if (!request->authenticate("admin", "insomnia")) {
-      return request->requestAuthentication();
-    }
-    if (request->hasParam("id")) {
-      String id = request->getParam("id")->value();
+             [this](AsyncWebServerRequest* request) {
+               if (!request->authenticate("admin", "insomnia")) {
+                 return request->requestAuthentication();
+               }
+               if (request->hasParam("id")) {
+                 String id = request->getParam("id")->value();
 
-      // Remove from configuration
-      Config cfg = _configMgr.get();
-      JsonDocument sensorDoc;
-      deserializeJson(sensorDoc, cfg.sensorsJson);
+                 // Remove from configuration
+                 Config cfg = _configMgr.get();
+                 JsonDocument sensorDoc;
+                 deserializeJson(sensorDoc, cfg.sensorsJson);
 
-      JsonArray array = sensorDoc.as<JsonArray>();
-      for (size_t i = 0; i < array.size(); i++) {
-          if (array[i]["id"] == id) {
-              array.remove(i);
-              break;
-          }
-      }
+                 JsonArray array = sensorDoc.as<JsonArray>();
+                 for (size_t i = 0; i < array.size(); i++) {
+                   if (array[i]["id"] == id) {
+                     array.remove(i);
+                     break;
+                   }
+                 }
 
-      serializeJson(sensorDoc, cfg.sensorsJson);
-      _configMgr.set(cfg);
-      _configMgr.save();
+                 serializeJson(sensorDoc, cfg.sensorsJson);
+                 _configMgr.set(cfg);
+                 _configMgr.save();
 
-      // Re-init so the running SensorManager reflects the updated config.
-      SensorManager::instance().init(cfg.sensorsJson, _discovery);
+                 // Re-init so the running SensorManager reflects the updated
+                 // config.
+                 SensorManager::instance().init(cfg.sensorsJson, _discovery);
 
-      request->send(200, "application/json", "{\"status\":\"ok\"}");
-      return;
-    }
-    request->send(400);
-  });
+                 request->send(200, "application/json", "{\"status\":\"ok\"}");
+                 return;
+               }
+               request->send(400);
+             });
 
   _server.on(
       "/api/sensors/test", HTTP_POST, [](AsyncWebServerRequest* request) {
@@ -703,8 +709,9 @@ document.getElementsByClassName('tablinks')[0].click();
           auto sensor = SensorManager::instance().getSensor(id.c_str());
           if (sensor) {
             bool result = sensor->read();
-            String response = "{\"id\":\"" + id + "\", \"value\":" +
-                              (result ? "true" : "false") + "}";
+            String response = "{\"id\":\"" + id +
+                              "\", \"value\":" + (result ? "true" : "false") +
+                              "}";
             request->send(200, "application/json", response);
             return;
           }
@@ -743,52 +750,51 @@ document.getElementsByClassName('tablinks')[0].click();
   // One-shot sensor probe without registering it in SensorManager.
   // Uses AsyncCallbackJsonWebHandler so the body is fully accumulated before
   // our handler is called — avoids the deferred-send race with _send().
-  _server.on(
-      "/api/probe", HTTP_POST,
-      [this](AsyncWebServerRequest* request, JsonVariant& json) {
-        if (!request->authenticate("admin", "insomnia")) {
-          return request->requestAuthentication();
-        }
-        std::string type = json["type"] | "";
-        bool available = false;
-        int latencyMs = -1;
+  _server.on("/api/probe", HTTP_POST,
+             [this](AsyncWebServerRequest* request, JsonVariant& json) {
+               if (!request->authenticate("admin", "insomnia")) {
+                 return request->requestAuthentication();
+               }
+               std::string type = json["type"] | "";
+               bool available = false;
+               int latencyMs = -1;
 
-        if (type == "ping") {
-          std::string target = json["target_ip"] | "";
-          if (!target.empty()) {
-            uint32_t t = millis();
-            available = Ping.ping(target.c_str(), 1);
-            latencyMs = static_cast<int>(millis() - t);
-          }
-        } else if (type == "http") {
-          std::string url = json["url"] | "";
-          if (!url.empty()) {
-            HTTPClient http;
-            http.begin(url.c_str());
-            http.setTimeout(3000);
-            uint32_t t = millis();
-            int code = http.GET();
-            latencyMs = static_cast<int>(millis() - t);
-            available = (code > 0 && code < 500);
-            http.end();
-          }
-        } else if (type == "upnp") {
-          std::string target = json["target_name"] | "";
-          for (auto& tv : _discovery.getDiscoveredTvs()) {
-            if (tv.name == target) {
-              available = true;
-              break;
-            }
-          }
-          latencyMs = 0;
-        }
+               if (type == "ping") {
+                 std::string target = json["target_ip"] | "";
+                 if (!target.empty()) {
+                   uint32_t t = millis();
+                   available = Ping.ping(target.c_str(), 1);
+                   latencyMs = static_cast<int>(millis() - t);
+                 }
+               } else if (type == "http") {
+                 std::string url = json["url"] | "";
+                 if (!url.empty()) {
+                   HTTPClient http;
+                   http.begin(url.c_str());
+                   http.setTimeout(3000);
+                   uint32_t t = millis();
+                   int code = http.GET();
+                   latencyMs = static_cast<int>(millis() - t);
+                   available = (code > 0 && code < 500);
+                   http.end();
+                 }
+               } else if (type == "upnp") {
+                 std::string target = json["target_name"] | "";
+                 for (auto& tv : _discovery.getDiscoveredTvs()) {
+                   if (tv.name == target) {
+                     available = true;
+                     break;
+                   }
+                 }
+                 latencyMs = 0;
+               }
 
-        char buf[80];
-        snprintf(buf, sizeof(buf),
-                 "{\"available\":%s,\"latency_ms\":%d}",
-                 available ? "true" : "false", latencyMs);
-        request->send(200, "application/json", buf);
-      });
+               char buf[80];
+               snprintf(buf, sizeof(buf),
+                        "{\"available\":%s,\"latency_ms\":%d}",
+                        available ? "true" : "false", latencyMs);
+               request->send(200, "application/json", buf);
+             });
 
   _server.on("/api/scan", HTTP_POST, [this](AsyncWebServerRequest* request) {
     if (!request->authenticate("admin", "insomnia")) {

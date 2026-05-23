@@ -28,12 +28,12 @@ namespace InsomniaTV {
  *   else  → UNKNOWN
  */
 class TvStateMachine {
- public:
+public:
   enum class PowerState { UNKNOWN, ON, OFF, TRANSITIONING };
 
   struct SensorConfig {
     std::string sensorId;
-    int weight;   // 1-5; higher = more influence
+    int weight;  // 1-5; higher = more influence
     bool enabled;
   };
 
@@ -42,7 +42,7 @@ class TvStateMachine {
     bool rawValue;
     int weightedVote;  // weight * (+1 or -1); 0 when disabled or no reading
     bool enabled;
-    bool available;    // false when no reading has been received yet
+    bool available;  // false when no reading has been received yet
   };
 
   explicit TvStateMachine(SensorManager& sensorManager,
@@ -71,7 +71,7 @@ class TvStateMachine {
   // Called by SensorManager when a sensor value changes.
   void onSensorUpdate(const std::string& sensorId, bool value);
 
- private:
+private:
   // Returns true if the current state changed (caller must hold mutex_).
   bool evaluateState();
   float calculateConfidence() const;  // caller must hold mutex_

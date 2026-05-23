@@ -15,7 +15,7 @@ using InsomniaTV::State;
 // Minimal clock mock
 // ---------------------------------------------------------------------------
 class MockClock : public IClock {
- public:
+public:
   uint32_t nowMs() const override { return ms_; }
   void advanceMs(uint32_t ms) override { ms_ += ms; }
   uint32_t ms_ = 0;
@@ -93,9 +93,9 @@ void test_state_machine_verifying_no_tv_sm() {
   sm.setPowerOffCallback([&] { powerOffCalls++; });
 
   clk.advanceMs(6000);
-  sm.tick();                    // → RAMPING
-  sm.onRampComplete();          // → VERIFYING
-  sm.tick();                    // → fires callback, → MONITORING
+  sm.tick();            // → RAMPING
+  sm.onRampComplete();  // → VERIFYING
+  sm.tick();            // → fires callback, → MONITORING
 
   TEST_ASSERT_EQUAL(1, powerOffCalls);
   TEST_ASSERT_EQUAL(State::MONITORING, sm.getCurrentState());

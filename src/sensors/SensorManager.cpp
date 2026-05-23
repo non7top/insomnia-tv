@@ -28,7 +28,8 @@ void SensorManager::registerFactory(const std::string& type,
 }
 
 void SensorManager::registerSensor(std::shared_ptr<Sensor> sensor) {
-  if (!sensor) return;
+  if (!sensor)
+    return;
   std::lock_guard<std::mutex> lock(mutex_);
   sensors_[sensor->getId()] = sensor;
 
@@ -99,11 +100,13 @@ void SensorManager::init(const std::string& configJson,
     });
   }
 
-  if (configJson.empty()) return;
+  if (configJson.empty())
+    return;
 
   JsonDocument doc;
   DeserializationError error = deserializeJson(doc, configJson);
-  if (error) return;
+  if (error)
+    return;
 
   if (doc.is<JsonArray>()) {
     // Clear before re-loading to avoid orphaned sensors. Sensors registered
