@@ -4,9 +4,9 @@
 // Covers the weight-derivation logic (main.cpp boot sequence) and the
 // multi-component wiring between the three subsystems.
 
+#include <ArduinoJson.h>
 #include <unity.h>
 
-#include <ArduinoJson.h>
 #include <cstring>
 #include <memory>
 #include <string>
@@ -25,9 +25,8 @@ using InsomniaTV::TvStateMachine;
 // independent.
 // ---------------------------------------------------------------------------
 class MockSensor : public InsomniaTV::Sensor {
- public:
-  MockSensor(const std::string& id, const std::string& type,
-             bool value = false)
+public:
+  MockSensor(const std::string& id, const std::string& type, bool value = false)
       : id_(id), type_(type), value_(value) {
     state_ = State::READY;
   }
@@ -38,7 +37,7 @@ class MockSensor : public InsomniaTV::Sensor {
   void setConfig(const JsonDocument&) override {}
   void setValue(bool v) { value_ = v; }
 
- private:
+private:
   std::string id_;
   std::string type_;
   bool value_;
@@ -71,32 +70,27 @@ static JsonDocument buildTvDoc(const std::string& sensorsJson) {
 
 void test_upnp_weight_is_4(void) {
   JsonDocument doc = buildTvDoc(R"([{"id":"s","type":"upnp"}])");
-  TEST_ASSERT_EQUAL_INT(4,
-                        doc["detection_sensors"][0]["weight"].as<int>());
+  TEST_ASSERT_EQUAL_INT(4, doc["detection_sensors"][0]["weight"].as<int>());
 }
 
 void test_ping_weight_is_3(void) {
   JsonDocument doc = buildTvDoc(R"([{"id":"s","type":"ping"}])");
-  TEST_ASSERT_EQUAL_INT(3,
-                        doc["detection_sensors"][0]["weight"].as<int>());
+  TEST_ASSERT_EQUAL_INT(3, doc["detection_sensors"][0]["weight"].as<int>());
 }
 
 void test_http_weight_is_2(void) {
   JsonDocument doc = buildTvDoc(R"([{"id":"s","type":"http"}])");
-  TEST_ASSERT_EQUAL_INT(2,
-                        doc["detection_sensors"][0]["weight"].as<int>());
+  TEST_ASSERT_EQUAL_INT(2, doc["detection_sensors"][0]["weight"].as<int>());
 }
 
 void test_unknown_type_weight_is_2(void) {
-  JsonDocument doc =
-      buildTvDoc(R"([{"id":"s","type":"gpio_input","pin":4}])");
-  TEST_ASSERT_EQUAL_INT(2,
-                        doc["detection_sensors"][0]["weight"].as<int>());
+  JsonDocument doc = buildTvDoc(R"([{"id":"s","type":"gpio_input","pin":4}])");
+  TEST_ASSERT_EQUAL_INT(2, doc["detection_sensors"][0]["weight"].as<int>());
 }
 
 void test_all_sensors_enabled_by_default(void) {
-  JsonDocument doc = buildTvDoc(
-      R"([{"id":"a","type":"ping"},{"id":"b","type":"upnp"}])");
+  JsonDocument doc =
+      buildTvDoc(R"([{"id":"a","type":"ping"},{"id":"b","type":"upnp"}])");
   JsonArray arr = doc["detection_sensors"];
   TEST_ASSERT_EQUAL(2, arr.size());
   TEST_ASSERT_TRUE(arr[0]["enabled"].as<bool>());
@@ -105,8 +99,7 @@ void test_all_sensors_enabled_by_default(void) {
 
 void test_empty_sensors_json_yields_no_detection_sensors(void) {
   JsonDocument doc = buildTvDoc("[]");
-  TEST_ASSERT_EQUAL(
-      0, doc["detection_sensors"].as<JsonArray>().size());
+  TEST_ASSERT_EQUAL(0, doc["detection_sensors"].as<JsonArray>().size());
 }
 
 void test_hysteresis_count_is_2(void) {
@@ -126,14 +119,10 @@ void test_sensor_manager_init_registers_sensors(void) {
 
   SensorManager::instance().init(json, discovery);
 
-  TEST_ASSERT_NOT_NULL(
-      SensorManager::instance().getSensor("tv_ping").get());
-  TEST_ASSERT_NOT_NULL(
-      SensorManager::instance().getSensor("tv_http").get());
-  TEST_ASSERT_NULL(
-      SensorManager::instance().getSensor("nonexistent").get());
-  TEST_ASSERT_EQUAL(2,
-                    SensorManager::instance().listSensors().size());
+  TEST_ASSERT_NOT_NULL(SensorManager::instance().getSensor("tv_ping").get());
+  TEST_ASSERT_NOT_NULL(SensorManager::instance().getSensor("tv_http").get());
+  TEST_ASSERT_NULL(SensorManager::instance().getSensor("nonexistent").get());
+  TEST_ASSERT_EQUAL(2, SensorManager::instance().listSensors().size());
 }
 
 void test_sensor_manager_reinit_replaces_sensors(void) {
@@ -141,17 +130,13 @@ void test_sensor_manager_reinit_replaces_sensors(void) {
   SensorManager::instance().clear();
 
   SensorManager::instance().init(
-      R"([{"id":"old","type":"ping","target_ip":"1.1.1.1"}])",
-      discovery);
-  TEST_ASSERT_NOT_NULL(
-      SensorManager::instance().getSensor("old").get());
+      R"([{"id":"old","type":"ping","target_ip":"1.1.1.1"}])", discovery);
+  TEST_ASSERT_NOT_NULL(SensorManager::instance().getSensor("old").get());
 
   SensorManager::instance().init(
-      R"([{"id":"new","type":"http","url":"http://tv.local"}])",
-      discovery);
+      R"([{"id":"new","type":"http","url":"http://tv.local"}])", discovery);
   TEST_ASSERT_NULL(SensorManager::instance().getSensor("old").get());
-  TEST_ASSERT_NOT_NULL(
-      SensorManager::instance().getSensor("new").get());
+  TEST_ASSERT_NOT_NULL(SensorManager::instance().getSensor("new").get());
 }
 
 // ── Full pipeline integration test ──────────────────────────────────────────
@@ -170,10 +155,9 @@ void test_full_pipeline_weights_flow_to_tv_sm(void) {
       std::make_shared<MockSensor>("tv_http", "http", true));
 
   // Build the derived tvDoc (same logic as main.cpp boot sequence).
-  const char* sensorsJson =
-      R"([{"id":"tv_ping","type":"ping"},)"
-      R"({"id":"tv_upnp","type":"upnp"},)"
-      R"({"id":"tv_http","type":"http"}])";
+  const char* sensorsJson = R"([{"id":"tv_ping","type":"ping"},)"
+                            R"({"id":"tv_upnp","type":"upnp"},)"
+                            R"({"id":"tv_http","type":"http"}])";
   JsonDocument tvDoc = buildTvDoc(sensorsJson);
 
   TvStateMachine tvSm(SensorManager::instance());
