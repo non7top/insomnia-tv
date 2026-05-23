@@ -5,6 +5,7 @@
 #include <ArduinoJson.h>
 
 #include <cstdio>
+#include <functional>
 #include <string>
 
 #include "../version.h"
@@ -14,6 +15,7 @@
 #include <AsyncJson.h>
 #include <ESP32Ping.h>
 #include <HTTPClient.h>
+#include <LittleFS.h>
 #include <Update.h>
 #include <WiFi.h>
 #endif
@@ -138,6 +140,7 @@ void WebServer::setupRoutes() {
   <button class="tablinks" onclick="openTab(event,'Status')">Status</button>
   <button class="tablinks" onclick="openTab(event,'Config')">Config</button>
   <button class="tablinks" onclick="openTab(event,'Sensors')">Sensors</button>
+  <button class="tablinks" onclick="openTab(event,'Files')">Files</button>
 </div>
 
 <div id="Status" class="tabcontent">
@@ -174,6 +177,29 @@ void WebServer::setupRoutes() {
     </thead>
     <tbody id="sensor-table-body"></tbody>
   </table>
+</div>
+
+<div id="Files" class="tabcontent">
+  <h3>File Manager</h3>
+  <fieldset>
+    <legend>Upload</legend>
+    <label>Target path:</label>
+    <input type="text" id="upload-path" placeholder="/config/insomnia_tv.json" style="margin-bottom:8px">
+    <input type="file" id="upload-file" style="margin-bottom:8px">
+    <button onclick="uploadFile()">Upload</button>
+  </fieldset>
+  <table>
+    <thead><tr><th>Path</th><th>Size</th><th>Actions</th></tr></thead>
+    <tbody id="files-table-body"></tbody>
+  </table>
+  <div id="file-editor" style="display:none;margin-top:20px;background:white;padding:15px;border-radius:5px;border:1px solid #ccc;">
+    <h4 id="editor-title" style="margin-top:0"></h4>
+    <textarea id="editor-content" style="width:100%;height:300px;font-family:monospace;font-size:13px;box-sizing:border-box;border:1px solid #ccc;border-radius:4px;padding:8px;"></textarea>
+    <div style="margin-top:10px;display:flex;gap:8px;">
+      <button id="editor-save-btn" onclick="saveFile()">Save</button>
+      <button class="btn-gray" onclick="closeEditor()">Cancel</button>
+    </div>
+  </div>
 </div>
 
 <!-- ── Add Sensor modal ─────────────────────────────────────────── -->
@@ -270,6 +296,7 @@ function openTab(evt, name) {
     evt.currentTarget.classList.add('active');
     if (name === 'Status')  loadStatus();
     if (name === 'Sensors') loadSensors();
+    if (name === 'Files')   loadFiles();
 }
 
 // ── Status ──────────────────────────────────────────────────────────────────
@@ -417,6 +444,72 @@ function deleteSensor(id) {
 function testSensor(id) {
     fetch('/api/sensors/test', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'id='+id})
       .then(r => r.json()).then(d => alert('Test: ' + d.id + ' = ' + (d.value ? 'HIGH / OK' : 'LOW / FAIL')));
+}
+
+// ── File Manager ─────────────────────────────────────────────────────────────
+const TEXT_EXTS = new Set(['.json','.txt','.log','.yaml','.yml','.ini',
+    '.csv','.html','.htm','.js','.css','.xml']);
+let editingPath = null;
+
+function loadFiles() {
+    fetch('/api/files').then(r => r.json()).then(data => {
+        const tbody = document.getElementById('files-table-body');
+        tbody.innerHTML = '';
+        if (!data.length) {
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#888">No files on filesystem</td></tr>';
+            return;
+        }
+        data.forEach(f => {
+            const dot = f.name.lastIndexOf('.');
+            const ext = dot >= 0 ? f.name.substring(dot).toLowerCase() : '';
+            const isText = TEXT_EXTS.has(ext);
+            const dl = '/api/files/download?path=' + encodeURIComponent(f.name);
+            const tr = document.createElement('tr');
+            tr.innerHTML = '<td>' + f.name + '</td><td>' + fmtSize(f.size) + '</td><td>' +
+                '<a href="' + dl + '" download><button>Download</button></a> ' +
+                (isText ? '<button onclick="editFile(\'' + f.name.replace(/'/g,"\\'") + '\')">Edit</button> ' : '') +
+                '<button class="delete" onclick="deleteFile(\'' + f.name.replace(/'/g,"\\'") + '\')">Delete</button>' +
+                '</td>';
+            tbody.appendChild(tr);
+        });
+    });
+}
+function fmtSize(b) {
+    if (b < 1024) return b + ' B';
+    if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+    return (b / 1048576).toFixed(1) + ' MB';
+}
+function editFile(path) {
+    fetch('/api/files/edit?path=' + encodeURIComponent(path)).then(r => r.text()).then(content => {
+        editingPath = path;
+        document.getElementById('editor-title').textContent = 'Editing: ' + path;
+        document.getElementById('editor-content').value = content;
+        const btn = document.getElementById('editor-save-btn');
+        btn.textContent = path === '/config/insomnia_tv.json' ? 'Save & Reload Config' : 'Save';
+        document.getElementById('file-editor').style.display = 'block';
+        document.getElementById('file-editor').scrollIntoView({behavior: 'smooth'});
+    });
+}
+function saveFile() {
+    if (!editingPath) return;
+    fetch('/api/files/edit', {method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({path: editingPath, content: document.getElementById('editor-content').value})
+    }).then(r => { if (r.ok) { closeEditor(); loadFiles(); } else alert('Save failed'); });
+}
+function closeEditor() { editingPath = null; document.getElementById('file-editor').style.display = 'none'; }
+function deleteFile(path) {
+    if (!confirm('Delete ' + path + '?')) return;
+    fetch('/api/files?path=' + encodeURIComponent(path), {method: 'DELETE'}).then(() => loadFiles());
+}
+function uploadFile() {
+    const fi = document.getElementById('upload-file');
+    const pi = document.getElementById('upload-path');
+    if (!fi.files.length) { alert('Select a file first'); return; }
+    const targetPath = pi.value.trim() || ('/' + fi.files[0].name);
+    const fd = new FormData();
+    fd.append('file', fi.files[0]);
+    fetch('/api/files/upload?path=' + encodeURIComponent(targetPath), {method: 'POST', body: fd})
+        .then(r => { if (r.ok) { fi.value = ''; pi.value = ''; loadFiles(); } else alert('Upload failed'); });
 }
 
 // ── Config tab ───────────────────────────────────────────────────────────────
@@ -857,6 +950,176 @@ document.getElementsByClassName('tablinks')[0].click();
         String response;
         serializeJson(doc, response);
         request->send(200, "application/json", response);
+      });
+
+  // GET /api/files — recursive LittleFS listing
+  _server.on("/api/files", HTTP_GET, [](AsyncWebServerRequest* request) {
+    if (!request->authenticate("admin", "insomnia")) {
+      return request->requestAuthentication();
+    }
+    JsonDocument doc;
+    JsonArray array = doc.to<JsonArray>();
+    std::function<void(const String&)> walk;
+    walk = [&walk, &array](const String& dir) {
+      File d = LittleFS.open(dir);
+      if (!d || !d.isDirectory()) {
+        return;
+      }
+      File f = d.openNextFile();
+      while (f) {
+        String p = (dir == "/") ? String("/") + f.name()
+                                : dir + "/" + f.name();
+        if (f.isDirectory()) {
+          walk(p);
+        } else {
+          JsonObject o = array.add<JsonObject>();
+          o["name"] = p;
+          o["size"] = static_cast<uint32_t>(f.size());
+        }
+        f = d.openNextFile();
+      }
+    };
+    walk("/");
+    String response;
+    serializeJson(doc, response);
+    request->send(200, "application/json", response);
+  });
+
+  // GET /api/files/download?path=<path>
+  _server.on("/api/files/download", HTTP_GET,
+             [](AsyncWebServerRequest* request) {
+               if (!request->authenticate("admin", "insomnia")) {
+                 return request->requestAuthentication();
+               }
+               if (!request->hasParam("path")) {
+                 request->send(400);
+                 return;
+               }
+               String path = request->getParam("path")->value();
+               if (!LittleFS.exists(path)) {
+                 request->send(404);
+                 return;
+               }
+               request->send(LittleFS, path, "application/octet-stream",
+                             true);
+             });
+
+  // GET /api/files/edit?path=<path> — return file contents as plain text
+  _server.on("/api/files/edit", HTTP_GET,
+             [](AsyncWebServerRequest* request) {
+               if (!request->authenticate("admin", "insomnia")) {
+                 return request->requestAuthentication();
+               }
+               if (!request->hasParam("path")) {
+                 request->send(400);
+                 return;
+               }
+               String path = request->getParam("path")->value();
+               if (!LittleFS.exists(path)) {
+                 request->send(404);
+                 return;
+               }
+               File f = LittleFS.open(path, "r");
+               if (!f) {
+                 request->send(500);
+                 return;
+               }
+               if (f.size() > 65536) {
+                 f.close();
+                 request->send(413, "text/plain", "File too large to edit");
+                 return;
+               }
+               String content = f.readString();
+               f.close();
+               request->send(200, "text/plain", content);
+             });
+
+  // POST /api/files/edit — atomic save; hot-reloads config if applicable
+  _server.on(
+      "/api/files/edit", HTTP_POST,
+      [](AsyncWebServerRequest* request) {
+        if (!request->authenticate("admin", "insomnia")) {
+          return request->requestAuthentication();
+        }
+      },
+      NULL,
+      [this](AsyncWebServerRequest* request, uint8_t* data, size_t len,
+             size_t index, size_t total) {
+        JsonDocument doc;
+        deserializeJson(doc, data, len);
+        String path = doc["path"] | "";
+        String content = doc["content"] | "";
+        if (path.isEmpty()) {
+          request->send(400);
+          return;
+        }
+        String tmp = path + ".tmp";
+        File f = LittleFS.open(tmp, "w");
+        if (!f) {
+          request->send(500);
+          return;
+        }
+        f.print(content);
+        f.close();
+        LittleFS.remove(path);
+        if (!LittleFS.rename(tmp, path)) {
+          request->send(500);
+          return;
+        }
+        if (path == ConfigManager::kConfigPath) {
+          _configMgr.load();
+        }
+        request->send(200, "application/json", "{\"status\":\"ok\"}");
+      });
+
+  // DELETE /api/files?path=<path>
+  _server.on("/api/files", HTTP_DELETE,
+             [](AsyncWebServerRequest* request) {
+               if (!request->authenticate("admin", "insomnia")) {
+                 return request->requestAuthentication();
+               }
+               if (!request->hasParam("path")) {
+                 request->send(400);
+                 return;
+               }
+               String path = request->getParam("path")->value();
+               if (LittleFS.remove(path)) {
+                 request->send(200, "application/json",
+                               "{\"status\":\"ok\"}");
+               } else {
+                 request->send(404);
+               }
+             });
+
+  // POST /api/files/upload?path=<path> — atomic multipart upload
+  _server.on(
+      "/api/files/upload", HTTP_POST,
+      [](AsyncWebServerRequest* request) {
+        request->send(200, "application/json", "{\"status\":\"ok\"}");
+      },
+      [](AsyncWebServerRequest* request, String filename, size_t index,
+         uint8_t* data, size_t len, bool final) {
+        static File uploadFile;
+        static String uploadPath;
+        if (index == 0) {
+          uploadPath = request->hasParam("path")
+                           ? request->getParam("path")->value()
+                           : "/" + filename;
+          String tmp = uploadPath + ".tmp";
+          LittleFS.remove(tmp);
+          uploadFile = LittleFS.open(tmp, "w");
+        }
+        if (uploadFile) {
+          uploadFile.write(data, len);
+        }
+        if (final) {
+          if (uploadFile) {
+            uploadFile.close();
+            String tmp = uploadPath + ".tmp";
+            LittleFS.remove(uploadPath);
+            LittleFS.rename(tmp, uploadPath);
+          }
+        }
       });
 }
 #else
