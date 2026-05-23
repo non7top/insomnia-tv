@@ -835,30 +835,29 @@ document.getElementsByClassName('tablinks')[0].click();
              });
 
   // GET /api/tv-config — live sensor contributions and power state
-  _server.on("/api/tv-config", HTTP_GET,
-             [this](AsyncWebServerRequest* request) {
-               if (!request->authenticate("admin", "insomnia")) {
-                 return request->requestAuthentication();
-               }
-               JsonDocument doc;
-               if (_tvSm != nullptr) {
-                 const char* states[] = {"UNKNOWN", "ON", "OFF",
-                                         "TRANSITIONING"};
-                 int ps = static_cast<int>(_tvSm->getPowerState());
-                 doc["power_state"] = states[ps];
-                 JsonArray contribs = doc["contributions"].to<JsonArray>();
-                 for (const auto& c : _tvSm->getContributions()) {
-                   JsonObject o = contribs.add<JsonObject>();
-                   o["sensor_id"] = c.sensorId;
-                   o["enabled"] = c.enabled;
-                   o["available"] = c.available;
-                   o["vote"] = c.weightedVote;
-                 }
-               }
-               String response;
-               serializeJson(doc, response);
-               request->send(200, "application/json", response);
-             });
+  _server.on(
+      "/api/tv-config", HTTP_GET, [this](AsyncWebServerRequest* request) {
+        if (!request->authenticate("admin", "insomnia")) {
+          return request->requestAuthentication();
+        }
+        JsonDocument doc;
+        if (_tvSm != nullptr) {
+          const char* states[] = {"UNKNOWN", "ON", "OFF", "TRANSITIONING"};
+          int ps = static_cast<int>(_tvSm->getPowerState());
+          doc["power_state"] = states[ps];
+          JsonArray contribs = doc["contributions"].to<JsonArray>();
+          for (const auto& c : _tvSm->getContributions()) {
+            JsonObject o = contribs.add<JsonObject>();
+            o["sensor_id"] = c.sensorId;
+            o["enabled"] = c.enabled;
+            o["available"] = c.available;
+            o["vote"] = c.weightedVote;
+          }
+        }
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
+      });
 }
 #else
 WebServer::WebServer(uint16_t port, SamsungTvDiscovery& discovery,
