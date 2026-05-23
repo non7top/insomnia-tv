@@ -12,18 +12,18 @@ namespace InsomniaTV {
  */
 class IHallSensor {
 public:
-    virtual ~IHallSensor() = default;
+  virtual ~IHallSensor() = default;
 
-    /**
-     * @brief Gets the current reading in Amperes.
-     * @return Current in Amperes, or -1.0 on failure.
-     */
-    virtual float getCurrentAmperes() = 0;
+  /**
+   * @brief Gets the current reading in Amperes.
+   * @return Current in Amperes, or -1.0 on failure.
+   */
+  virtual float getCurrentAmperes() = 0;
 
-    /**
-     * @brief Calibrates the sensor zero-point.
-     */
-    virtual void calibrate() = 0;
+  /**
+   * @brief Calibrates the sensor zero-point.
+   */
+  virtual void calibrate() = 0;
 };
 
 }  // namespace InsomniaTV

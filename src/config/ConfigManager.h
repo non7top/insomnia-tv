@@ -63,6 +63,9 @@ struct Config {
   // Web
   uint16_t webPort;
   bool webAuthEnabled;
+
+  // Sensors
+  std::string sensorsJson;
 };
 
 // Config change notification callback

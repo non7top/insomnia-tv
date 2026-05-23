@@ -15,6 +15,7 @@
 #include "config/ConfigManager.h"
 #include "discovery/SamsungTvDiscovery.h"
 #include "network/WifiSetup.h"
+#include "sensors/SensorManager.h"
 #include "web/WebServer.h"
 
 // Onboard LED (active-low) for nologo C3 super mini
@@ -23,7 +24,7 @@
 static InsomniaTV::ConfigManager configMgr;
 static InsomniaTV::WifiSetup wifiSetup;
 static InsomniaTV::SamsungTvDiscovery tvDiscovery;
-static InsomniaTV::WebServer webServer(80, tvDiscovery);
+static InsomniaTV::WebServer webServer(80, tvDiscovery, configMgr);
 static Ticker heartbeat;
 
 void toggleStatusLed() {
@@ -63,6 +64,11 @@ void setup() {
 
   // WiFi Setup
   wifiSetup.begin();
+
+  // Sensor Framework
+  Serial.println("[insomniaTV] Initializing sensor framework...");
+  InsomniaTV::SensorManager::instance().init(
+      configMgr.get().sensorsJson.c_str(), tvDiscovery);
 
   // Web Server
   webServer.begin();

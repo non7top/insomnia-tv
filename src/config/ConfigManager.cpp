@@ -6,6 +6,10 @@
 
 #include <string>
 
+#if defined(ARDUINO)
+#include <LittleFS.h>
+#endif
+
 namespace InsomniaTV {
 
 const char* ConfigManager::kConfigPath = "/config/insomnia_tv.json";
@@ -16,18 +20,49 @@ ConfigManager::ConfigManager() {
 }
 
 ConfigStatus ConfigManager::load() {
-  // Phase 1: placeholder for FS -- filesystem integration in Phase 5
-  // For now, just ensuring it returns Ok with defaults.
+#if defined(ARDUINO)
+  if (!LittleFS.exists(kConfigPath)) {
+    applyDefaults_();
+    return ConfigStatus::FileNotFound;
+  }
+
+  File file = LittleFS.open(kConfigPath, "r");
+  if (!file)
+    return ConfigStatus::FileNotFound;
+
+  std::string json = file.readString().c_str();
+  file.close();
+
+  Config next;
+  if (!parseJson_(json, next)) {
+    return ConfigStatus::InvalidJson;
+  }
+
+  current_ = next;
+  return ConfigStatus::Ok;
+#else
   applyDefaults_();
   return ConfigStatus::Ok;
+#endif
 }
 
 ConfigStatus ConfigManager::save() {
-  // Phase 1: placeholder for FS -- filesystem integration in Phase 5
-  // We can still call toJson_ to ensure it's functional.
   std::string json = toJson_(current_);
+#if defined(ARDUINO)
+  // Ensure directory exists
+  if (!LittleFS.exists("/config")) {
+    LittleFS.mkdir("/config");
+  }
+  File file = LittleFS.open(kConfigPath, "w");
+  if (!file)
+    return ConfigStatus::WriteFailed;
+  file.print(json.c_str());
+  file.close();
+  return ConfigStatus::Ok;
+#else
   (void)json;
   return ConfigStatus::Ok;
+#endif
 }
 
 const Config& ConfigManager::get() const {
@@ -108,6 +143,7 @@ void ConfigManager::resetToDefaults() {
   d.irLearnedCodesPath = "/ir_learned.json";
   d.webPort = 80;
   d.webAuthEnabled = false;
+  d.sensorsJson = "[]";
   current_ = d;
 }
 
@@ -170,6 +206,10 @@ bool ConfigManager::parseJson_(const std::string& json, Config& out) {
     out.webAuthEnabled = doc["web"]["auth_enabled"] | false;
   }
 
+  if (doc["sensors"].is<JsonArray>()) {
+    serializeJson(doc["sensors"], out.sensorsJson);
+  }
+
   return true;
 }
 
@@ -218,6 +258,12 @@ std::string ConfigManager::toJson_(const Config& cfg) {
   JsonObject web = doc["web"].to<JsonObject>();
   web["port"] = cfg.webPort;
   web["auth_enabled"] = cfg.webAuthEnabled;
+
+  if (!cfg.sensorsJson.empty()) {
+    JsonDocument sensorDoc;
+    deserializeJson(sensorDoc, cfg.sensorsJson);
+    doc["sensors"] = sensorDoc.as<JsonArray>();
+  }
 
   std::string out;
   serializeJson(doc, out);

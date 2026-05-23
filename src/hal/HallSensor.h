@@ -12,15 +12,15 @@ namespace InsomniaTV {
  */
 class HallSensor : public IHallSensor {
 public:
-    explicit HallSensor(uint8_t pin);
-    ~HallSensor() override = default;
+  explicit HallSensor(uint8_t pin);
+  ~HallSensor() override = default;
 
-    float getCurrentAmperes() override;
-    void calibrate() override;
+  float getCurrentAmperes() override;
+  void calibrate() override;
 
 private:
-    uint8_t _pin;
-    float _zeroPoint;
+  uint8_t _pin;
+  float _zeroPoint;
 };
 
 }  // namespace InsomniaTV

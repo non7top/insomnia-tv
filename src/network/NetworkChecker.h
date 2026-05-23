@@ -4,6 +4,7 @@
 #define SRC_NETWORK_NETWORKCHECKER_H_
 
 #include <string>
+
 #include "../hal/INetworkChecker.h"
 
 namespace InsomniaTV {
@@ -16,39 +17,39 @@ namespace InsomniaTV {
  */
 class NetworkChecker : public INetworkChecker {
 public:
-    /**
-     * @brief Constructs the NetworkChecker.
-     */
-    NetworkChecker() = default;
-    ~NetworkChecker() override = default;
+  /**
+   * @brief Constructs the NetworkChecker.
+   */
+  NetworkChecker() = default;
+  ~NetworkChecker() override = default;
 
-    /**
-     * @brief Pings the target IP address.
-     * @param ip The target IP address as a string.
-     * @return RTT in ms if successful, -1 otherwise.
-     */
-    int32_t ping(const std::string& ip) override;
+  /**
+   * @brief Pings the target IP address.
+   * @param ip The target IP address as a string.
+   * @return RTT in ms if successful, -1 otherwise.
+   */
+  int32_t ping(const std::string& ip) override;
 
-    /**
-     * @brief Performs an HTTP GET request to the given URL.
-     * @param url The target URL.
-     * @return HTTP status code if successful, -1 otherwise.
-     */
-    int32_t httpGet(const std::string& url) override;
+  /**
+   * @brief Performs an HTTP GET request to the given URL.
+   * @param url The target URL.
+   * @return HTTP status code if successful, -1 otherwise.
+   */
+  int32_t httpGet(const std::string& url) override;
 
-    /**
-     * @brief Sets the timeout for network operations.
-     * @param timeoutMs Timeout duration in milliseconds.
-     */
-    void setTimeout(uint32_t timeoutMs) override;
+  /**
+   * @brief Sets the timeout for network operations.
+   * @param timeoutMs Timeout duration in milliseconds.
+   */
+  void setTimeout(uint32_t timeoutMs) override;
 
-    /**
-     * @brief Checks if the WiFi interface is currently connected.
-     */
-    bool isConnected() const override;
+  /**
+   * @brief Checks if the WiFi interface is currently connected.
+   */
+  bool isConnected() const override;
 
 private:
-    uint32_t _timeoutMs = 1000;
+  uint32_t _timeoutMs = 1000;
 };
 
 }  // namespace InsomniaTV

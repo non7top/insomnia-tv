@@ -1,0 +1,40 @@
+name: Auto Format
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'feature/**'
+
+jobs:
+  format:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install clang-format
+        run: pip install clang-format==22.1.5
+
+      - name: Apply clang-format
+        run: |
+          find src test -name '*.cpp' -o -name '*.h' | \
+            xargs clang-format --style=file -i
+
+      - name: Commit if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email \
+            "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --staged --quiet; then
+            echo "No formatting changes needed."
+          else
+            git commit -m "style: auto-apply clang-format"
+            git push
+          fi
