@@ -1061,8 +1061,7 @@ document.getElementsByClassName('tablinks')[0].click();
       }
       File f = d.openNextFile();
       while (f) {
-        String p =
-            (dir == "/") ? String("/") + f.name() : dir + "/" + f.name();
+        String p = (dir == "/") ? String("/") + f.name() : dir + "/" + f.name();
         if (f.isDirectory()) {
           walk(p);
         } else {
