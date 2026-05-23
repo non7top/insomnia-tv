@@ -1129,8 +1129,9 @@ document.getElementsByClassName('tablinks')[0].click();
                             tmp.c_str(), uploadPath.c_str());
             }
           } else {
-            Serial.printf("[WebServer] upload: no file handle at final for %s\n",
-                          uploadPath.c_str());
+            Serial.printf(
+                "[WebServer] upload: no file handle at final for %s\n",
+                uploadPath.c_str());
           }
         }
       });

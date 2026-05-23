@@ -38,7 +38,8 @@ ConfigStatus ConfigManager::load() {
 
   Config next;
   if (!parseJson_(json, next)) {
-    Serial.printf("[ConfigManager] load: JSON parse error in %s\n", kConfigPath);
+    Serial.printf("[ConfigManager] load: JSON parse error in %s\n",
+                  kConfigPath);
     return ConfigStatus::InvalidJson;
   }
 
@@ -56,7 +57,8 @@ ConfigStatus ConfigManager::save() {
 #if defined(ARDUINO)
   if (!LittleFS.exists("/config")) {
     if (!LittleFS.mkdir("/config")) {
-      Serial.println("[ConfigManager] save: failed to create /config directory");
+      Serial.println(
+          "[ConfigManager] save: failed to create /config directory");
       return ConfigStatus::WriteFailed;
     }
   }
