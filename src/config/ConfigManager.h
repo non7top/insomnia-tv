@@ -67,7 +67,8 @@ struct Config {
   // Sensors
   std::string sensorsJson;
 
-  // TV State Machine detection config (JSON: hysteresis_count + detection_sensors)
+  // TV State Machine detection config (JSON: hysteresis_count +
+  // detection_sensors)
   std::string tvSmConfigJson;
 
   // Config schema version (bumped on breaking changes)

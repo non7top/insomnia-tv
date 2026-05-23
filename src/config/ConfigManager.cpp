@@ -151,8 +151,7 @@ void ConfigManager::resetToDefaults() {
   d.webPort = 80;
   d.webAuthEnabled = false;
   d.sensorsJson = "[]";
-  d.tvSmConfigJson =
-      "{\"hysteresis_count\":2,\"detection_sensors\":[]}";
+  d.tvSmConfigJson = "{\"hysteresis_count\":2,\"detection_sensors\":[]}";
   d.configVersion = 1;
   current_ = d;
 }
