@@ -2,21 +2,20 @@ name: Auto Format
 
 on:
   workflow_dispatch:
-    inputs:
-      ref:
-        description: Branch to format
-        required: false
-        default: ''
+  push:
+    branches:
+      - 'feature/**'
 
 jobs:
   format:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.ref || github.ref }}
+          ref: ${{ github.ref }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install clang-format
