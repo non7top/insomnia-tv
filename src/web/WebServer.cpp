@@ -967,8 +967,7 @@ document.getElementsByClassName('tablinks')[0].click();
       }
       File f = d.openNextFile();
       while (f) {
-        String p = (dir == "/") ? String("/") + f.name()
-                                : dir + "/" + f.name();
+        String p = (dir == "/") ? String("/") + f.name() : dir + "/" + f.name();
         if (f.isDirectory()) {
           walk(p);
         } else {
@@ -1000,39 +999,37 @@ document.getElementsByClassName('tablinks')[0].click();
                  request->send(404);
                  return;
                }
-               request->send(LittleFS, path, "application/octet-stream",
-                             true);
+               request->send(LittleFS, path, "application/octet-stream", true);
              });
 
   // GET /api/files/edit?path=<path> — return file contents as plain text
-  _server.on("/api/files/edit", HTTP_GET,
-             [](AsyncWebServerRequest* request) {
-               if (!request->authenticate("admin", "insomnia")) {
-                 return request->requestAuthentication();
-               }
-               if (!request->hasParam("path")) {
-                 request->send(400);
-                 return;
-               }
-               String path = request->getParam("path")->value();
-               if (!LittleFS.exists(path)) {
-                 request->send(404);
-                 return;
-               }
-               File f = LittleFS.open(path, "r");
-               if (!f) {
-                 request->send(500);
-                 return;
-               }
-               if (f.size() > 65536) {
-                 f.close();
-                 request->send(413, "text/plain", "File too large to edit");
-                 return;
-               }
-               String content = f.readString();
-               f.close();
-               request->send(200, "text/plain", content);
-             });
+  _server.on("/api/files/edit", HTTP_GET, [](AsyncWebServerRequest* request) {
+    if (!request->authenticate("admin", "insomnia")) {
+      return request->requestAuthentication();
+    }
+    if (!request->hasParam("path")) {
+      request->send(400);
+      return;
+    }
+    String path = request->getParam("path")->value();
+    if (!LittleFS.exists(path)) {
+      request->send(404);
+      return;
+    }
+    File f = LittleFS.open(path, "r");
+    if (!f) {
+      request->send(500);
+      return;
+    }
+    if (f.size() > 65536) {
+      f.close();
+      request->send(413, "text/plain", "File too large to edit");
+      return;
+    }
+    String content = f.readString();
+    f.close();
+    request->send(200, "text/plain", content);
+  });
 
   // POST /api/files/edit — atomic save; hot-reloads config if applicable
   _server.on(
@@ -1073,23 +1070,21 @@ document.getElementsByClassName('tablinks')[0].click();
       });
 
   // DELETE /api/files?path=<path>
-  _server.on("/api/files", HTTP_DELETE,
-             [](AsyncWebServerRequest* request) {
-               if (!request->authenticate("admin", "insomnia")) {
-                 return request->requestAuthentication();
-               }
-               if (!request->hasParam("path")) {
-                 request->send(400);
-                 return;
-               }
-               String path = request->getParam("path")->value();
-               if (LittleFS.remove(path)) {
-                 request->send(200, "application/json",
-                               "{\"status\":\"ok\"}");
-               } else {
-                 request->send(404);
-               }
-             });
+  _server.on("/api/files", HTTP_DELETE, [](AsyncWebServerRequest* request) {
+    if (!request->authenticate("admin", "insomnia")) {
+      return request->requestAuthentication();
+    }
+    if (!request->hasParam("path")) {
+      request->send(400);
+      return;
+    }
+    String path = request->getParam("path")->value();
+    if (LittleFS.remove(path)) {
+      request->send(200, "application/json", "{\"status\":\"ok\"}");
+    } else {
+      request->send(404);
+    }
+  });
 
   // POST /api/files/upload?path=<path> — atomic multipart upload
   _server.on(
