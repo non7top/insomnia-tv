@@ -8,9 +8,9 @@
 #ifndef UNIT_TEST
 
 #include <Arduino.h>
+#include <LittleFS.h>
 #include <Ticker.h>
 
-#include <LittleFS.h>
 #include <cstring>
 #include <string>
 
