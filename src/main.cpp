@@ -10,6 +10,7 @@
 #include <Arduino.h>
 #include <Ticker.h>
 
+#include <cstring>
 #include <string>
 
 #include "config/ConfigManager.h"
@@ -80,8 +81,19 @@ void setup() {
   Serial.println("[insomniaTV] Initializing TV state machine...");
   tvSm = new InsomniaTV::TvStateMachine(InsomniaTV::SensorManager::instance());
   {
+    JsonDocument sensorsDoc;
+    deserializeJson(sensorsDoc, configMgr.get().sensorsJson);
     JsonDocument tvDoc;
-    deserializeJson(tvDoc, configMgr.get().tvSmConfigJson);
+    tvDoc["hysteresis_count"] = 2;
+    JsonArray detArr = tvDoc["detection_sensors"].to<JsonArray>();
+    for (JsonObject s : sensorsDoc.as<JsonArray>()) {
+      const char* t = s["type"] | "";
+      int w = (strcmp(t, "upnp") == 0) ? 4 : (strcmp(t, "ping") == 0) ? 3 : 2;
+      JsonObject ds = detArr.add<JsonObject>();
+      ds["sensor_id"] = s["id"] | "";
+      ds["weight"] = w;
+      ds["enabled"] = true;
+    }
     tvSm->begin(tvDoc);
   }
 

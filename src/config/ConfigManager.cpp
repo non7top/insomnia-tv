@@ -151,7 +151,6 @@ void ConfigManager::resetToDefaults() {
   d.webPort = 80;
   d.webAuthEnabled = false;
   d.sensorsJson = "[]";
-  d.tvSmConfigJson = "{\"hysteresis_count\":2,\"detection_sensors\":[]}";
   d.configVersion = 1;
   current_ = d;
 }
@@ -219,10 +218,6 @@ bool ConfigManager::parseJson_(const std::string& json, Config& out) {
     serializeJson(doc["sensors"], out.sensorsJson);
   }
 
-  if (doc["tv_sm"].is<JsonObject>()) {
-    serializeJson(doc["tv_sm"], out.tvSmConfigJson);
-  }
-
   out.configVersion = doc["config_version"] | 1;
 
   return true;
@@ -278,12 +273,6 @@ std::string ConfigManager::toJson_(const Config& cfg) {
     JsonDocument sensorDoc;
     deserializeJson(sensorDoc, cfg.sensorsJson);
     doc["sensors"] = sensorDoc.as<JsonArray>();
-  }
-
-  if (!cfg.tvSmConfigJson.empty()) {
-    JsonDocument tvDoc;
-    deserializeJson(tvDoc, cfg.tvSmConfigJson);
-    doc["tv_sm"] = tvDoc.as<JsonObject>();
   }
 
   doc["config_version"] = cfg.configVersion;
