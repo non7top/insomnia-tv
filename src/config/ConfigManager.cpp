@@ -49,15 +49,22 @@ ConfigStatus ConfigManager::load() {
 ConfigStatus ConfigManager::save() {
   std::string json = toJson_(current_);
 #if defined(ARDUINO)
-  // Ensure directory exists
   if (!LittleFS.exists("/config")) {
     LittleFS.mkdir("/config");
   }
-  File file = LittleFS.open(kConfigPath, "w");
-  if (!file)
+  // Write to a temp file then rename for atomicity — a power cut during
+  // the write leaves the old file intact rather than a partial corrupt one.
+  static const char* kTmpPath = "/config/insomnia_tv.json.tmp";
+  File file = LittleFS.open(kTmpPath, "w");
+  if (!file) {
     return ConfigStatus::WriteFailed;
+  }
   file.print(json.c_str());
   file.close();
+  LittleFS.remove(kConfigPath);
+  if (!LittleFS.rename(kTmpPath, kConfigPath)) {
+    return ConfigStatus::WriteFailed;
+  }
   return ConfigStatus::Ok;
 #else
   (void)json;
@@ -144,6 +151,9 @@ void ConfigManager::resetToDefaults() {
   d.webPort = 80;
   d.webAuthEnabled = false;
   d.sensorsJson = "[]";
+  d.tvSmConfigJson =
+      "{\"hysteresis_count\":2,\"detection_sensors\":[]}";
+  d.configVersion = 1;
   current_ = d;
 }
 
@@ -210,6 +220,12 @@ bool ConfigManager::parseJson_(const std::string& json, Config& out) {
     serializeJson(doc["sensors"], out.sensorsJson);
   }
 
+  if (doc["tv_sm"].is<JsonObject>()) {
+    serializeJson(doc["tv_sm"], out.tvSmConfigJson);
+  }
+
+  out.configVersion = doc["config_version"] | 1;
+
   return true;
 }
 
@@ -264,6 +280,14 @@ std::string ConfigManager::toJson_(const Config& cfg) {
     deserializeJson(sensorDoc, cfg.sensorsJson);
     doc["sensors"] = sensorDoc.as<JsonArray>();
   }
+
+  if (!cfg.tvSmConfigJson.empty()) {
+    JsonDocument tvDoc;
+    deserializeJson(tvDoc, cfg.tvSmConfigJson);
+    doc["tv_sm"] = tvDoc.as<JsonObject>();
+  }
+
+  doc["config_version"] = cfg.configVersion;
 
   std::string out;
   serializeJson(doc, out);

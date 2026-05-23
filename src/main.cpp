@@ -14,8 +14,11 @@
 
 #include "config/ConfigManager.h"
 #include "discovery/SamsungTvDiscovery.h"
+#include "hal/SystemClock.h"
 #include "network/WifiSetup.h"
 #include "sensors/SensorManager.h"
+#include "state/SleepStateMachine.h"
+#include "tv/TvStateMachine.h"
 #include "web/WebServer.h"
 
 // Onboard LED (active-low) for nologo C3 super mini
@@ -26,6 +29,9 @@ static InsomniaTV::WifiSetup wifiSetup;
 static InsomniaTV::SamsungTvDiscovery tvDiscovery;
 static InsomniaTV::WebServer webServer(80, tvDiscovery, configMgr);
 static Ticker heartbeat;
+static InsomniaTV::SystemClock systemClock;
+static InsomniaTV::TvStateMachine* tvSm = nullptr;
+static InsomniaTV::SleepStateMachine* sleepSm = nullptr;
 
 void toggleStatusLed() {
   digitalWrite(STATUS_LED_PIN, !digitalRead(STATUS_LED_PIN));
@@ -70,14 +76,33 @@ void setup() {
   InsomniaTV::SensorManager::instance().init(
       configMgr.get().sensorsJson.c_str(), tvDiscovery);
 
+  // TV State Machine — restore detection-sensor config from stored JSON
+  Serial.println("[insomniaTV] Initializing TV state machine...");
+  tvSm = new InsomniaTV::TvStateMachine(InsomniaTV::SensorManager::instance());
+  {
+    JsonDocument tvDoc;
+    deserializeJson(tvDoc, configMgr.get().tvSmConfigJson);
+    tvSm->begin(tvDoc);
+  }
+
+  // Sleep State Machine — inactivity timeout from behavior config
+  uint32_t timeoutMs =
+      static_cast<uint32_t>(configMgr.get().inactivityTimeoutMin) * 60000UL;
+  sleepSm = new InsomniaTV::SleepStateMachine(systemClock, timeoutMs);
+  sleepSm->setTvStateMachine(tvSm);
+
+  webServer.setTvStateMachine(tvSm);
+
   // Web Server
   webServer.begin();
 }
 
 void loop() {
   wifiSetup.handleResetButton();
-  // Phase 1: minimal loop
-  // Later phases will add task scheduling here
+  InsomniaTV::SensorManager::instance().tick();
+  if (sleepSm != nullptr) {
+    sleepSm->tick();
+  }
   delay(100);
 }
 

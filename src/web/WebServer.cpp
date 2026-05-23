@@ -31,6 +31,10 @@ WebServer::WebServer(uint16_t port, SamsungTvDiscovery& discovery,
   setupRoutes();
 }
 
+void WebServer::setTvStateMachine(TvStateMachine* tvSm) {
+  _tvSm = tvSm;
+}
+
 void WebServer::begin() {
   _server.addHandler(&events);
   _server.begin();
@@ -556,6 +560,17 @@ async function wzCreate() {
         const r = await fetch('/api/sensors', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(p)});
         if (r.ok) created++;
     }
+    // Persist TV detection config so it survives reboots.
+    // Default weights: upnp=4 (active presence), ping=3, http=2.
+    const weights = {upnp: 4, ping: 3, http: 2};
+    const detectionSensors = wzSensors
+        .filter(s => s.id.trim())
+        .map(s => ({sensor_id: s.id.trim(), weight: weights[s.type] || 2, enabled: s.enabled}));
+    await fetch('/api/tv-config', {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({hysteresis_count: 2, detection_sensors: detectionSensors})
+    });
     document.getElementById('wz-done-title').textContent = created + ' sensor' + (created !== 1 ? 's' : '') + ' added!';
     document.getElementById('wz-done-msg').textContent   = 'Sensors for "' + wzTv.name + '" are now active in the registry.';
     wzShowPage(4);
@@ -829,12 +844,68 @@ document.getElementsByClassName('tablinks')[0].click();
                serializeJson(doc, response);
                request->send(200, "application/json", response);
              });
+
+  // GET /api/tv-config — return stored config + live sensor contributions
+  _server.on("/api/tv-config", HTTP_GET,
+             [this](AsyncWebServerRequest* request) {
+               if (!request->authenticate("admin", "insomnia")) {
+                 return request->requestAuthentication();
+               }
+               JsonDocument doc;
+               JsonDocument cfgDoc;
+               deserializeJson(cfgDoc, _configMgr.get().tvSmConfigJson);
+               doc["config"] = cfgDoc;
+               if (_tvSm != nullptr) {
+                 const char* states[] = {"UNKNOWN", "ON", "OFF",
+                                         "TRANSITIONING"};
+                 int ps =
+                     static_cast<int>(_tvSm->getPowerState());
+                 doc["power_state"] = states[ps];
+                 JsonArray contribs = doc["contributions"].to<JsonArray>();
+                 for (const auto& c : _tvSm->getContributions()) {
+                   JsonObject o = contribs.add<JsonObject>();
+                   o["sensor_id"] = c.sensorId;
+                   o["enabled"] = c.enabled;
+                   o["available"] = c.available;
+                   o["vote"] = c.weightedVote;
+                 }
+               }
+               String response;
+               serializeJson(doc, response);
+               request->send(200, "application/json", response);
+             });
+
+  // PUT /api/tv-config — update detection-sensor config and persist
+  _server.on(
+      "/api/tv-config", HTTP_PUT,
+      [](AsyncWebServerRequest* request) {
+        if (!request->authenticate("admin", "insomnia")) {
+          return request->requestAuthentication();
+        }
+      },
+      NULL,
+      [this](AsyncWebServerRequest* request, uint8_t* data, size_t len,
+             size_t index, size_t total) {
+        JsonDocument doc;
+        deserializeJson(doc, data, len);
+        Config cfg = _configMgr.get();
+        serializeJson(doc, cfg.tvSmConfigJson);
+        _configMgr.set(cfg);
+        _configMgr.save();
+        if (_tvSm != nullptr) {
+          _tvSm->begin(doc);
+        }
+        request->send(200, "application/json", "{\"status\":\"ok\"}");
+      });
 }
 #else
 WebServer::WebServer(uint16_t port, SamsungTvDiscovery& discovery,
                      ConfigManager& configMgr)
     : _discovery(discovery), _configMgr(configMgr) {}
 void WebServer::begin() {}
+void WebServer::setTvStateMachine(TvStateMachine* tvSm) {
+  _tvSm = tvSm;
+}
 void WebServer::setupRoutes() {}
 #endif
 

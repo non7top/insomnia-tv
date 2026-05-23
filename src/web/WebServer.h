@@ -10,6 +10,7 @@
 
 #include "../config/ConfigManager.h"
 #include "../discovery/SamsungTvDiscovery.h"
+#include "../tv/TvStateMachine.h"
 
 namespace InsomniaTV {
 
@@ -32,12 +33,19 @@ public:
    */
   void begin();
 
+  /**
+   * @brief Wire in the TvStateMachine so /api/tv-config can read/update it.
+   * Called from setup() after the state machine is created.
+   */
+  void setTvStateMachine(TvStateMachine* tvSm);
+
 private:
 #if defined(ARDUINO)
   AsyncWebServer _server;
 #endif
   SamsungTvDiscovery& _discovery;
   ConfigManager& _configMgr;
+  TvStateMachine* _tvSm = nullptr;
   void setupRoutes();
 };
 
