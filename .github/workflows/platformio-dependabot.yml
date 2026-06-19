@@ -13,7 +13,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Run PlatformIO Dependabot
         uses: peterus/platformio_dependabot@v1
