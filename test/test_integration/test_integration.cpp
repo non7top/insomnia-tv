@@ -16,7 +16,6 @@
 #include "../../src/tv/TvStateMachine.h"
 
 using InsomniaTV::SamsungTvDiscovery;
-using InsomniaTV::SensorContribution;
 using InsomniaTV::SensorManager;
 using InsomniaTV::TvStateMachine;
 
@@ -162,7 +161,10 @@ void test_full_pipeline_weights_flow_to_tv_sm(void) {
 
   TvStateMachine tvSm(SensorManager::instance());
   tvSm.begin(tvDoc);
-  tvSm.tick();
+  // TvStateMachine is push-based: it subscribed to SensorManager's
+  // value-change events in its constructor, so ticking the manager (not
+  // the state machine) is what drives sensor reads into it.
+  SensorManager::instance().tick();
 
   auto contribs = tvSm.getContributions();
   TEST_ASSERT_EQUAL(3, contribs.size());
