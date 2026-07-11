@@ -59,6 +59,18 @@ jobs:
 
       # Coverage reporting disabled — see #52 (stale .pio cache means gcov
       # never finds .gcno files, so lcov always errors with no valid records).
+      # - name: Generate coverage report
+      #   run: |
+      #     sudo apt-get install -y lcov
+      #     lcov --capture --directory . --build-directory . --ignore-errors gcov --output-file .pio/build/native/coverage.info
+      #     lcov --remove .pio/build/native/coverage.info '*/test/*' '*/.pio/*' --ignore-errors unused --output-file .pio/build/native/coverage.info
+      #
+      # - name: Upload coverage artifact
+      #   if: always()
+      #   uses: actions/upload-artifact@v7
+      #   with:
+      #     name: coverage-report
+      #     path: .pio/build/native/coverage.info
 
   build-firmware:
     needs: [lint, unit-tests]
