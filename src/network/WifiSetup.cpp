@@ -72,7 +72,9 @@ void WifiSetup::handleResetButton() {
 #endif
 }
 
-bool WifiSetup::isPortalActive() const { return _portalActive; }
+bool WifiSetup::isPortalActive() const {
+  return _portalActive;
+}
 
 std::string WifiSetup::getChipId() {
 #if defined(ARDUINO)

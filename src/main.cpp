@@ -43,7 +43,8 @@ static InsomniaTV::SleepStateMachine* sleepSm = nullptr;
 void updateStatusLed() {
   float phase = (millis() % kStatusLedBreathPeriodMs) /
                 static_cast<float>(kStatusLedBreathPeriodMs);
-  float envelope = (1.0f - cosf(2.0f * static_cast<float>(M_PI) * phase)) / 2.0f;
+  float envelope =
+      (1.0f - cosf(2.0f * static_cast<float>(M_PI) * phase)) / 2.0f;
   int brightness = static_cast<int>(envelope * kStatusLedMaxBrightness);
   ledcWrite(STATUS_LED_PIN, 255 - brightness);  // active-low
 }
