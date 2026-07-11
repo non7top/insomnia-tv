@@ -219,8 +219,6 @@ void test_config_json_roundtrip(void) {
   InsomniaTV::Config original;
 
   // Fill all fields with non-default values
-  original.wifiSsid = "custom-ssid";
-  original.wifiPassword = "custom-password";
   original.mqttEnabled = false;
   original.mqttBroker = "192.168.1.100";
   original.mqttPort = 8883;
@@ -255,9 +253,6 @@ void test_config_json_roundtrip(void) {
   TEST_ASSERT_TRUE(mgr.testParseJson(json, parsed));
 
   // Verify all fields
-  TEST_ASSERT_EQUAL_STRING(original.wifiSsid.c_str(), parsed.wifiSsid.c_str());
-  TEST_ASSERT_EQUAL_STRING(original.wifiPassword.c_str(),
-                           parsed.wifiPassword.c_str());
   TEST_ASSERT_EQUAL_INT(original.mqttEnabled, parsed.mqttEnabled);
   TEST_ASSERT_EQUAL_STRING(original.mqttBroker.c_str(),
                            parsed.mqttBroker.c_str());
@@ -300,8 +295,6 @@ void test_config_json_roundtrip(void) {
 void test_config_json_logic(void) {
   TestConfigManager mgr;
   InsomniaTV::Config cfg;
-  cfg.wifiSsid = "test-ssid";
-  cfg.wifiPassword = "test-password";
   cfg.mqttEnabled = false;
   cfg.mqttBroker = "10.0.0.1";
   cfg.mqttPort = 1234;
@@ -332,9 +325,6 @@ void test_config_json_logic(void) {
   InsomniaTV::Config parsed;
   TEST_ASSERT_TRUE(mgr.testParseJson(json, parsed));
 
-  TEST_ASSERT_EQUAL_STRING(cfg.wifiSsid.c_str(), parsed.wifiSsid.c_str());
-  TEST_ASSERT_EQUAL_STRING(cfg.wifiPassword.c_str(),
-                           parsed.wifiPassword.c_str());
   TEST_ASSERT_EQUAL_INT(cfg.mqttEnabled, parsed.mqttEnabled);
   TEST_ASSERT_EQUAL_STRING(cfg.mqttBroker.c_str(), parsed.mqttBroker.c_str());
   TEST_ASSERT_EQUAL_UINT16(cfg.mqttPort, parsed.mqttPort);

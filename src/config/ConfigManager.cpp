@@ -139,8 +139,6 @@ bool ConfigManager::validate(const Config& cfg, std::string& outError) {
 
 void ConfigManager::resetToDefaults() {
   Config d;
-  d.wifiSsid = "";
-  d.wifiPassword = "";
   d.mqttEnabled = true;
   d.mqttBroker = "";
   d.mqttPort = 1883;
@@ -176,11 +174,6 @@ bool ConfigManager::parseJson_(const std::string& json, Config& out) {
   DeserializationError error = deserializeJson(doc, json);
   if (error)
     return false;
-
-  if (doc["wifi"].is<JsonObject>()) {
-    out.wifiSsid = doc["wifi"]["ssid"] | "";
-    out.wifiPassword = doc["wifi"]["password"] | "";
-  }
 
   if (doc["mqtt"].is<JsonObject>()) {
     out.mqttEnabled = doc["mqtt"]["enabled"] | true;
@@ -241,10 +234,6 @@ bool ConfigManager::parseJson_(const std::string& json, Config& out) {
 
 std::string ConfigManager::toJson_(const Config& cfg) {
   JsonDocument doc;
-
-  JsonObject wifi = doc["wifi"].to<JsonObject>();
-  wifi["ssid"] = cfg.wifiSsid;
-  wifi["password"] = cfg.wifiPassword;
 
   JsonObject mqtt = doc["mqtt"].to<JsonObject>();
   mqtt["enabled"] = cfg.mqttEnabled;

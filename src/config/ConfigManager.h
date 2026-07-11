@@ -25,10 +25,6 @@ enum class ConfigStatus {
 
 // Full device configuration
 struct Config {
-  // WiFi
-  std::string wifiSsid;
-  std::string wifiPassword;
-
   // MQTT
   bool mqttEnabled;
   std::string mqttBroker;
