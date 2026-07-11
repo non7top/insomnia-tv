@@ -64,3 +64,6 @@ managed_components/
 
 # Generated version header (rebuilt each compile)
 src/version.h
+
+# Generated version file for LittleFS upload (rebuilt each compile)
+data/version.txt
