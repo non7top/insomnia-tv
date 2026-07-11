@@ -23,6 +23,7 @@ WifiSetup::WifiSetup() : _buttonPressStart(0), _isButtonPressed(false) {}
 void WifiSetup::begin() {
 #if defined(ARDUINO)
   WiFiManager wm;
+  wm.setAPCallback([this](WiFiManager*) { _portalActive = true; });
 
   std::string apName = "insomnia-" + getChipId();
 
@@ -31,6 +32,8 @@ void WifiSetup::begin() {
     Serial.println("[insomniaTV] WiFi connection failed and portal timed out");
     ESP.restart();
   }
+  _portalActive = false;
+  WiFi.setSleep(true);  // modem-sleep between beacons; less regulator heat
 
   Serial.println("[insomniaTV] WiFi connected");
   Serial.print("[insomniaTV] IP address: ");
@@ -68,6 +71,8 @@ void WifiSetup::handleResetButton() {
   }
 #endif
 }
+
+bool WifiSetup::isPortalActive() const { return _portalActive; }
 
 std::string WifiSetup::getChipId() {
 #if defined(ARDUINO)

@@ -9,8 +9,8 @@
 
 #include <Arduino.h>
 #include <LittleFS.h>
-#include <Ticker.h>
 
+#include <cmath>
 #include <cstring>
 #include <string>
 
@@ -26,20 +26,53 @@
 // Onboard LED (active-low) for nologo C3 super mini
 #define STATUS_LED_PIN 8
 
+static constexpr int kStatusLedFreqHz = 5000;
+static constexpr int kStatusLedResolutionBits = 8;
+static constexpr uint32_t kStatusLedBreathPeriodMs = 4000;
+// Kept low (out of 255) so the heartbeat reads as a faint pulse, not a blink.
+static constexpr int kStatusLedMaxBrightness = 60;
+
 static InsomniaTV::ConfigManager configMgr;
 static InsomniaTV::WifiSetup wifiSetup;
 static InsomniaTV::SamsungTvDiscovery tvDiscovery;
 static InsomniaTV::WebServer webServer(80, tvDiscovery, configMgr);
-static Ticker heartbeat;
 static InsomniaTV::SystemClock systemClock;
 static InsomniaTV::TvStateMachine* tvSm = nullptr;
 static InsomniaTV::SleepStateMachine* sleepSm = nullptr;
 
-void toggleStatusLed() {
-  digitalWrite(STATUS_LED_PIN, !digitalRead(STATUS_LED_PIN));
+void updateStatusLed() {
+  float phase = (millis() % kStatusLedBreathPeriodMs) /
+                static_cast<float>(kStatusLedBreathPeriodMs);
+  float envelope = (1.0f - cosf(2.0f * static_cast<float>(M_PI) * phase)) / 2.0f;
+  int brightness = static_cast<int>(envelope * kStatusLedMaxBrightness);
+  ledcWrite(STATUS_LED_PIN, 255 - brightness);  // active-low
+}
+
+// Quick "bip-bip-bip-bip" blink while the WiFi config portal is waiting for
+// setup, vs. the slow breathing heartbeat during normal operation.
+void updatePortalBlinkLed() {
+  bool on = (millis() / 150) % 2 == 0;
+  ledcWrite(STATUS_LED_PIN, on ? 0 : 255);  // active-low
+}
+
+// Runs on its own task so the LED stays responsive even when loop() stalls
+// on blocking sensor I/O (e.g. HttpSensor's 5s timeout).
+void statusLedTask(void*) {
+  for (;;) {
+    if (wifiSetup.isPortalActive()) {
+      updatePortalBlinkLed();
+    } else {
+      updateStatusLed();
+    }
+    vTaskDelay(pdMS_TO_TICKS(20));
+  }
 }
 
 void setup() {
+  // Lower power draw (less heat through the onboard 5V regulator); this
+  // workload is nowhere near CPU-bound.
+  setCpuFrequencyMhz(80);
+
   Serial.begin(115200);
   // Wait for Serial on USB boards
   uint32_t start = millis();
@@ -48,10 +81,10 @@ void setup() {
 
   Serial.println("\n[insomniaTV] Initializing...");
 
-  // Status LED heartbeat
-  pinMode(STATUS_LED_PIN, OUTPUT);
-  digitalWrite(STATUS_LED_PIN, HIGH);  // Off
-  heartbeat.attach(0.5, toggleStatusLed);
+  // Status LED — slow breathing heartbeat (active-low), on its own task
+  ledcAttach(STATUS_LED_PIN, kStatusLedFreqHz, kStatusLedResolutionBits);
+  ledcWrite(STATUS_LED_PIN, 255);  // start off
+  xTaskCreate(statusLedTask, "status_led", 2048, NULL, 1, NULL);
 
   // Filesystem — must be mounted before any config or file-manager access
   if (!LittleFS.begin(true)) {
