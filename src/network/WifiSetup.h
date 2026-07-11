@@ -5,6 +5,7 @@
 
 #include <stdint.h>
 
+#include <atomic>
 #include <string>
 
 namespace InsomniaTV {
@@ -26,10 +27,17 @@ public:
    */
   void handleResetButton();
 
+  /**
+   * @brief True while the WiFi config (AP) portal is active, awaiting setup.
+   *        Safe to poll from another task.
+   */
+  bool isPortalActive() const;
+
 private:
   std::string getChipId();
   uint32_t _buttonPressStart;
   bool _isButtonPressed;
+  std::atomic<bool> _portalActive{false};
 };
 
 }  // namespace InsomniaTV

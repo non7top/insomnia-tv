@@ -25,10 +25,6 @@ enum class ConfigStatus {
 
 // Full device configuration
 struct Config {
-  // WiFi
-  std::string wifiSsid;
-  std::string wifiPassword;
-
   // MQTT
   bool mqttEnabled;
   std::string mqttBroker;
@@ -66,6 +62,9 @@ struct Config {
 
   // Sensors
   std::string sensorsJson;
+
+  // Config schema version (bumped on breaking changes)
+  int configVersion;
 };
 
 // Config change notification callback

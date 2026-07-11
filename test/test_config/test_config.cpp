@@ -219,8 +219,6 @@ void test_config_json_roundtrip(void) {
   InsomniaTV::Config original;
 
   // Fill all fields with non-default values
-  original.wifiSsid = "custom-ssid";
-  original.wifiPassword = "custom-password";
   original.mqttEnabled = false;
   original.mqttBroker = "192.168.1.100";
   original.mqttPort = 8883;
@@ -255,9 +253,6 @@ void test_config_json_roundtrip(void) {
   TEST_ASSERT_TRUE(mgr.testParseJson(json, parsed));
 
   // Verify all fields
-  TEST_ASSERT_EQUAL_STRING(original.wifiSsid.c_str(), parsed.wifiSsid.c_str());
-  TEST_ASSERT_EQUAL_STRING(original.wifiPassword.c_str(),
-                           parsed.wifiPassword.c_str());
   TEST_ASSERT_EQUAL_INT(original.mqttEnabled, parsed.mqttEnabled);
   TEST_ASSERT_EQUAL_STRING(original.mqttBroker.c_str(),
                            parsed.mqttBroker.c_str());
@@ -300,8 +295,6 @@ void test_config_json_roundtrip(void) {
 void test_config_json_logic(void) {
   TestConfigManager mgr;
   InsomniaTV::Config cfg;
-  cfg.wifiSsid = "test-ssid";
-  cfg.wifiPassword = "test-password";
   cfg.mqttEnabled = false;
   cfg.mqttBroker = "10.0.0.1";
   cfg.mqttPort = 1234;
@@ -332,9 +325,6 @@ void test_config_json_logic(void) {
   InsomniaTV::Config parsed;
   TEST_ASSERT_TRUE(mgr.testParseJson(json, parsed));
 
-  TEST_ASSERT_EQUAL_STRING(cfg.wifiSsid.c_str(), parsed.wifiSsid.c_str());
-  TEST_ASSERT_EQUAL_STRING(cfg.wifiPassword.c_str(),
-                           parsed.wifiPassword.c_str());
   TEST_ASSERT_EQUAL_INT(cfg.mqttEnabled, parsed.mqttEnabled);
   TEST_ASSERT_EQUAL_STRING(cfg.mqttBroker.c_str(), parsed.mqttBroker.c_str());
   TEST_ASSERT_EQUAL_UINT16(cfg.mqttPort, parsed.mqttPort);
@@ -370,6 +360,50 @@ void test_config_sensors_json(void) {
   TEST_ASSERT_EQUAL_STRING(cfg.sensorsJson.c_str(), next.sensorsJson.c_str());
 }
 
+// ---------------------------------------------------------------------------
+// Test: configVersion defaults to 1
+// ---------------------------------------------------------------------------
+void test_config_version_defaults_to_1(void) {
+  InsomniaTV::ConfigManager mgr;
+  mgr.resetToDefaults();
+  TEST_ASSERT_EQUAL_INT(1, mgr.get().configVersion);
+}
+
+// ---------------------------------------------------------------------------
+// Test: configVersion survives a JSON round-trip
+// ---------------------------------------------------------------------------
+void test_config_version_roundtrip(void) {
+  TestConfigManager mgr;
+  mgr.resetToDefaults();
+  InsomniaTV::Config cfg = mgr.get();
+  cfg.configVersion = 7;
+  std::string json = mgr.testToJson(cfg);
+
+  InsomniaTV::Config parsed;
+  TEST_ASSERT_TRUE(mgr.testParseJson(json, parsed));
+  TEST_ASSERT_EQUAL_INT(7, parsed.configVersion);
+}
+
+// ---------------------------------------------------------------------------
+// Test: serialised JSON must NOT contain a "tv_sm" key (field was removed)
+// ---------------------------------------------------------------------------
+void test_config_no_tv_sm_key(void) {
+  TestConfigManager mgr;
+  mgr.resetToDefaults();
+  std::string json = mgr.testToJson(mgr.get());
+  TEST_ASSERT_EQUAL_INT(static_cast<int>(std::string::npos),
+                        static_cast<int>(json.find("\"tv_sm\"")));
+}
+
+// ---------------------------------------------------------------------------
+// Test: sensorsJson defaults to an empty JSON array "[]"
+// ---------------------------------------------------------------------------
+void test_config_sensors_json_default(void) {
+  InsomniaTV::ConfigManager mgr;
+  mgr.resetToDefaults();
+  TEST_ASSERT_EQUAL_STRING("[]", mgr.get().sensorsJson.c_str());
+}
+
 int runUnityTests(void) {
   UNITY_BEGIN();
   RUN_TEST(test_config_defaults);
@@ -389,6 +423,10 @@ int runUnityTests(void) {
   RUN_TEST(test_config_json_roundtrip);
   RUN_TEST(test_config_json_logic);
   RUN_TEST(test_config_sensors_json);
+  RUN_TEST(test_config_version_defaults_to_1);
+  RUN_TEST(test_config_version_roundtrip);
+  RUN_TEST(test_config_no_tv_sm_key);
+  RUN_TEST(test_config_sensors_json_default);
   return UNITY_END();
 }
 
