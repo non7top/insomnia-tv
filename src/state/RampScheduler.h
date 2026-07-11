@@ -21,8 +21,8 @@ namespace InsomniaTV {
 class RampScheduler {
 public:
   RampScheduler(IClock& clock, uint32_t interval_ms, uint8_t max_steps,
-               std::function<void()> on_ramp_step,
-               std::function<void()> on_complete);
+                std::function<void()> on_ramp_step,
+                std::function<void()> on_complete);
 
   // Begins the ramp sequence: resets step count, marks active.
   void start();
