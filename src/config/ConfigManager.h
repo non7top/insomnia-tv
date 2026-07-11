@@ -54,6 +54,9 @@ struct Config {
   std::string irVolumeDownProtocol;
   uint64_t irVolumeDownCode;
   uint16_t irVolumeDownBits;
+  std::string irPowerProtocol;
+  uint64_t irPowerCode;
+  uint16_t irPowerBits;
   std::string irLearnedCodesPath;
 
   // Web

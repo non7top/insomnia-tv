@@ -102,14 +102,92 @@ void test_state_machine_verifying_no_tv_sm() {
 }
 
 // ---------------------------------------------------------------------------
-// RampScheduler can be constructed and toggled (stubs)
+// SleepStateMachine invokes the ramp-start callback on entering RAMPING
 // ---------------------------------------------------------------------------
-void test_ramp_scheduler_init() {
-  auto on_step = []() {};
-  RampScheduler rs(1000, on_step);
+void test_state_machine_ramp_start_callback_fires() {
+  MockClock clk;
+  SleepStateMachine sm(clk, 5000);
+  int rampStarts = 0;
+  sm.setRampStartCallback([&] { rampStarts++; });
+
+  clk.advanceMs(4999);
+  sm.tick();
+  TEST_ASSERT_EQUAL(0, rampStarts);
+
+  clk.advanceMs(1);
+  sm.tick();
+  TEST_ASSERT_EQUAL(1, rampStarts);
+  TEST_ASSERT_EQUAL(State::RAMPING, sm.getCurrentState());
+}
+
+// ---------------------------------------------------------------------------
+// RampScheduler: no step before interval elapses
+// ---------------------------------------------------------------------------
+void test_ramp_scheduler_no_step_before_interval() {
+  MockClock clk;
+  int steps = 0;
+  RampScheduler rs(clk, 1000, 3, [&] { steps++; }, [] {});
+  rs.start();
+
+  clk.advanceMs(999);
+  rs.tick();
+  TEST_ASSERT_EQUAL(0, steps);
+}
+
+// ---------------------------------------------------------------------------
+// RampScheduler: fires a step once the interval elapses
+// ---------------------------------------------------------------------------
+void test_ramp_scheduler_fires_step_at_interval() {
+  MockClock clk;
+  int steps = 0;
+  RampScheduler rs(clk, 1000, 3, [&] { steps++; }, [] {});
+  rs.start();
+
+  clk.advanceMs(1000);
+  rs.tick();
+  TEST_ASSERT_EQUAL(1, steps);
+  TEST_ASSERT_EQUAL(1, rs.stepCount());
+}
+
+// ---------------------------------------------------------------------------
+// RampScheduler: fires on_complete and stops after max_steps
+// ---------------------------------------------------------------------------
+void test_ramp_scheduler_completes_after_max_steps() {
+  MockClock clk;
+  int steps = 0;
+  int completes = 0;
+  RampScheduler rs(clk, 1000, 3, [&] { steps++; }, [&] { completes++; });
+  rs.start();
+
+  for (int i = 0; i < 3; i++) {
+    clk.advanceMs(1000);
+    rs.tick();
+  }
+
+  TEST_ASSERT_EQUAL(3, steps);
+  TEST_ASSERT_EQUAL(1, completes);
+  TEST_ASSERT_FALSE(rs.isActive());
+
+  // No further steps once complete, even if more time passes.
+  clk.advanceMs(1000);
+  rs.tick();
+  TEST_ASSERT_EQUAL(3, steps);
+}
+
+// ---------------------------------------------------------------------------
+// RampScheduler: stop() cancels the sequence
+// ---------------------------------------------------------------------------
+void test_ramp_scheduler_stop_cancels() {
+  MockClock clk;
+  int steps = 0;
+  RampScheduler rs(clk, 1000, 3, [&] { steps++; }, [] {});
   rs.start();
   rs.stop();
-  TEST_ASSERT_TRUE(true);
+
+  clk.advanceMs(1000);
+  rs.tick();
+  TEST_ASSERT_EQUAL(0, steps);
+  TEST_ASSERT_FALSE(rs.isActive());
 }
 
 int main() {
@@ -120,6 +198,10 @@ int main() {
   RUN_TEST(test_state_machine_ir_during_ramping);
   RUN_TEST(test_state_machine_ramp_complete_to_verifying);
   RUN_TEST(test_state_machine_verifying_no_tv_sm);
-  RUN_TEST(test_ramp_scheduler_init);
+  RUN_TEST(test_state_machine_ramp_start_callback_fires);
+  RUN_TEST(test_ramp_scheduler_no_step_before_interval);
+  RUN_TEST(test_ramp_scheduler_fires_step_at_interval);
+  RUN_TEST(test_ramp_scheduler_completes_after_max_steps);
+  RUN_TEST(test_ramp_scheduler_stop_cancels);
   return UNITY_END();
 }

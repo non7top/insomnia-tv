@@ -241,6 +241,9 @@ void test_config_json_roundtrip(void) {
   original.irVolumeDownProtocol = "SONY";
   original.irVolumeDownCode = 0xFEDCBA9876543210ULL;
   original.irVolumeDownBits = 12;
+  original.irPowerProtocol = "RC5";
+  original.irPowerCode = 0x1A2B3C4DULL;
+  original.irPowerBits = 20;
   original.irLearnedCodesPath = "/custom_learned.json";
   original.webPort = 8080;
   original.webAuthEnabled = true;
@@ -286,6 +289,10 @@ void test_config_json_roundtrip(void) {
                            parsed.irVolumeDownProtocol.c_str());
   TEST_ASSERT_EQUAL_HEX64(original.irVolumeDownCode, parsed.irVolumeDownCode);
   TEST_ASSERT_EQUAL_UINT16(original.irVolumeDownBits, parsed.irVolumeDownBits);
+  TEST_ASSERT_EQUAL_STRING(original.irPowerProtocol.c_str(),
+                           parsed.irPowerProtocol.c_str());
+  TEST_ASSERT_EQUAL_HEX64(original.irPowerCode, parsed.irPowerCode);
+  TEST_ASSERT_EQUAL_UINT16(original.irPowerBits, parsed.irPowerBits);
   TEST_ASSERT_EQUAL_STRING(original.irLearnedCodesPath.c_str(),
                            parsed.irLearnedCodesPath.c_str());
   TEST_ASSERT_EQUAL_UINT16(original.webPort, parsed.webPort);

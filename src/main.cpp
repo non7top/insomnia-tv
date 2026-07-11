@@ -17,14 +17,23 @@
 #include "config/ConfigManager.h"
 #include "discovery/SamsungTvDiscovery.h"
 #include "hal/SystemClock.h"
+#include "ir/ActivityTracker.h"
+#include "ir/IrDriver.h"
 #include "network/WifiSetup.h"
 #include "sensors/SensorManager.h"
+#include "state/RampScheduler.h"
 #include "state/SleepStateMachine.h"
 #include "tv/TvStateMachine.h"
 #include "web/WebServer.h"
 
 // Onboard LED (active-low) for nologo C3 super mini
 #define STATUS_LED_PIN 8
+
+// IR blaster/receiver pins — no physical IR hardware attached yet;
+// IrDriver::begin()/send()/receive() are no-op stubs today, so these are
+// placeholders, safe to wire ahead of the real hardware (see #48).
+#define IR_TX_PIN 4
+#define IR_RX_PIN 5
 
 static constexpr int kStatusLedFreqHz = 5000;
 static constexpr int kStatusLedResolutionBits = 8;
@@ -37,8 +46,11 @@ static InsomniaTV::WifiSetup wifiSetup;
 static InsomniaTV::SamsungTvDiscovery tvDiscovery;
 static InsomniaTV::WebServer webServer(80, tvDiscovery, configMgr);
 static InsomniaTV::SystemClock systemClock;
+static InsomniaTV::IrDriver irDriver(IR_TX_PIN, IR_RX_PIN);
 static InsomniaTV::TvStateMachine* tvSm = nullptr;
 static InsomniaTV::SleepStateMachine* sleepSm = nullptr;
+static InsomniaTV::ActivityTracker* activityTracker = nullptr;
+static InsomniaTV::RampScheduler* rampScheduler = nullptr;
 
 void updateStatusLed() {
   float phase = (millis() % kStatusLedBreathPeriodMs) /
@@ -143,7 +155,46 @@ void setup() {
   sleepSm = new InsomniaTV::SleepStateMachine(systemClock, timeoutMs);
   sleepSm->setTvStateMachine(tvSm);
 
+  // IR — begin() is a no-op until real hardware exists (see #48); safe to
+  // wire the call sites now so nothing else needs to change once it's real.
+  irDriver.begin();
+  activityTracker = new InsomniaTV::ActivityTracker(timeoutMs);
+
+  // Ramp sequence: periodic volume-down while warning, then hand off to
+  // POWERING_OFF/FALLBACK_OFF via onRampComplete().
+  {
+    const auto& cfg = configMgr.get();
+    rampScheduler = new InsomniaTV::RampScheduler(
+        systemClock, cfg.rampIntervalMin * 60000UL,
+        cfg.maxRampStepsBeforePoweroff,
+        [] {
+          const auto& c = configMgr.get();
+          irDriver.send(c.irVolumeDownProtocol, c.irVolumeDownCode,
+                        c.irVolumeDownBits);
+        },
+        [] { sleepSm->onRampComplete(); });
+  }
+  sleepSm->setRampStartCallback([] { rampScheduler->start(); });
+  sleepSm->setPowerOffCallback([] {
+    const auto& c = configMgr.get();
+    irDriver.send(c.irPowerProtocol, c.irPowerCode, c.irPowerBits);
+  });
+
+  // Interim, testable activity signal — no real IR hardware to detect
+  // remote-control activity yet, so treat a configured "presence_phone"
+  // ping sensor (reserved id, not a schema field) as a stand-in presence
+  // signal. This is a test/stub convention, not the final design — see
+  // #62 for the planned generalized presence-fusion replacement.
+  InsomniaTV::SensorManager::instance().subscribeValueChange(
+      [](const std::string& id, bool value) {
+        if (id == "presence_phone" && value && sleepSm != nullptr) {
+          sleepSm->onIrActivity();
+        }
+      });
+
   webServer.setTvStateMachine(tvSm);
+  webServer.setSleepStateMachine(sleepSm);
+  webServer.setActivityTracker(activityTracker);
 
   // Web Server
   webServer.begin();
@@ -155,6 +206,20 @@ void loop() {
   if (sleepSm != nullptr) {
     sleepSm->tick();
   }
+  if (rampScheduler != nullptr) {
+    rampScheduler->tick();
+  }
+
+  // No-op today (IrDriver::receive()/hasDecoded() are stubs) until real IR
+  // hardware exists — see #48.
+  irDriver.receive();
+  if (irDriver.hasDecoded() && activityTracker != nullptr &&
+      sleepSm != nullptr) {
+    activityTracker->record(irDriver.lastProtocol(), irDriver.lastCode(),
+                            irDriver.lastBits());
+    sleepSm->onIrActivity();
+  }
+
   delay(100);
 }
 

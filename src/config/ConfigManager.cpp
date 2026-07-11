@@ -161,6 +161,9 @@ void ConfigManager::resetToDefaults() {
   d.irVolumeDownProtocol = "NEC";
   d.irVolumeDownCode = 0;
   d.irVolumeDownBits = 32;
+  d.irPowerProtocol = "NEC";
+  d.irPowerCode = 0;
+  d.irPowerBits = 32;
   d.irLearnedCodesPath = "/ir_learned.json";
   d.webPort = 80;
   d.webAuthEnabled = false;
@@ -215,6 +218,12 @@ bool ConfigManager::parseJson_(const std::string& json, Config& out) {
       out.irVolumeDownCode = volDown["hex"] | 0ULL;
       out.irVolumeDownBits = volDown["bits"] | 32;
     }
+    if (ir["power"].is<JsonObject>()) {
+      JsonObject power = ir["power"];
+      out.irPowerProtocol = power["protocol"] | "NEC";
+      out.irPowerCode = power["hex"] | 0ULL;
+      out.irPowerBits = power["bits"] | 32;
+    }
     out.irLearnedCodesPath = ir["learned_codes_path"] | "/ir_learned.json";
   }
 
@@ -267,6 +276,11 @@ std::string ConfigManager::toJson_(const Config& cfg) {
   volDown["protocol"] = cfg.irVolumeDownProtocol;
   volDown["hex"] = cfg.irVolumeDownCode;
   volDown["bits"] = cfg.irVolumeDownBits;
+
+  JsonObject power = ir["power"].to<JsonObject>();
+  power["protocol"] = cfg.irPowerProtocol;
+  power["hex"] = cfg.irPowerCode;
+  power["bits"] = cfg.irPowerBits;
 
   ir["learned_codes_path"] = cfg.irLearnedCodesPath;
 

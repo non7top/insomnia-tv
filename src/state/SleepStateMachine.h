@@ -45,6 +45,9 @@ public:
   // Callback invoked when a power-off command should be sent.
   void setPowerOffCallback(std::function<void()> callback);
 
+  // Callback invoked on entering RAMPING (starts the ramp sequence).
+  void setRampStartCallback(std::function<void()> callback);
+
 private:
   void resetToMonitoring();
 
@@ -55,6 +58,7 @@ private:
   State current_;
   TvStateMachine* tvStateMachine_;
   std::function<void()> powerOffCallback_;
+  std::function<void()> rampStartCallback_;
 };
 
 }  // namespace InsomniaTV
