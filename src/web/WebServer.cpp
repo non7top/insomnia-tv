@@ -37,6 +37,14 @@ void WebServer::setTvStateMachine(TvStateMachine* tvSm) {
   _tvSm = tvSm;
 }
 
+void WebServer::setSleepStateMachine(SleepStateMachine* sleepSm) {
+  _sleepSm = sleepSm;
+}
+
+void WebServer::setActivityTracker(ActivityTracker* tracker) {
+  _activityTracker = tracker;
+}
+
 void WebServer::begin() {
   _server.addHandler(&events);
   _server.begin();
@@ -670,7 +678,7 @@ document.getElementsByClassName('tablinks')[0].click();
     request->send(res);
   });
 
-  _server.on("/api/status", HTTP_GET, [](AsyncWebServerRequest* request) {
+  _server.on("/api/status", HTTP_GET, [this](AsyncWebServerRequest* request) {
     if (!request->authenticate("admin", "insomnia")) {
       return request->requestAuthentication();
     }
@@ -687,6 +695,15 @@ document.getElementsByClassName('tablinks')[0].click();
     doc["freeHeap"] = ESP.getFreeHeap();
     doc["wifiStatus"] =
         WiFi.status() == WL_CONNECTED ? "connected" : "disconnected";
+    if (_sleepSm != nullptr) {
+      const char* sleepStates[] = {"MONITORING", "RAMPING", "VERIFYING",
+                                   "POWERING_OFF", "FALLBACK_OFF"};
+      int ss = static_cast<int>(_sleepSm->getCurrentState());
+      doc["sleepState"] = sleepStates[ss];
+    }
+    if (_activityTracker != nullptr) {
+      doc["msSinceLastActivity"] = _activityTracker->msSinceLastActivity();
+    }
 
     String response;
     serializeJson(doc, response);
@@ -1146,6 +1163,12 @@ WebServer::WebServer(uint16_t port, SamsungTvDiscovery& discovery,
 void WebServer::begin() {}
 void WebServer::setTvStateMachine(TvStateMachine* tvSm) {
   _tvSm = tvSm;
+}
+void WebServer::setSleepStateMachine(SleepStateMachine* sleepSm) {
+  _sleepSm = sleepSm;
+}
+void WebServer::setActivityTracker(ActivityTracker* tracker) {
+  _activityTracker = tracker;
 }
 void WebServer::setupRoutes() {}
 #endif

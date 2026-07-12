@@ -19,6 +19,8 @@ void SleepStateMachine::tick() {
     case State::MONITORING:
       if (clock_.nowMs() - lastActivityMs_ >= inactivityTimeoutMs_) {
         current_ = State::RAMPING;
+        if (rampStartCallback_)
+          rampStartCallback_();
       }
       break;
 
@@ -81,6 +83,10 @@ void SleepStateMachine::setTvStateMachine(TvStateMachine* tv) {
 
 void SleepStateMachine::setPowerOffCallback(std::function<void()> callback) {
   powerOffCallback_ = callback;
+}
+
+void SleepStateMachine::setRampStartCallback(std::function<void()> callback) {
+  rampStartCallback_ = callback;
 }
 
 void SleepStateMachine::resetToMonitoring() {

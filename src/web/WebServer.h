@@ -10,6 +10,8 @@
 
 #include "../config/ConfigManager.h"
 #include "../discovery/SamsungTvDiscovery.h"
+#include "../ir/ActivityTracker.h"
+#include "../state/SleepStateMachine.h"
 #include "../tv/TvStateMachine.h"
 
 namespace InsomniaTV {
@@ -39,6 +41,18 @@ public:
    */
   void setTvStateMachine(TvStateMachine* tvSm);
 
+  /**
+   * @brief Wire in the SleepStateMachine so /api/status can expose sleep
+   * state. Called from setup() after the state machine is created.
+   */
+  void setSleepStateMachine(SleepStateMachine* sleepSm);
+
+  /**
+   * @brief Wire in the ActivityTracker so /api/status can expose time since
+   * last activity. Called from setup() after the tracker is created.
+   */
+  void setActivityTracker(ActivityTracker* tracker);
+
 private:
 #if defined(ARDUINO)
   AsyncWebServer _server;
@@ -46,6 +60,8 @@ private:
   SamsungTvDiscovery& _discovery;
   ConfigManager& _configMgr;
   TvStateMachine* _tvSm = nullptr;
+  SleepStateMachine* _sleepSm = nullptr;
+  ActivityTracker* _activityTracker = nullptr;
   void setupRoutes();
 };
 
