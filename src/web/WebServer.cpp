@@ -841,8 +841,13 @@ document.getElementsByClassName('tablinks')[0].click();
             200, "text/plain", shouldReboot ? "OK" : "FAIL");
         res->addHeader("Connection", "close");
         request->send(res);
-        if (shouldReboot)
+        if (shouldReboot) {
+          // Give the async response time to actually flush before tearing
+          // down the connection -- restarting immediately races the
+          // response delivery and the client never sees it (#65).
+          delay(1000);
           ESP.restart();
+        }
       },
       [](AsyncWebServerRequest* request, String filename, size_t index,
          uint8_t* data, size_t len, bool final) {
@@ -1030,13 +1035,31 @@ document.getElementsByClassName('tablinks')[0].click();
       NULL,
       [this](AsyncWebServerRequest* request, uint8_t* data, size_t len,
              size_t index, size_t total) {
+        if (index == 0) {
+          _editBodyBuffer = "";
+          _editBodyBuffer.reserve(total);
+        }
+        _editBodyBuffer.concat(reinterpret_cast<const char*>(data), len);
+        if (index + len != total) {
+          return;  // wait for the remaining chunks
+        }
+
         JsonDocument doc;
-        deserializeJson(doc, data, len);
+        deserializeJson(doc, _editBodyBuffer);
         String path = doc["path"] | "";
         String content = doc["content"] | "";
         if (path.isEmpty()) {
           request->send(400);
           return;
+        }
+        if (path == ConfigManager::kConfigPath) {
+          // Reject non-JSON content outright rather than writing it and
+          // silently corrupting the live config on the next load() (#67).
+          JsonDocument probe;
+          if (deserializeJson(probe, content)) {
+            request->send(400, "text/plain", "Invalid config JSON");
+            return;
+          }
         }
         String tmp = path + ".tmp";
         File f = LittleFS.open(tmp, "w");

@@ -62,6 +62,12 @@ private:
   TvStateMachine* _tvSm = nullptr;
   SleepStateMachine* _sleepSm = nullptr;
   ActivityTracker* _activityTracker = nullptr;
+#if defined(ARDUINO)
+  // Accumulates /api/files/edit's request body across chunks -- the body
+  // callback fires once per TCP chunk, and JSON can't be parsed until the
+  // whole thing has arrived (#67).
+  String _editBodyBuffer;
+#endif
   void setupRoutes();
 };
 
