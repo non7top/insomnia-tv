@@ -92,8 +92,7 @@ void test_http_sensor() {
 // ---------------------------------------------------------------------------
 class MockCacheSensor : public Sensor {
 public:
-  MockCacheSensor(const std::string& id, bool value)
-      : id_(id), value_(value) {
+  MockCacheSensor(const std::string& id, bool value) : id_(id), value_(value) {
     state_ = State::READY;
   }
   std::string getId() const override { return id_; }
