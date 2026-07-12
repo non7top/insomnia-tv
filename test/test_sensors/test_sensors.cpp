@@ -3,6 +3,7 @@
 #include <unity.h>
 
 #include <memory>
+#include <string>
 
 #include "../../src/sensors/GpioAnalogSensor.h"
 #include "../../src/sensors/GpioInputSensor.h"
@@ -85,6 +86,65 @@ void test_http_sensor() {
   TEST_ASSERT_EQUAL_STRING("http1", sensor.getId().c_str());
 }
 
+// ---------------------------------------------------------------------------
+// Controllable sensor for testing SensorManager's value cache directly,
+// without depending on any real sensor type's native-stub read() behavior.
+// ---------------------------------------------------------------------------
+class MockCacheSensor : public Sensor {
+public:
+  MockCacheSensor(const std::string& id, bool value)
+      : id_(id), value_(value) {
+    state_ = State::READY;
+  }
+  std::string getId() const override { return id_; }
+  std::string getType() const override { return "mock"; }
+  bool read() override { return value_; }
+  JsonDocument getConfig() override { return JsonDocument(); }
+  void setConfig(const JsonDocument&) override {}
+  void setValue(bool v) { value_ = v; }
+
+private:
+  std::string id_;
+  bool value_;
+};
+
+// ---------------------------------------------------------------------------
+// Test: getCachedValue() defaults to false for a sensor that's never been
+// tick()'d yet, and for an unknown id -- doesn't block, doesn't crash (#75).
+// ---------------------------------------------------------------------------
+void test_get_cached_value_defaults_false_when_never_read() {
+  auto& mgr = SensorManager::instance();
+  mgr.clear();
+  auto sensor = std::make_shared<MockCacheSensor>("cache_test", true);
+  mgr.registerSensor(sensor);
+
+  TEST_ASSERT_FALSE(mgr.getCachedValue("cache_test"));
+  TEST_ASSERT_FALSE(mgr.getCachedValue("nonexistent_id"));
+}
+
+// ---------------------------------------------------------------------------
+// Test: getCachedValue() reflects the value from the last tick(), not a
+// fresh live read -- this is exactly what lets /api/sensors and the SSE
+// poll task avoid blocking on hardware I/O themselves (#75).
+// ---------------------------------------------------------------------------
+void test_get_cached_value_reflects_last_tick() {
+  auto& mgr = SensorManager::instance();
+  mgr.clear();
+  auto sensor = std::make_shared<MockCacheSensor>("cache_test2", true);
+  mgr.registerSensor(sensor);
+
+  mgr.tick();
+  TEST_ASSERT_TRUE(mgr.getCachedValue("cache_test2"));
+
+  sensor->setValue(false);
+  TEST_ASSERT_TRUE_MESSAGE(
+      mgr.getCachedValue("cache_test2"),
+      "cache should still show the old value before the next tick()");
+
+  mgr.tick();
+  TEST_ASSERT_FALSE(mgr.getCachedValue("cache_test2"));
+}
+
 int main() {
   UNITY_BEGIN();
   RUN_TEST(test_sensor_manager_registry);
@@ -94,5 +154,7 @@ int main() {
   RUN_TEST(test_gpio_analog_sensor);
   RUN_TEST(test_ping_sensor);
   RUN_TEST(test_http_sensor);
+  RUN_TEST(test_get_cached_value_defaults_false_when_never_read);
+  RUN_TEST(test_get_cached_value_reflects_last_tick);
   return UNITY_END();
 }

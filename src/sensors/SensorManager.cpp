@@ -155,4 +155,10 @@ void SensorManager::tick() {
   }
 }
 
+bool SensorManager::getCachedValue(const std::string& id) const {
+  std::lock_guard<std::mutex> lock(mutex_);
+  auto it = lastValues_.find(id);
+  return it != lastValues_.end() ? it->second : false;
+}
+
 }  // namespace InsomniaTV

@@ -54,6 +54,13 @@ public:
   void clear();
   void removeSensor(const std::string& id);
 
+  // Returns the last value tick() observed for this sensor, or false if it
+  // has never been read yet. Cheap and non-blocking -- callers that just
+  // want the current known state (e.g. the web API) should use this
+  // instead of calling Sensor::read() themselves, which can block for
+  // seconds on an unreachable ping/http target (#75).
+  bool getCachedValue(const std::string& id) const;
+
 private:
   SensorManager() = default;
   ~SensorManager() = default;

@@ -72,13 +72,14 @@ void WebServer::begin() {
   _server.addHandler(&events);
   _server.begin();
 
-  // Periodic sensor reader task
+  // Periodic sensor status broadcaster -- reads the cache SensorManager's
+  // own poll task maintains, doesn't read hardware itself (#75).
   xTaskCreate(
       [](void* pvParameters) {
         for (;;) {
           auto sensors = SensorManager::instance().listSensors();
           for (auto const& s : sensors) {
-            bool val = s->read();
+            bool val = SensorManager::instance().getCachedValue(s->getId());
             JsonDocument doc;
             doc["id"] = s->getId();
             doc["value"] = val;
@@ -748,7 +749,7 @@ document.getElementsByClassName('tablinks')[0].click();
       obj["id"] = sensor->getId();
       obj["type"] = sensor->getType();
       obj["available"] = sensor->isAvailable();
-      obj["value"] = sensor->read();
+      obj["value"] = SensorManager::instance().getCachedValue(sensor->getId());
       JsonDocument cfg = sensor->getConfig();
       for (JsonPair kv : cfg.as<JsonObject>()) {
         const char* k = kv.key().c_str();
