@@ -411,6 +411,30 @@ void test_config_sensors_json_default(void) {
   TEST_ASSERT_EQUAL_STRING("[]", mgr.get().sensorsJson.c_str());
 }
 
+// ---------------------------------------------------------------------------
+// Test: parsing a partial/incomplete JSON over an already-seeded Config
+// must not clobber fields the JSON doesn't mention (#69 -- load() seeds
+// `next` from the existing/default Config before parsing, precisely so a
+// syntactically-valid-but-incomplete file like "{}" can't leave behavior
+// fields at zero/garbage).
+// ---------------------------------------------------------------------------
+void test_config_partial_json_preserves_seeded_values(void) {
+  TestConfigManager mgr;
+  InsomniaTV::Config seeded;
+  mgr.resetToDefaults();
+  seeded = mgr.get();
+  seeded.rampIntervalMin = 2;
+  seeded.maxRampStepsBeforePoweroff = 10;
+  seeded.inactivityTimeoutMin = 15;
+
+  InsomniaTV::Config parsed = seeded;
+  TEST_ASSERT_TRUE(mgr.testParseJson("{}", parsed));
+
+  TEST_ASSERT_EQUAL_UINT32(2, parsed.rampIntervalMin);
+  TEST_ASSERT_EQUAL_UINT8(10, parsed.maxRampStepsBeforePoweroff);
+  TEST_ASSERT_EQUAL_UINT32(15, parsed.inactivityTimeoutMin);
+}
+
 int runUnityTests(void) {
   UNITY_BEGIN();
   RUN_TEST(test_config_defaults);
@@ -434,6 +458,7 @@ int runUnityTests(void) {
   RUN_TEST(test_config_version_roundtrip);
   RUN_TEST(test_config_no_tv_sm_key);
   RUN_TEST(test_config_sensors_json_default);
+  RUN_TEST(test_config_partial_json_preserves_seeded_values);
   return UNITY_END();
 }
 

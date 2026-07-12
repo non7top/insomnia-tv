@@ -36,10 +36,13 @@ ConfigStatus ConfigManager::load() {
   std::string json = file.readString().c_str();
   file.close();
 
-  Config next;
+  Config next = current_;  // seed with existing/default values; any field
+                           // absent from the JSON keeps a real value, not
+                           // uninitialized stack garbage (#69).
   if (!parseJson_(json, next)) {
     Serial.printf("[ConfigManager] load: JSON parse error in %s\n",
                   kConfigPath);
+    applyDefaults_();
     return ConfigStatus::InvalidJson;
   }
 
