@@ -8,7 +8,9 @@
 #include <functional>
 #include <string>
 
+#include "../config/SystemCredentials.h"
 #include "../version.h"
+#include "UpdateCompletion.h"
 
 #if defined(ARDUINO)
 #include <AsyncEventSource.h>
@@ -26,6 +28,27 @@ namespace InsomniaTV {
 
 #if defined(ARDUINO)
 AsyncEventSource events("/events");
+
+namespace {
+class ArduinoRebootSequencer : public IRebootSequencer {
+public:
+  explicit ArduinoRebootSequencer(AsyncWebServerRequest* request)
+      : _request(request) {}
+
+  void sendResponse(bool ok) override {
+    AsyncWebServerResponse* res =
+        _request->beginResponse(200, "text/plain", ok ? "OK" : "FAIL");
+    res->addHeader("Connection", "close");
+    _request->send(res);
+  }
+
+  void delayMs(uint32_t ms) override { delay(ms); }
+  void restart() override { ESP.restart(); }
+
+private:
+  AsyncWebServerRequest* _request;
+};
+}  // namespace
 
 WebServer::WebServer(uint16_t port, SamsungTvDiscovery& discovery,
                      ConfigManager& configMgr)
@@ -72,7 +95,7 @@ void WebServer::begin() {
 
 void WebServer::setupRoutes() {
   _server.on("/", HTTP_GET, [](AsyncWebServerRequest* request) {
-    if (!request->authenticate("admin", "insomnia")) {
+    if (!request->authenticate(kSystemUsername, kSystemPassword)) {
       return request->requestAuthentication();
     }
     // Serve embedded index.html
@@ -679,7 +702,7 @@ document.getElementsByClassName('tablinks')[0].click();
   });
 
   _server.on("/api/status", HTTP_GET, [this](AsyncWebServerRequest* request) {
-    if (!request->authenticate("admin", "insomnia")) {
+    if (!request->authenticate(kSystemUsername, kSystemPassword)) {
       return request->requestAuthentication();
     }
     JsonDocument doc;
@@ -714,7 +737,7 @@ document.getElementsByClassName('tablinks')[0].click();
   });
 
   _server.on("/api/sensors", HTTP_GET, [](AsyncWebServerRequest* request) {
-    if (!request->authenticate("admin", "insomnia")) {
+    if (!request->authenticate(kSystemUsername, kSystemPassword)) {
       return request->requestAuthentication();
     }
     auto sensors = SensorManager::instance().listSensors();
@@ -741,7 +764,7 @@ document.getElementsByClassName('tablinks')[0].click();
   _server.on(
       "/api/sensors", HTTP_POST,
       [](AsyncWebServerRequest* request) {
-        if (!request->authenticate("admin", "insomnia")) {
+        if (!request->authenticate(kSystemUsername, kSystemPassword)) {
           return request->requestAuthentication();
         }
       },
@@ -780,7 +803,7 @@ document.getElementsByClassName('tablinks')[0].click();
 
   _server.on("/api/sensors", HTTP_DELETE,
              [this](AsyncWebServerRequest* request) {
-               if (!request->authenticate("admin", "insomnia")) {
+               if (!request->authenticate(kSystemUsername, kSystemPassword)) {
                  return request->requestAuthentication();
                }
                if (request->hasParam("id")) {
@@ -815,7 +838,7 @@ document.getElementsByClassName('tablinks')[0].click();
 
   _server.on(
       "/api/sensors/test", HTTP_POST, [](AsyncWebServerRequest* request) {
-        if (!request->authenticate("admin", "insomnia")) {
+        if (!request->authenticate(kSystemUsername, kSystemPassword)) {
           return request->requestAuthentication();
         }
         if (request->hasParam("id", true)) {
@@ -837,17 +860,8 @@ document.getElementsByClassName('tablinks')[0].click();
       "/update", HTTP_POST,
       [](AsyncWebServerRequest* request) {
         bool shouldReboot = !Update.hasError();
-        AsyncWebServerResponse* res = request->beginResponse(
-            200, "text/plain", shouldReboot ? "OK" : "FAIL");
-        res->addHeader("Connection", "close");
-        request->send(res);
-        if (shouldReboot) {
-          // Give the async response time to actually flush before tearing
-          // down the connection -- restarting immediately races the
-          // response delivery and the client never sees it (#65).
-          delay(1000);
-          ESP.restart();
-        }
+        ArduinoRebootSequencer sequencer(request);
+        handleUpdateCompletion(shouldReboot, sequencer);
       },
       [](AsyncWebServerRequest* request, String filename, size_t index,
          uint8_t* data, size_t len, bool final) {
@@ -871,7 +885,7 @@ document.getElementsByClassName('tablinks')[0].click();
   // our handler is called — avoids the deferred-send race with _send().
   _server.on("/api/probe", HTTP_POST,
              [this](AsyncWebServerRequest* request, JsonVariant& json) {
-               if (!request->authenticate("admin", "insomnia")) {
+               if (!request->authenticate(kSystemUsername, kSystemPassword)) {
                  return request->requestAuthentication();
                }
                std::string type = json["type"] | "";
@@ -916,7 +930,7 @@ document.getElementsByClassName('tablinks')[0].click();
              });
 
   _server.on("/api/scan", HTTP_POST, [this](AsyncWebServerRequest* request) {
-    if (!request->authenticate("admin", "insomnia")) {
+    if (!request->authenticate(kSystemUsername, kSystemPassword)) {
       return request->requestAuthentication();
     }
     xTaskCreate(
@@ -933,7 +947,7 @@ document.getElementsByClassName('tablinks')[0].click();
 
   _server.on("/api/discovery", HTTP_GET,
              [this](AsyncWebServerRequest* request) {
-               if (!request->authenticate("admin", "insomnia")) {
+               if (!request->authenticate(kSystemUsername, kSystemPassword)) {
                  return request->requestAuthentication();
                }
                JsonDocument doc;
@@ -952,7 +966,7 @@ document.getElementsByClassName('tablinks')[0].click();
   // GET /api/tv-config — live sensor contributions and power state
   _server.on(
       "/api/tv-config", HTTP_GET, [this](AsyncWebServerRequest* request) {
-        if (!request->authenticate("admin", "insomnia")) {
+        if (!request->authenticate(kSystemUsername, kSystemPassword)) {
           return request->requestAuthentication();
         }
         JsonDocument doc;
@@ -980,7 +994,7 @@ document.getElementsByClassName('tablinks')[0].click();
   // if registered first.
   _server.on("/api/files/download", HTTP_GET,
              [](AsyncWebServerRequest* request) {
-               if (!request->authenticate("admin", "insomnia")) {
+               if (!request->authenticate(kSystemUsername, kSystemPassword)) {
                  return request->requestAuthentication();
                }
                if (!request->hasParam("path")) {
@@ -997,7 +1011,7 @@ document.getElementsByClassName('tablinks')[0].click();
 
   // GET /api/files/edit?path=<path> — return file contents as plain text
   _server.on("/api/files/edit", HTTP_GET, [](AsyncWebServerRequest* request) {
-    if (!request->authenticate("admin", "insomnia")) {
+    if (!request->authenticate(kSystemUsername, kSystemPassword)) {
       return request->requestAuthentication();
     }
     if (!request->hasParam("path")) {
@@ -1028,7 +1042,7 @@ document.getElementsByClassName('tablinks')[0].click();
   _server.on(
       "/api/files/edit", HTTP_POST,
       [](AsyncWebServerRequest* request) {
-        if (!request->authenticate("admin", "insomnia")) {
+        if (!request->authenticate(kSystemUsername, kSystemPassword)) {
           return request->requestAuthentication();
         }
       },
@@ -1086,7 +1100,7 @@ document.getElementsByClassName('tablinks')[0].click();
 
   // GET /api/files — recursive LittleFS listing (must come after /api/files/*)
   _server.on("/api/files", HTTP_GET, [](AsyncWebServerRequest* request) {
-    if (!request->authenticate("admin", "insomnia")) {
+    if (!request->authenticate(kSystemUsername, kSystemPassword)) {
       return request->requestAuthentication();
     }
     JsonDocument doc;
@@ -1120,7 +1134,7 @@ document.getElementsByClassName('tablinks')[0].click();
 
   // DELETE /api/files?path=<path>
   _server.on("/api/files", HTTP_DELETE, [](AsyncWebServerRequest* request) {
-    if (!request->authenticate("admin", "insomnia")) {
+    if (!request->authenticate(kSystemUsername, kSystemPassword)) {
       return request->requestAuthentication();
     }
     if (!request->hasParam("path")) {
