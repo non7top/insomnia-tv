@@ -5,6 +5,8 @@
 #include <cstdio>
 #include <string>
 
+#include "../config/SystemCredentials.h"
+
 #if defined(ARDUINO)
 #include <ArduinoOTA.h>
 #include <WiFi.h>
@@ -40,10 +42,7 @@ void WifiSetup::begin() {
   Serial.println(WiFi.localIP());
 
   ArduinoOTA.setHostname(apName.c_str());
-  // Same literal password as the web Basic Auth (WebServer.cpp) -- one
-  // system password, not two. Both are hardcoded pending #51's proper
-  // shared-credential fix; keep them in sync until then.
-  ArduinoOTA.setPassword("insomnia");
+  ArduinoOTA.setPassword(kSystemPassword);
   ArduinoOTA.onStart([]() { Serial.println("OTA Start"); });
   ArduinoOTA.begin();
 
