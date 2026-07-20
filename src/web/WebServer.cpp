@@ -177,11 +177,28 @@ void WebServer::setupRoutes() {
 <div id="Status" class="tabcontent">
   <h3>System Status</h3>
   <fieldset>
+    <legend>TV</legend>
+    <p><b>Power:</b> <span id="tv-power_state" class="state-badge">Loading...</span></p>
+    <p><b>Sensor votes:</b></p>
+    <div id="tv-contributions" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+  </fieldset>
+  <fieldset>
+    <legend>Sleep Controller</legend>
+    <p><b>State:</b> <span id="sys-sleepState" class="state-badge">Loading...</span></p>
+    <p><b>Last activity:</b> <span id="sys-lastActivity"></span></p>
+  </fieldset>
+  <fieldset>
     <legend>System</legend>
     <p><b>Status:</b> <span id="sys-status">Loading...</span></p>
     <p><b>Version:</b> <span id="sys-version"></span></p>
     <p><b>Chip ID:</b> <span id="sys-chipId"></span></p>
     <p><b>Free Heap:</b> <span id="sys-freeHeap"></span></p>
+  </fieldset>
+  <fieldset>
+    <legend>Network</legend>
+    <p><b>IP Address:</b> <span id="sys-ip"></span></p>
+    <p><b>MAC:</b> <span id="sys-mac"></span></p>
+    <p><b>WiFi:</b> <span id="sys-wifiStatus"></span> (<span id="sys-ssid"></span>, <span id="sys-rssi"></span> dBm)</p>
   </fieldset>
 </div>
 
@@ -331,11 +348,55 @@ function openTab(evt, name) {
 }
 
 // ── Status ──────────────────────────────────────────────────────────────────
+const SLEEP_STATE_COLORS = {
+    MONITORING: '#4CAF50', RAMPING: '#ff9800', VERIFYING: '#ff9800',
+    POWERING_OFF: '#f44336', FALLBACK_OFF: '#f44336',
+};
+const TV_STATE_COLORS = {
+    ON: '#4CAF50', OFF: '#757575', TRANSITIONING: '#ff9800', UNKNOWN: '#999',
+};
+function setStateBadge(el, state, colors) {
+    el.textContent = state || 'unknown';
+    el.style.background = (colors && colors[state]) || '#999';
+    el.style.color = '#fff';
+    el.style.padding = '2px 8px';
+    el.style.borderRadius = '10px';
+}
+function formatDuration(ms) {
+    const s = Math.floor(ms / 1000);
+    const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60);
+    if (d > 0) return d + 'd ' + h + 'h ago';
+    if (h > 0) return h + 'h ' + m + 'm ago';
+    if (m > 0) return m + 'm ' + (s % 60) + 's ago';
+    return s + 's ago';
+}
 function loadStatus() {
     fetch('/api/status').then(r => r.json()).then(data => {
         for (const [k, v] of Object.entries(data)) {
+            if (k === 'sleepState' || k === 'msSinceLastActivity') continue;
             const el = document.getElementById('sys-' + k);
             if (el) el.textContent = v;
+        }
+        const stateEl = document.getElementById('sys-sleepState');
+        if (stateEl) setStateBadge(stateEl, data.sleepState, SLEEP_STATE_COLORS);
+        const lastActEl = document.getElementById('sys-lastActivity');
+        if (lastActEl) {
+            lastActEl.textContent = data.msSinceLastActivity != null ?
+                formatDuration(data.msSinceLastActivity) : 'unknown';
+        }
+    });
+    fetch('/api/tv-config').then(r => r.json()).then(data => {
+        const el = document.getElementById('tv-power_state');
+        if (el) setStateBadge(el, data.power_state, TV_STATE_COLORS);
+        const contribEl = document.getElementById('tv-contributions');
+        if (contribEl) {
+            contribEl.innerHTML = (data.contributions || []).map(c => {
+                const label = c.available ? (c.vote > 0 ? '+' + c.vote : c.vote) : 'n/a';
+                return '<span class="s-badge" style="background:' +
+                    (c.available ? '#e3f2fd' : '#eee') + ';color:' +
+                    (c.available ? '#1565c0' : '#999') + '">' +
+                    c.sensor_id + ': ' + label + '</span>';
+            }).join('');
         }
     });
 }
