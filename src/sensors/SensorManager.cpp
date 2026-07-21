@@ -132,13 +132,30 @@ void SensorManager::init(const std::string& configJson,
 }
 
 void SensorManager::tick() {
+  // Snapshot the sensor list, then read outside the lock -- Sensor::read()
+  // can block for real seconds on an unreachable ping/http target, and
+  // holding mutex_ for that whole stretch would make getCachedValue() (used
+  // by /api/sensors, expected to be cheap and non-blocking) block right
+  // along with it, defeating the point of caching in the first place (#75).
+  std::vector<std::pair<std::string, std::shared_ptr<Sensor>>> snapshot;
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    snapshot.assign(sensors_.begin(), sensors_.end());
+  }
+
+  std::vector<std::pair<std::string, bool>> reads;
+  reads.reserve(snapshot.size());
+  for (auto const& [id, sensor] : snapshot) {
+    bool value = sensor->read();
+    sensor->setState(value ? Sensor::State::READY : Sensor::State::ERROR);
+    reads.emplace_back(id, value);
+  }
+
   std::vector<std::pair<std::string, bool>> changes;
   std::vector<ValueChangeCallback> cbs;
   {
     std::lock_guard<std::mutex> lock(mutex_);
-    for (auto const& [id, sensor] : sensors_) {
-      bool value = sensor->read();
-      sensor->setState(value ? Sensor::State::READY : Sensor::State::ERROR);
+    for (auto const& [id, value] : reads) {
       auto it = lastValues_.find(id);
       if (it == lastValues_.end() || it->second != value) {
         lastValues_[id] = value;
@@ -153,6 +170,12 @@ void SensorManager::tick() {
       cb(id, value);
     }
   }
+}
+
+bool SensorManager::getCachedValue(const std::string& id) const {
+  std::lock_guard<std::mutex> lock(mutex_);
+  auto it = lastValues_.find(id);
+  return it != lastValues_.end() ? it->second : false;
 }
 
 }  // namespace InsomniaTV

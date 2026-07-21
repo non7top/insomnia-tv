@@ -81,6 +81,16 @@ void statusLedTask(void*) {
   }
 }
 
+// Sensor reads (ping/http) can block for seconds on an unreachable target.
+// Runs on its own task so that doesn't stall loop()'s RampScheduler/
+// SleepStateMachine ticking or IR polling (#75).
+void sensorPollTask(void*) {
+  for (;;) {
+    InsomniaTV::SensorManager::instance().tick();
+    vTaskDelay(pdMS_TO_TICKS(1000));
+  }
+}
+
 void setup() {
   // Lower power draw (less heat through the onboard 5V regulator); this
   // workload is nowhere near CPU-bound.
@@ -98,6 +108,7 @@ void setup() {
   ledcAttach(STATUS_LED_PIN, kStatusLedFreqHz, kStatusLedResolutionBits);
   ledcWrite(STATUS_LED_PIN, 255);  // start off
   xTaskCreate(statusLedTask, "status_led", 2048, NULL, 1, NULL);
+  xTaskCreate(sensorPollTask, "sensor_tick", 4096, NULL, 1, NULL);
 
   // Filesystem — must be mounted before any config or file-manager access
   if (!LittleFS.begin(true)) {
@@ -202,7 +213,6 @@ void setup() {
 
 void loop() {
   wifiSetup.handleResetButton();
-  InsomniaTV::SensorManager::instance().tick();
   if (sleepSm != nullptr) {
     sleepSm->tick();
   }
