@@ -385,6 +385,9 @@ function loadStatus() {
             lastActEl.textContent = data.msSinceLastActivity != null ?
                 formatDuration(data.msSinceLastActivity) : 'unknown';
         }
+    }).catch(() => {
+        const el = document.getElementById('sys-status');
+        if (el) el.textContent = 'Error: device unreachable';
     });
     fetch('/api/tv-config').then(r => r.json()).then(data => {
         const el = document.getElementById('tv-power_state');
@@ -399,6 +402,9 @@ function loadStatus() {
                     c.sensor_id + ': ' + label + '</span>';
             }).join('');
         }
+    }).catch(() => {
+        const el = document.getElementById('tv-power_state');
+        if (el) setStateBadge(el, 'ERROR', {ERROR: '#f44336'});
     });
 }
 
@@ -417,12 +423,15 @@ function loadSensors() {
             tr.innerHTML = `<td>${s.id}</td><td>${s.type}</td><td>${s.value}</td>
               <td>${s.available ? '🟢' : '🔴'}</td>
               <td>
-                <button onclick="event.stopPropagation();testSensor('${s.id}')">Test</button>
+                <button onclick="event.stopPropagation();testSensor('${s.id}', this)">Test</button>
                 <button class="delete" onclick="event.stopPropagation();deleteSensor('${s.id}')">Delete</button>
               </td>`;
             tr.onclick = () => toggleSensorDetail(s.id);
             tbody.appendChild(tr);
         });
+    }).catch(() => {
+        document.getElementById('sensor-table-body').innerHTML =
+            '<tr><td colspan="5" style="text-align:center;color:#f44336">Failed to load sensors</td></tr>';
     });
 }
 
@@ -464,7 +473,8 @@ function saveSensorEdit(id) {
     else if (s.type === 'gpio_input' || s.type === 'gpio_analog')
                                   s.pin         = +document.getElementById('ef-pin-'         + id)?.value;
     fetch('/api/sensors', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(s)})
-        .then(() => { document.getElementById('sensor-detail-' + id)?.remove(); loadSensors(); });
+        .then(r => { if (r.ok) { document.getElementById('sensor-detail-' + id)?.remove(); loadSensors(); } else alert('Failed to save'); })
+        .catch(err => alert('Request failed: ' + err));
 }
 
 // ── Add-sensor modal ─────────────────────────────────────────────────────────
@@ -515,6 +525,9 @@ function fetchUpnpDevices() {
             };
             list.appendChild(div);
         });
+    }).catch(err => {
+        document.getElementById('upnp-list').innerHTML =
+            '<div class="discovery-item" style="color:#f44336">Failed to load: ' + err + '</div>';
     });
 }
 function saveSensor() {
@@ -528,15 +541,23 @@ function saveSensor() {
     else if (type === 'http')   { cfg.url = document.getElementById('s_url').value; }
     else if (type === 'upnp')   { cfg.target_name = document.getElementById('s_target_name').value; }
     fetch('/api/sensors', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(cfg)})
-      .then(r => { if (r.ok) { closeModal(); loadSensors(); } else alert('Failed to save'); });
+      .then(r => { if (r.ok) { closeModal(); loadSensors(); } else alert('Failed to save'); })
+      .catch(err => alert('Request failed: ' + err));
 }
 function deleteSensor(id) {
     if (!confirm('Delete sensor ' + id + '?')) return;
-    fetch('/api/sensors?id=' + id, {method:'DELETE'}).then(() => loadSensors());
+    fetch('/api/sensors?id=' + id, {method:'DELETE'})
+        .then(r => { if (r.ok) loadSensors(); else alert('Failed to delete'); })
+        .catch(err => alert('Request failed: ' + err));
 }
-function testSensor(id) {
+function testSensor(id, btn) {
+    const original = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Testing…';
     fetch('/api/sensors/test', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'id='+id})
-      .then(r => r.json()).then(d => alert('Test: ' + d.id + ' = ' + (d.value ? 'HIGH / OK' : 'LOW / FAIL')));
+      .then(r => r.json()).then(d => alert('Test: ' + d.id + ' = ' + (d.value ? 'HIGH / OK' : 'LOW / FAIL')))
+      .catch(err => alert('Test failed: ' + err))
+      .finally(() => { btn.disabled = false; btn.textContent = original; });
 }
 
 // ── File Manager ─────────────────────────────────────────────────────────────
@@ -565,6 +586,9 @@ function loadFiles() {
                 '</td>';
             tbody.appendChild(tr);
         });
+    }).catch(() => {
+        document.getElementById('files-table-body').innerHTML =
+            '<tr><td colspan="3" style="text-align:center;color:#f44336">Failed to load files</td></tr>';
     });
 }
 function fmtSize(b) {
@@ -581,18 +605,21 @@ function editFile(path) {
         btn.textContent = path === '/config/insomnia_tv.json' ? 'Save & Reload Config' : 'Save';
         document.getElementById('file-editor').style.display = 'block';
         document.getElementById('file-editor').scrollIntoView({behavior: 'smooth'});
-    });
+    }).catch(err => alert('Failed to open file: ' + err));
 }
 function saveFile() {
     if (!editingPath) return;
     fetch('/api/files/edit', {method: 'POST', headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({path: editingPath, content: document.getElementById('editor-content').value})
-    }).then(r => { if (r.ok) { closeEditor(); loadFiles(); } else alert('Save failed'); });
+    }).then(r => { if (r.ok) { closeEditor(); loadFiles(); } else alert('Save failed'); })
+      .catch(err => alert('Request failed: ' + err));
 }
 function closeEditor() { editingPath = null; document.getElementById('file-editor').style.display = 'none'; }
 function deleteFile(path) {
     if (!confirm('Delete ' + path + '?')) return;
-    fetch('/api/files?path=' + encodeURIComponent(path), {method: 'DELETE'}).then(() => loadFiles());
+    fetch('/api/files?path=' + encodeURIComponent(path), {method: 'DELETE'})
+        .then(r => { if (r.ok) loadFiles(); else alert('Failed to delete'); })
+        .catch(err => alert('Request failed: ' + err));
 }
 function uploadFile() {
     const fi = document.getElementById('upload-file');
@@ -602,13 +629,15 @@ function uploadFile() {
     const fd = new FormData();
     fd.append('file', fi.files[0]);
     fetch('/api/files/upload?path=' + encodeURIComponent(targetPath), {method: 'POST', body: fd})
-        .then(r => { if (r.ok) { fi.value = ''; pi.value = ''; loadFiles(); } else alert('Upload failed'); });
+        .then(r => { if (r.ok) { fi.value = ''; pi.value = ''; loadFiles(); } else alert('Upload failed'); })
+        .catch(err => alert('Request failed: ' + err));
 }
 
 // ── Config tab ───────────────────────────────────────────────────────────────
 function scanTV() {
     document.getElementById('tv-list').innerHTML = '<li>Scanning...</li>';
-    fetch('/api/scan', {method:'POST'}).then(() => setTimeout(loadDiscovery, 3000));
+    fetch('/api/scan', {method:'POST'}).then(() => setTimeout(loadDiscovery, 3000))
+        .catch(err => { document.getElementById('tv-list').innerHTML = '<li style="color:#f44336">Scan failed: ' + err + '</li>'; });
 }
 function loadDiscovery() {
     fetch('/api/discovery').then(r => r.json()).then(data => {
@@ -619,6 +648,8 @@ function loadDiscovery() {
             li.innerHTML = '<b>' + tv.name + '</b> (' + tv.ip + ') - ' + tv.model;
             list.appendChild(li);
         });
+    }).catch(err => {
+        document.getElementById('tv-list').innerHTML = '<li style="color:#f44336">Failed to load: ' + err + '</li>';
     });
 }
 
@@ -678,6 +709,11 @@ function wzPoll() {
                 '<p style="color:#888;font-size:14px">Make sure your TV is on and connected to the same network. ' +
                 '<a href="#" onclick="wzStartScan();return false">Try again</a></p>';
         }
+    }).catch(err => {
+        document.getElementById('wz-scan-status').innerHTML = 'Scan failed.';
+        document.getElementById('wz-tv-list').innerHTML =
+            '<p style="color:#f44336;font-size:14px">' + err + ' ' +
+            '<a href="#" onclick="wzStartScan();return false">Try again</a></p>';
     });
 }
 function wzShowTvList(tvs) {
@@ -738,13 +774,18 @@ function wzBack() {
 async function wzCreate() {
     const toCreate = wzSensors.filter(s => s.enabled && s.id.trim());
     let created = 0;
-    for (const s of toCreate) {
-        const p = {id: s.id.trim(), type: s.type};
-        if (s.type === 'ping') p.target_ip   = s.target_ip;
-        if (s.type === 'upnp') p.target_name = s.target_name;
-        if (s.type === 'http') p.url         = s.url;
-        const r = await fetch('/api/sensors', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(p)});
-        if (r.ok) created++;
+    try {
+        for (const s of toCreate) {
+            const p = {id: s.id.trim(), type: s.type};
+            if (s.type === 'ping') p.target_ip   = s.target_ip;
+            if (s.type === 'upnp') p.target_name = s.target_name;
+            if (s.type === 'http') p.url         = s.url;
+            const r = await fetch('/api/sensors', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(p)});
+            if (r.ok) created++;
+        }
+    } catch (err) {
+        alert('Failed to add sensors: ' + err);
+        return;
     }
     document.getElementById('wz-done-title').textContent = created + ' sensor' + (created !== 1 ? 's' : '') + ' added!';
     document.getElementById('wz-done-msg').textContent   = 'Sensors for "' + wzTv.name + '" are now active in the registry.';
