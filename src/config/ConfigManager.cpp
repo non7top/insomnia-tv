@@ -140,6 +140,42 @@ bool ConfigManager::validate(const Config& cfg, std::string& outError) {
   return true;
 }
 
+bool ConfigManager::repairInvalid(Config& cfg) {
+  ConfigManager defaults;
+  const Config& d = defaults.get();
+  bool changed = false;
+  if (cfg.inactivityTimeoutMin < 1 || cfg.inactivityTimeoutMin > 120) {
+    cfg.inactivityTimeoutMin = d.inactivityTimeoutMin;
+    changed = true;
+  }
+  if (cfg.volumeStepPerRamp < 1 || cfg.volumeStepPerRamp > 10) {
+    cfg.volumeStepPerRamp = d.volumeStepPerRamp;
+    changed = true;
+  }
+  if (cfg.rampIntervalMin < 1 || cfg.rampIntervalMin > 30) {
+    cfg.rampIntervalMin = d.rampIntervalMin;
+    changed = true;
+  }
+  if (cfg.maxRampStepsBeforePoweroff < 1 ||
+      cfg.maxRampStepsBeforePoweroff > 50) {
+    cfg.maxRampStepsBeforePoweroff = d.maxRampStepsBeforePoweroff;
+    changed = true;
+  }
+  if (cfg.tvVerifyTimeoutMs < 500 || cfg.tvVerifyTimeoutMs > 10000) {
+    cfg.tvVerifyTimeoutMs = d.tvVerifyTimeoutMs;
+    changed = true;
+  }
+  if (cfg.tvVerifyRetries < 1 || cfg.tvVerifyRetries > 5) {
+    cfg.tvVerifyRetries = d.tvVerifyRetries;
+    changed = true;
+  }
+  if (cfg.tvVerifyMethod != "ping" && cfg.tvVerifyMethod != "http") {
+    cfg.tvVerifyMethod = d.tvVerifyMethod;
+    changed = true;
+  }
+  return changed;
+}
+
 void ConfigManager::resetToDefaults() {
   Config d;
   d.mqttEnabled = true;

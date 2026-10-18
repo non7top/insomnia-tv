@@ -141,6 +141,10 @@ void setup() {
   if (!InsomniaTV::ConfigManager::validate(configMgr.get(), validationErr)) {
     Serial.printf("[insomniaTV] Config validation error: %s\n",
                   validationErr.c_str());
+    // Out-of-range values would otherwise reach the state machines (#71).
+    InsomniaTV::Config repaired = configMgr.get();
+    InsomniaTV::ConfigManager::repairInvalid(repaired);
+    configMgr.set(repaired);
   }
 
   Serial.println("[insomniaTV] Initialization complete");

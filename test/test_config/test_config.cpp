@@ -461,6 +461,30 @@ void test_config_tv_control_defaults_empty(void) {
   TEST_ASSERT_EQUAL_STRING("", parsed.tvControlToken.c_str());
 }
 
+void test_config_repair_invalid_resets_only_bad_fields(void) {
+  InsomniaTV::ConfigManager mgr;
+  InsomniaTV::Config cfg = mgr.get();
+  cfg.inactivityTimeoutMin = 0;
+  cfg.tvVerifyMethod = "carrier-pigeon";
+  cfg.rampIntervalMin = 7;
+  cfg.sensorsJson = "[{\"id\":\"keep\"}]";
+
+  TEST_ASSERT_TRUE(InsomniaTV::ConfigManager::repairInvalid(cfg));
+
+  std::string err;
+  TEST_ASSERT_TRUE(InsomniaTV::ConfigManager::validate(cfg, err));
+  TEST_ASSERT_EQUAL_UINT32(15, cfg.inactivityTimeoutMin);
+  TEST_ASSERT_EQUAL_STRING("ping", cfg.tvVerifyMethod.c_str());
+  TEST_ASSERT_EQUAL_UINT32(7, cfg.rampIntervalMin);
+  TEST_ASSERT_EQUAL_STRING("[{\"id\":\"keep\"}]", cfg.sensorsJson.c_str());
+}
+
+void test_config_repair_valid_is_noop(void) {
+  InsomniaTV::ConfigManager mgr;
+  InsomniaTV::Config cfg = mgr.get();
+  TEST_ASSERT_FALSE(InsomniaTV::ConfigManager::repairInvalid(cfg));
+}
+
 int runUnityTests(void) {
   UNITY_BEGIN();
   RUN_TEST(test_config_defaults);
@@ -487,6 +511,8 @@ int runUnityTests(void) {
   RUN_TEST(test_config_partial_json_preserves_seeded_values);
   RUN_TEST(test_config_tv_control_roundtrip);
   RUN_TEST(test_config_tv_control_defaults_empty);
+  RUN_TEST(test_config_repair_invalid_resets_only_bad_fields);
+  RUN_TEST(test_config_repair_valid_is_noop);
   return UNITY_END();
 }
 
