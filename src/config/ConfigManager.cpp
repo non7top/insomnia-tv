@@ -158,6 +158,9 @@ void ConfigManager::resetToDefaults() {
   d.tvVerifyTarget = "";
   d.tvVerifyTimeoutMs = 1000;
   d.tvVerifyRetries = 3;
+  d.tvControlHost = "";
+  d.tvControlToken = "";
+  d.tvControlMac = "";
   d.irVolumeUpProtocol = "NEC";
   d.irVolumeUpCode = 0;
   d.irVolumeUpBits = 32;
@@ -205,6 +208,12 @@ bool ConfigManager::parseJson_(const std::string& json, Config& out) {
     out.tvVerifyTarget = doc["tv_verification"]["target"] | "";
     out.tvVerifyTimeoutMs = doc["tv_verification"]["timeout_ms"] | 1000;
     out.tvVerifyRetries = doc["tv_verification"]["retries"] | 3;
+  }
+
+  if (doc["tv_control"].is<JsonObject>()) {
+    out.tvControlHost = doc["tv_control"]["host"] | "";
+    out.tvControlToken = doc["tv_control"]["token"] | "";
+    out.tvControlMac = doc["tv_control"]["mac"] | "";
   }
 
   if (doc["ir_codes"].is<JsonObject>()) {
@@ -268,6 +277,11 @@ std::string ConfigManager::toJson_(const Config& cfg) {
   tv["target"] = cfg.tvVerifyTarget;
   tv["timeout_ms"] = cfg.tvVerifyTimeoutMs;
   tv["retries"] = cfg.tvVerifyRetries;
+
+  JsonObject tvControl = doc["tv_control"].to<JsonObject>();
+  tvControl["host"] = cfg.tvControlHost;
+  tvControl["token"] = cfg.tvControlToken;
+  tvControl["mac"] = cfg.tvControlMac;
 
   JsonObject ir = doc["ir_codes"].to<JsonObject>();
   JsonObject volUp = ir["volume_up"].to<JsonObject>();

@@ -37,3 +37,4 @@ A singleton registry that manages sensor instances and provides thread-safe acce
 - **Ping**: Network reachability check.
 - **HTTP**: Remote service status check.
 - **UPnP**: Device discovery and monitoring.
+- **Samsung TV** (`samsung_tv`): True while the TV reports `PowerState: on` on its REST API (port 8001); false in standby. Config: `id`, `host`, optional `timeout_ms` and `weight` (default 5 in TV fusion).

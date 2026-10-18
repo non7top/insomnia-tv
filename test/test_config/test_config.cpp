@@ -435,6 +435,32 @@ void test_config_partial_json_preserves_seeded_values(void) {
   TEST_ASSERT_EQUAL_UINT32(15, parsed.inactivityTimeoutMin);
 }
 
+void test_config_tv_control_roundtrip(void) {
+  TestConfigManager mgr;
+  InsomniaTV::Config original;
+  mgr.resetToDefaults();
+  original = mgr.get();
+  original.tvControlHost = "192.168.2.190";
+  original.tvControlToken = "16008142";
+  original.tvControlMac = "aa:bb:cc:dd:ee:ff";
+
+  InsomniaTV::Config parsed = mgr.get();
+  TEST_ASSERT_TRUE(mgr.testParseJson(mgr.testToJson(original), parsed));
+
+  TEST_ASSERT_EQUAL_STRING("192.168.2.190", parsed.tvControlHost.c_str());
+  TEST_ASSERT_EQUAL_STRING("16008142", parsed.tvControlToken.c_str());
+  TEST_ASSERT_EQUAL_STRING("aa:bb:cc:dd:ee:ff", parsed.tvControlMac.c_str());
+}
+
+void test_config_tv_control_defaults_empty(void) {
+  TestConfigManager mgr;
+  mgr.resetToDefaults();
+  InsomniaTV::Config parsed = mgr.get();
+  TEST_ASSERT_TRUE(mgr.testParseJson("{}", parsed));
+  TEST_ASSERT_EQUAL_STRING("", parsed.tvControlHost.c_str());
+  TEST_ASSERT_EQUAL_STRING("", parsed.tvControlToken.c_str());
+}
+
 int runUnityTests(void) {
   UNITY_BEGIN();
   RUN_TEST(test_config_defaults);
@@ -459,6 +485,8 @@ int runUnityTests(void) {
   RUN_TEST(test_config_no_tv_sm_key);
   RUN_TEST(test_config_sensors_json_default);
   RUN_TEST(test_config_partial_json_preserves_seeded_values);
+  RUN_TEST(test_config_tv_control_roundtrip);
+  RUN_TEST(test_config_tv_control_defaults_empty);
   return UNITY_END();
 }
 

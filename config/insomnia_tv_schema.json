@@ -126,6 +126,14 @@
         }
       }
     },
+    "tv_control": {
+      "type": "object",
+      "properties": {
+        "host": { "type": "string", "default": "" },
+        "token": { "type": "string", "default": "" },
+        "mac": { "type": "string", "default": "" }
+      }
+    },
     "web": {
       "type": "object",
       "required": ["port", "auth_enabled"],
