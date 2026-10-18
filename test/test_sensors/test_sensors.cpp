@@ -5,6 +5,7 @@
 #include <memory>
 #include <string>
 
+#include "../../src/discovery/SamsungTvDiscovery.h"
 #include "../../src/sensors/GpioAnalogSensor.h"
 #include "../../src/sensors/GpioInputSensor.h"
 #include "../../src/sensors/HttpSensor.h"
@@ -87,6 +88,26 @@ void test_http_sensor() {
 }
 
 // ---------------------------------------------------------------------------
+// Test: device_id from the persisted sensor config is attached to the sensor
+// (#59); a missing one is just empty.
+// ---------------------------------------------------------------------------
+void test_sensor_device_id_loaded_from_config() {
+  auto& mgr = SensorManager::instance();
+  mgr.clear();
+  InsomniaTV::SamsungTvDiscovery discovery;
+  mgr.init(
+      "[{\"id\":\"p1\",\"type\":\"ping\",\"target_ip\":\"1.2.3.4\","
+      "\"device_id\":\"living_room_tv\"},"
+      "{\"id\":\"p2\",\"type\":\"ping\",\"target_ip\":\"1.2.3.5\"}]",
+      discovery);
+
+  TEST_ASSERT_EQUAL_STRING("living_room_tv",
+                           mgr.getSensor("p1")->getDeviceId().c_str());
+  TEST_ASSERT_EQUAL_STRING("", mgr.getSensor("p2")->getDeviceId().c_str());
+  mgr.clear();
+}
+
+// ---------------------------------------------------------------------------
 // Controllable sensor for testing SensorManager's value cache directly,
 // without depending on any real sensor type's native-stub read() behavior.
 // ---------------------------------------------------------------------------
@@ -153,6 +174,7 @@ int main() {
   RUN_TEST(test_gpio_analog_sensor);
   RUN_TEST(test_ping_sensor);
   RUN_TEST(test_http_sensor);
+  RUN_TEST(test_sensor_device_id_loaded_from_config);
   RUN_TEST(test_get_cached_value_defaults_false_when_never_read);
   RUN_TEST(test_get_cached_value_reflects_last_tick);
   return UNITY_END();

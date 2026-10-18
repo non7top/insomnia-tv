@@ -122,6 +122,7 @@ void SensorManager::init(const std::string& configJson,
         if (factories_.count(type)) {
           auto sensor = factories_[type](sensorCfg);
           if (sensor) {
+            sensor->setDeviceId(sensorCfg["device_id"] | "");
             sensor->setState(Sensor::State::READY);
             sensors_[id] = sensor;
           }

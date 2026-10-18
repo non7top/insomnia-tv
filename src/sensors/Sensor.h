@@ -26,10 +26,16 @@ public:
   virtual void setState(State state) { state_ = state; }
 
   virtual bool isAvailable() const { return state_ == State::READY; }
+
+  // Groups sensors under the device they belong to (e.g. "living_room_tv").
+  // Pure metadata for now: runtime stays single-device (#59).
+  std::string getDeviceId() const { return deviceId_; }
+  void setDeviceId(const std::string& deviceId) { deviceId_ = deviceId; }
   virtual ~Sensor() = default;
 
 protected:
   State state_ = State::UNINITIALIZED;
+  std::string deviceId_;
 };
 
 }  // namespace InsomniaTV
