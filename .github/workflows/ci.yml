@@ -52,7 +52,7 @@ jobs:
             ${{ runner.os }}-pio-${{ github.job }}-
 
       - name: Set up PlatformIO
-        run: pip install platformio
+        run: pip install "platformio<6.2"
 
       - name: Run native tests
         run: pio test -e native
@@ -94,7 +94,7 @@ jobs:
             ${{ runner.os }}-pio-${{ github.job }}-
 
       - name: Set up PlatformIO
-        run: pip install platformio
+        run: pip install "platformio<6.2"
 
       - name: Build all ESP32 firmware
         run: pio run -e esp32c3 -e esp32dev -e qemu-esp32
