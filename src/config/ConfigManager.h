@@ -47,6 +47,11 @@ struct Config {
   uint32_t tvVerifyTimeoutMs;
   uint8_t tvVerifyRetries;
 
+  // Samsung network control (pairing result; empty until paired)
+  std::string tvControlHost;
+  std::string tvControlToken;
+  std::string tvControlMac;
+
   // IR Codes
   std::string irVolumeUpProtocol;
   uint64_t irVolumeUpCode;

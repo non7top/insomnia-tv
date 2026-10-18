@@ -12,6 +12,7 @@
 #include "../discovery/SamsungTvDiscovery.h"
 #include "../ir/ActivityTracker.h"
 #include "../state/SleepStateMachine.h"
+#include "../tv/SamsungTvController.h"
 #include "../tv/TvStateMachine.h"
 
 namespace InsomniaTV {
@@ -53,6 +54,12 @@ public:
    */
   void setActivityTracker(ActivityTracker* tracker);
 
+  /**
+   * @brief Wire in the Samsung controller behind /api/tv/pair, /api/tv/control
+   * and /api/tv/power-off.
+   */
+  void setSamsungTvController(SamsungTvController* controller);
+
 private:
 #if defined(ARDUINO)
   AsyncWebServer _server;
@@ -62,6 +69,7 @@ private:
   TvStateMachine* _tvSm = nullptr;
   SleepStateMachine* _sleepSm = nullptr;
   ActivityTracker* _activityTracker = nullptr;
+  SamsungTvController* _samsungTv = nullptr;
 #if defined(ARDUINO)
   // Accumulates /api/files/edit's request body across chunks -- the body
   // callback fires once per TCP chunk, and JSON can't be parsed until the

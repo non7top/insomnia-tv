@@ -68,6 +68,10 @@ void WebServer::setActivityTracker(ActivityTracker* tracker) {
   _activityTracker = tracker;
 }
 
+void WebServer::setSamsungTvController(SamsungTvController* controller) {
+  _samsungTv = controller;
+}
+
 void WebServer::begin() {
   _server.addHandler(&events);
   _server.begin();
@@ -207,6 +211,18 @@ void WebServer::setupRoutes() {
   <h3>TV Discovery</h3>
   <button onclick="scanTV()">Scan Network</button>
   <ul id="tv-list"></ul>
+  <h3>TV Power Control</h3>
+  <fieldset>
+    <legend>Samsung (network)</legend>
+    <p><b>Status:</b> <span id="tvc-status">Loading...</span></p>
+    <label>TV IP address:</label>
+    <input type="text" id="tvc-host" placeholder="e.g. 192.168.2.190" style="margin-bottom:8px">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button id="tvc-pair-btn" onclick="pairTv(document.getElementById('tvc-host').value.trim(), 'tvc-msg', 'tvc-pair-btn')">Pair</button>
+      <button class="btn-gray" id="tvc-off-btn" onclick="testPowerOff()">Test power-off</button>
+    </div>
+    <p id="tvc-msg" style="color:#555;font-size:14px"></p>
+  </fieldset>
   <h3>Firmware Update</h3>
   <form method="POST" action="/update" enctype="multipart/form-data">
     <input type="file" name="update">
@@ -265,6 +281,7 @@ void WebServer::setupRoutes() {
       <option value="ping">Ping (ICMP)</option>
       <option value="http">HTTP (GET)</option>
       <option value="upnp">UPnP (Discovery)</option>
+      <option value="samsung_tv">Samsung TV power state</option>
     </select>
     <div id="dynamicFields"></div>
     <button type="button" onclick="saveSensor()" style="margin-top:20px;width:100%;">Save Sensor</button>
@@ -313,6 +330,11 @@ void WebServer::setupRoutes() {
       <span class="done-icon">&#9989;</span>
       <h4 id="wz-done-title" style="margin:4px 0 8px"></h4>
       <p id="wz-done-msg" style="color:#666;margin:0"></p>
+      <div style="margin-top:16px;text-align:left;border-top:1px solid #eee;padding-top:12px">
+        <p style="margin:0 0 8px">To let insomniaTV switch this TV off, pair it now. The TV will show an allow prompt.</p>
+        <button class="btn-tv" id="wz-pair-btn" onclick="pairTv(wzTv.ip, 'wz-pair-msg', 'wz-pair-btn')">Pair for power control</button>
+        <p id="wz-pair-msg" style="color:#555;font-size:14px;margin:8px 0 0"></p>
+      </div>
     </div>
 
     <div class="wz-footer">
@@ -346,6 +368,7 @@ function openTab(evt, name) {
     if (name === 'Status')  loadStatus();
     if (name === 'Sensors') loadSensors();
     if (name === 'Files')   loadFiles();
+    if (name === 'Config')  loadTvControl();
 }
 
 // ── Status ──────────────────────────────────────────────────────────────────
@@ -458,6 +481,8 @@ function buildEditFields(s) {
         html += '<div class="detail-field"><label>IP / Hostname</label><input type="text" id="ef-target_ip-'+s.id+'" value="'+(s.target_ip||'')+'"></div>';
     } else if (s.type === 'http') {
         html += '<div class="detail-field"><label>URL</label><input type="text" id="ef-url-'+s.id+'" value="'+(s.url||'')+'"></div>';
+    } else if (s.type === 'samsung_tv') {
+        html += '<div class="detail-field"><label>TV IP / Hostname</label><input type="text" id="ef-host-'+s.id+'" value="'+(s.host||'')+'"></div>';
     } else if (s.type === 'upnp') {
         html += '<div class="detail-field"><label>Device Name</label><input type="text" id="ef-target_name-'+s.id+'" value="'+(s.target_name||'')+'"></div>';
     } else if (s.type === 'gpio_input' || s.type === 'gpio_analog') {
@@ -470,6 +495,7 @@ function saveSensorEdit(id) {
     if (s.type === 'ping')        s.target_ip   = document.getElementById('ef-target_ip-'   + id)?.value || s.target_ip;
     else if (s.type === 'http')   s.url         = document.getElementById('ef-url-'         + id)?.value || s.url;
     else if (s.type === 'upnp')   s.target_name = document.getElementById('ef-target_name-' + id)?.value || s.target_name;
+    else if (s.type === 'samsung_tv') s.host    = document.getElementById('ef-host-'        + id)?.value || s.host;
     else if (s.type === 'gpio_input' || s.type === 'gpio_analog')
                                   s.pin         = +document.getElementById('ef-pin-'         + id)?.value;
     fetch('/api/sensors', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(s)})
@@ -497,6 +523,8 @@ function updateFormFields() {
         f.innerHTML = `<label>Target IP/Host:</label><input type="text" id="s_target" placeholder="192.168.1.1">`;
     } else if (type === 'http') {
         f.innerHTML = `<label>URL:</label><input type="text" id="s_url" placeholder="http://api.local/status">`;
+    } else if (type === 'samsung_tv') {
+        f.innerHTML = `<label>TV IP/Host:</label><input type="text" id="s_host" placeholder="192.168.2.190">`;
     } else if (type === 'upnp') {
         f.innerHTML = `<label>Select Device:</label>
           <div id="upnp-list" style="border:1px solid #ccc;max-height:100px;overflow-y:auto;margin-bottom:10px;">Scanning...</div>
@@ -540,6 +568,7 @@ function saveSensor() {
     else if (type === 'ping')   { cfg.target_ip = document.getElementById('s_target').value; }
     else if (type === 'http')   { cfg.url = document.getElementById('s_url').value; }
     else if (type === 'upnp')   { cfg.target_name = document.getElementById('s_target_name').value; }
+    else if (type === 'samsung_tv') { cfg.host = document.getElementById('s_host').value; }
     fetch('/api/sensors', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(cfg)})
       .then(r => { if (r.ok) { closeModal(); loadSensors(); } else alert('Failed to save'); })
       .catch(err => alert('Request failed: ' + err));
@@ -744,7 +773,7 @@ function wzBuildSensors(tv) {
     wzSensors = [
         {id: slug+'_ping', type:'ping',  target_ip:   tv.ip,   label:'Ping', desc:'Network reachability · '+tv.ip, enabled:true},
         {id: slug+'_upnp', type:'upnp',  target_name: tv.name, label:'UPnP', desc:'Service discovery · '+tv.name, enabled:true},
-        {id: slug+'_http', type:'http',  url:'http://'+tv.ip+':8001/api/v2/', label:'HTTP', desc:'Samsung SmartThings API (optional)', enabled:false},
+        {id: slug+'_power', type:'samsung_tv', host: tv.ip, label:'Power', desc:'Samsung power state (sees standby) · '+tv.ip, enabled:true},
     ];
     const list = document.getElementById('wz-sensor-list');
     list.innerHTML = '';
@@ -780,6 +809,7 @@ async function wzCreate() {
             if (s.type === 'ping') p.target_ip   = s.target_ip;
             if (s.type === 'upnp') p.target_name = s.target_name;
             if (s.type === 'http') p.url         = s.url;
+            if (s.type === 'samsung_tv') p.host  = s.host;
             const r = await fetch('/api/sensors', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(p)});
             if (r.ok) created++;
         }
@@ -790,6 +820,48 @@ async function wzCreate() {
     document.getElementById('wz-done-title').textContent = created + ' sensor' + (created !== 1 ? 's' : '') + ' added!';
     document.getElementById('wz-done-msg').textContent   = 'Sensors for "' + wzTv.name + '" are now active in the registry.';
     wzShowPage(4);
+}
+
+// ── TV power control (Samsung pairing) ──────────────────────────────────────
+function loadTvControl() {
+    fetch('/api/tv/control').then(r => r.json()).then(d => {
+        document.getElementById('tvc-status').textContent =
+            d.paired ? 'Paired with ' + d.host + (d.mac ? ' (' + d.mac + ')' : '') : 'Not paired';
+        if (d.host && !document.getElementById('tvc-host').value) document.getElementById('tvc-host').value = d.host;
+    }).catch(err => { document.getElementById('tvc-status').textContent = 'Failed to load: ' + err; });
+}
+function pairTv(host, msgId, btnId) {
+    const msg = document.getElementById(msgId), btn = document.getElementById(btnId);
+    if (!host) { msg.textContent = 'Enter the TV IP address first.'; return; }
+    btn.disabled = true;
+    msg.textContent = 'Accept the "insomniaTV" prompt on your TV within 30 seconds\u2026';
+    fetch('/api/tv/pair', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({host:host})})
+        .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); setTimeout(() => pairPoll(host, msg, btn, 0), 2000); })
+        .catch(err => { msg.textContent = 'Pairing failed to start: ' + err; btn.disabled = false; });
+}
+function pairPoll(host, msg, btn, n) {
+    fetch('/api/tv/control').then(r => r.json()).then(d => {
+        if (d.pair_state === 'paired' && d.host === host) {
+            msg.textContent = '\u2705 Paired. insomniaTV can now switch this TV off.';
+            btn.disabled = false;
+            loadTvControl();
+        } else if (d.pair_state === 'failed') {
+            msg.textContent = 'Pairing failed: ' + d.error;
+            btn.disabled = false;
+        } else if (n < 20) {
+            setTimeout(() => pairPoll(host, msg, btn, n + 1), 2000);
+        } else {
+            msg.textContent = 'Timed out waiting for the TV.';
+            btn.disabled = false;
+        }
+    }).catch(err => { msg.textContent = 'Status check failed: ' + err; btn.disabled = false; });
+}
+function testPowerOff() {
+    const msg = document.getElementById('tvc-msg');
+    if (!confirm('Send the power-off command to the TV now?')) return;
+    fetch('/api/tv/power-off', {method:'POST'})
+        .then(r => r.json().then(d => { msg.textContent = r.ok ? 'Power-off sent (only if the TV was on).' : (d.error || 'Failed'); }))
+        .catch(err => { msg.textContent = 'Request failed: ' + err; });
 }
 
 document.getElementsByClassName('tablinks')[0].click();
@@ -1091,6 +1163,81 @@ document.getElementsByClassName('tablinks')[0].click();
         request->send(200, "application/json", response);
       });
 
+  // GET /api/tv/control — Samsung pairing state for the UI
+  _server.on(
+      "/api/tv/control", HTTP_GET, [this](AsyncWebServerRequest* request) {
+        if (!request->authenticate(kSystemUsername, kSystemPassword)) {
+          return request->requestAuthentication();
+        }
+        JsonDocument doc;
+        if (_samsungTv != nullptr) {
+          const char* states[] = {"idle", "waiting", "paired", "failed"};
+          doc["host"] = _samsungTv->host();
+          doc["mac"] = _samsungTv->mac();
+          doc["paired"] = _samsungTv->isPaired();
+          doc["pair_state"] = states[static_cast<int>(_samsungTv->pairState())];
+          doc["error"] = _samsungTv->lastError();
+        }
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
+      });
+
+  // POST /api/tv/pair {"host":"<ip>"} — starts pairing; the TV shows an
+  // allow prompt. Poll GET /api/tv/control for the outcome.
+  _server.on("/api/tv/pair", HTTP_POST,
+             [this](AsyncWebServerRequest* request, JsonVariant& json) {
+               if (!request->authenticate(kSystemUsername, kSystemPassword)) {
+                 return request->requestAuthentication();
+               }
+               std::string host = json["host"] | "";
+               if (_samsungTv == nullptr || host.empty()) {
+                 request->send(400, "application/json",
+                               "{\"error\":\"host required\"}");
+                 return;
+               }
+               if (_samsungTv->pairState() == PairState::Waiting) {
+                 request->send(409, "application/json",
+                               "{\"error\":\"pairing already in progress\"}");
+                 return;
+               }
+               struct PairJob {
+                 SamsungTvController* tv;
+                 std::string host;
+               };
+               auto* job = new PairJob{_samsungTv, host};
+               xTaskCreate(
+                   [](void* pvParameters) {
+                     auto* j = static_cast<PairJob*>(pvParameters);
+                     j->tv->pair(j->host);
+                     delete j;
+                     vTaskDelete(NULL);
+                   },
+                   "tv_pair", 10240, job, 1, NULL);
+               request->send(202, "application/json",
+                             "{\"status\":\"pairing\"}");
+             });
+
+  // POST /api/tv/power-off — manual test of the network power-off
+  _server.on(
+      "/api/tv/power-off", HTTP_POST, [this](AsyncWebServerRequest* request) {
+        if (!request->authenticate(kSystemUsername, kSystemPassword)) {
+          return request->requestAuthentication();
+        }
+        if (_samsungTv == nullptr || !_samsungTv->isPaired()) {
+          request->send(409, "application/json",
+                        "{\"error\":\"TV not paired\"}");
+          return;
+        }
+        xTaskCreate(
+            [](void* pvParameters) {
+              static_cast<SamsungTvController*>(pvParameters)->powerOff();
+              vTaskDelete(NULL);
+            },
+            "tv_poweroff", 10240, _samsungTv, 1, NULL);
+        request->send(202, "application/json", "{\"status\":\"sent\"}");
+      });
+
   // GET /api/files/download?path=<path>
   // NOTE: specific sub-routes must be registered before GET /api/files because
   // ESPAsyncWebServer matches by prefix — /api/files would capture /api/files/*
@@ -1309,6 +1456,9 @@ void WebServer::setSleepStateMachine(SleepStateMachine* sleepSm) {
 }
 void WebServer::setActivityTracker(ActivityTracker* tracker) {
   _activityTracker = tracker;
+}
+void WebServer::setSamsungTvController(SamsungTvController* controller) {
+  _samsungTv = controller;
 }
 void WebServer::setupRoutes() {}
 #endif

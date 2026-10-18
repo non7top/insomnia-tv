@@ -12,6 +12,7 @@
 #include "GpioInputSensor.h"
 #include "HttpSensor.h"
 #include "PingSensor.h"
+#include "SamsungPowerSensor.h"
 #include "UpnpSensor.h"
 
 namespace InsomniaTV {
@@ -97,6 +98,9 @@ void SensorManager::init(const std::string& configJson,
     });
     registerFactory("upnp", [&discovery](const JsonDocument& cfg) {
       return UpnpSensor::create(cfg, discovery);
+    });
+    registerFactory("samsung_tv", [](const JsonDocument& cfg) {
+      return SamsungPowerSensor::create(cfg);
     });
   }
 

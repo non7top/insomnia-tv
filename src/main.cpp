@@ -23,6 +23,8 @@
 #include "sensors/SensorManager.h"
 #include "state/RampScheduler.h"
 #include "state/SleepStateMachine.h"
+#include "tv/ArduinoSamsungTransport.h"
+#include "tv/SamsungTvController.h"
 #include "tv/TvStateMachine.h"
 #include "web/WebServer.h"
 
@@ -47,6 +49,8 @@ static InsomniaTV::SamsungTvDiscovery tvDiscovery;
 static InsomniaTV::WebServer webServer(80, tvDiscovery, configMgr);
 static InsomniaTV::SystemClock systemClock;
 static InsomniaTV::IrDriver irDriver(IR_TX_PIN, IR_RX_PIN);
+static InsomniaTV::ArduinoSamsungTransport samsungTransport;
+static InsomniaTV::SamsungTvController samsungTv(samsungTransport);
 static InsomniaTV::TvStateMachine* tvSm = nullptr;
 static InsomniaTV::SleepStateMachine* sleepSm = nullptr;
 static InsomniaTV::ActivityTracker* activityTracker = nullptr;
@@ -89,6 +93,15 @@ void sensorPollTask(void*) {
     InsomniaTV::SensorManager::instance().tick();
     vTaskDelay(pdMS_TO_TICKS(1000));
   }
+}
+
+// TLS handshake plus the allow/key round trip block for seconds, so the
+// network power-off runs on its own task like the sensor poll.
+void samsungPowerOffTask(void*) {
+  InsomniaTV::PowerOffResult r = samsungTv.powerOff();
+  Serial.printf("[insomniaTV] Samsung power-off result: %d\n",
+                static_cast<int>(r));
+  vTaskDelete(NULL);
 }
 
 void setup() {
@@ -135,6 +148,22 @@ void setup() {
   // WiFi Setup
   wifiSetup.begin();
 
+  // Samsung network control — pairing is done from the web UI; the token it
+  // yields is persisted so power-off keeps working across reboots.
+  samsungTv.configure(configMgr.get().tvControlHost,
+                      configMgr.get().tvControlToken,
+                      configMgr.get().tvControlMac);
+  samsungTv.setCredentialsCallback([](const std::string& host,
+                                      const std::string& token,
+                                      const std::string& mac) {
+    InsomniaTV::Config c = configMgr.get();
+    c.tvControlHost = host;
+    c.tvControlToken = token;
+    c.tvControlMac = mac;
+    configMgr.set(c);
+    configMgr.save();
+  });
+
   // Sensor Framework
   Serial.println("[insomniaTV] Initializing sensor framework...");
   InsomniaTV::SensorManager::instance().init(
@@ -151,7 +180,13 @@ void setup() {
     JsonArray detArr = tvDoc["detection_sensors"].to<JsonArray>();
     for (JsonObject s : sensorsDoc.as<JsonArray>()) {
       const char* t = s["type"] | "";
-      int w = (strcmp(t, "upnp") == 0) ? 4 : (strcmp(t, "ping") == 0) ? 3 : 2;
+      // samsung_tv defaults highest: it alone sees standby, while ping/http
+      // keep answering for a while after the screen is off.
+      int defaultWeight = (strcmp(t, "samsung_tv") == 0) ? 5
+                          : (strcmp(t, "upnp") == 0)     ? 4
+                          : (strcmp(t, "ping") == 0)     ? 3
+                                                         : 2;
+      int w = s["weight"] | defaultWeight;
       JsonObject ds = detArr.add<JsonObject>();
       ds["sensor_id"] = s["id"] | "";
       ds["weight"] = w;
@@ -187,6 +222,10 @@ void setup() {
   }
   sleepSm->setRampStartCallback([] { rampScheduler->start(); });
   sleepSm->setPowerOffCallback([] {
+    if (samsungTv.isPaired()) {
+      xTaskCreate(samsungPowerOffTask, "tv_poweroff", 10240, NULL, 1, NULL);
+      return;
+    }
     const auto& c = configMgr.get();
     irDriver.send(c.irPowerProtocol, c.irPowerCode, c.irPowerBits);
   });
@@ -206,6 +245,7 @@ void setup() {
   webServer.setTvStateMachine(tvSm);
   webServer.setSleepStateMachine(sleepSm);
   webServer.setActivityTracker(activityTracker);
+  webServer.setSamsungTvController(&samsungTv);
 
   // Web Server
   webServer.begin();
