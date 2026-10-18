@@ -203,6 +203,15 @@ void setup() {
         }
       });
 
+  // Hot-reload: the web config editor calls load(), which fires this.
+  configMgr.onChange(
+      [](const InsomniaTV::Config&, const InsomniaTV::Config& next) {
+        sleepSm->setInactivityTimeoutMs(
+            static_cast<uint32_t>(next.inactivityTimeoutMin) * 60000UL);
+        rampScheduler->setIntervalMs(next.rampIntervalMin * 60000UL);
+        rampScheduler->setMaxSteps(next.maxRampStepsBeforePoweroff);
+      });
+
   webServer.setTvStateMachine(tvSm);
   webServer.setSleepStateMachine(sleepSm);
   webServer.setActivityTracker(activityTracker);

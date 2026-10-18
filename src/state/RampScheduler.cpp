@@ -46,6 +46,14 @@ void RampScheduler::tick() {
   }
 }
 
+void RampScheduler::setIntervalMs(uint32_t interval_ms) {
+  interval_ms_ = interval_ms;
+}
+
+void RampScheduler::setMaxSteps(uint8_t max_steps) {
+  max_steps_ = max_steps;
+}
+
 bool RampScheduler::isActive() const {
   return active_;
 }

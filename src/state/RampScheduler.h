@@ -34,6 +34,10 @@ public:
   // active; fires on_complete() and stops once max_steps is reached.
   void tick();
 
+  // Apply changed config; an active ramp picks them up on its next tick.
+  void setIntervalMs(uint32_t interval_ms);
+  void setMaxSteps(uint8_t max_steps);
+
   bool isActive() const;
   uint8_t stepCount() const;
 

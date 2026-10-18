@@ -190,6 +190,36 @@ void test_ramp_scheduler_stop_cancels() {
   TEST_ASSERT_FALSE(rs.isActive());
 }
 
+// ---------------------------------------------------------------------------
+// Config hot-reload setters (#66)
+// ---------------------------------------------------------------------------
+void test_state_machine_timeout_change_applies() {
+  MockClock clk;
+  SleepStateMachine sm(clk, /*inactivityTimeoutMs=*/60000);
+  clk.advanceMs(10000);
+  sm.setInactivityTimeoutMs(5000);
+  sm.tick();
+  TEST_ASSERT_EQUAL(State::RAMPING, sm.getCurrentState());
+}
+
+void test_ramp_scheduler_config_change_applies() {
+  MockClock clk;
+  int steps = 0;
+  int completed = 0;
+  RampScheduler rs(
+      clk, /*interval_ms=*/1000, /*max_steps=*/5, [&] { steps++; },
+      [&] { completed++; });
+  rs.start();
+  rs.setIntervalMs(100);
+  rs.setMaxSteps(2);
+  clk.advanceMs(100);
+  rs.tick();
+  clk.advanceMs(100);
+  rs.tick();
+  TEST_ASSERT_EQUAL_INT(2, steps);
+  TEST_ASSERT_EQUAL_INT(1, completed);
+}
+
 int main() {
   UNITY_BEGIN();
   RUN_TEST(test_state_machine_initial_state);
@@ -203,5 +233,7 @@ int main() {
   RUN_TEST(test_ramp_scheduler_fires_step_at_interval);
   RUN_TEST(test_ramp_scheduler_completes_after_max_steps);
   RUN_TEST(test_ramp_scheduler_stop_cancels);
+  RUN_TEST(test_state_machine_timeout_change_applies);
+  RUN_TEST(test_ramp_scheduler_config_change_applies);
   return UNITY_END();
 }
