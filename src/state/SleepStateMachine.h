@@ -43,6 +43,10 @@ public:
   // next tick without resetting the idle clock.
   void setInactivityTimeoutMs(uint32_t timeoutMs);
 
+  // Time since the idle clock last reset (boot or any activity/cycle end);
+  // this is the value compared against the inactivity timeout.
+  uint32_t msSinceReset() const;
+
   // Optional: supply TvStateMachine for VERIFYING state decisions.
   void setTvStateMachine(TvStateMachine* tv);
 
