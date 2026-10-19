@@ -46,7 +46,7 @@ ConfigStatus ConfigManager::load() {
     return ConfigStatus::InvalidJson;
   }
 
-  current_ = next;
+  set(next);  // notifies onChange listeners so a reload takes effect (#66)
   Serial.printf("[ConfigManager] load: OK (%zu bytes)\n", json.size());
   return ConfigStatus::Ok;
 #else

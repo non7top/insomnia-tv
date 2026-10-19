@@ -14,6 +14,10 @@ SleepStateMachine::SleepStateMachine(IClock& clock,
       current_(State::MONITORING),
       tvStateMachine_(nullptr) {}
 
+void SleepStateMachine::setInactivityTimeoutMs(uint32_t timeoutMs) {
+  inactivityTimeoutMs_ = timeoutMs;
+}
+
 void SleepStateMachine::tick() {
   switch (current_) {
     case State::MONITORING:

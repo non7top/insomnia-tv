@@ -39,6 +39,10 @@ public:
 
   State getCurrentState() const;
 
+  // Applies a changed inactivity timeout from config; takes effect on the
+  // next tick without resetting the idle clock.
+  void setInactivityTimeoutMs(uint32_t timeoutMs);
+
   // Optional: supply TvStateMachine for VERIFYING state decisions.
   void setTvStateMachine(TvStateMachine* tv);
 
