@@ -37,6 +37,9 @@
 #define IR_TX_PIN 4
 #define IR_RX_PIN 5
 
+// Reserved sensor id: an activity signal, not a TV detection input.
+static const char kPresenceSensorId[] = "presence_phone";
+
 static constexpr int kStatusLedFreqHz = 5000;
 static constexpr int kStatusLedResolutionBits = 8;
 static constexpr uint32_t kStatusLedBreathPeriodMs = 4000;
@@ -183,6 +186,9 @@ void setup() {
     tvDoc["hysteresis_count"] = 2;
     JsonArray detArr = tvDoc["detection_sensors"].to<JsonArray>();
     for (JsonObject s : sensorsDoc.as<JsonArray>()) {
+      if (strcmp(s["id"] | "", kPresenceSensorId) == 0) {
+        continue;
+      }
       const char* t = s["type"] | "";
       // samsung_tv defaults highest: it alone sees standby, while ping/http
       // keep answering for a while after the screen is off.
@@ -241,7 +247,7 @@ void setup() {
   // #62 for the planned generalized presence-fusion replacement.
   InsomniaTV::SensorManager::instance().subscribeValueChange(
       [](const std::string& id, bool value) {
-        if (id == "presence_phone" && value && sleepSm != nullptr) {
+        if (id == kPresenceSensorId && value && sleepSm != nullptr) {
           sleepSm->onIrActivity();
         }
       });
