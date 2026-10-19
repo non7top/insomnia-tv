@@ -179,6 +179,7 @@ void WebServer::setupRoutes() {
   <button class="tablinks" onclick="openTab(event,'Config')">Config</button>
   <button class="tablinks" onclick="openTab(event,'Sensors')">Sensors</button>
   <button class="tablinks" onclick="openTab(event,'Files')">Files</button>
+  <button class="tablinks" onclick="openTab(event,'System')">System</button>
 </div>
 
 <div id="Status" class="tabcontent">
@@ -210,9 +211,6 @@ void WebServer::setupRoutes() {
 </div>
 
 <div id="Config" class="tabcontent">
-  <h3>TV Discovery</h3>
-  <button onclick="scanTV()">Scan Network</button>
-  <ul id="tv-list"></ul>
   <h3>TV Power Control</h3>
   <fieldset>
     <legend>Samsung (network)</legend>
@@ -225,11 +223,22 @@ void WebServer::setupRoutes() {
     </div>
     <p id="tvc-msg" style="color:#555;font-size:14px"></p>
   </fieldset>
-  <h3>Firmware Update</h3>
-  <form method="POST" action="/update" enctype="multipart/form-data">
-    <input type="file" name="update">
-    <input type="submit" value="Update">
-  </form>
+</div>
+
+<div id="System" class="tabcontent">
+  <h3>System</h3>
+  <fieldset>
+    <legend>Reboot</legend>
+    <button class="btn-gray" onclick="rebootDevice()">Reboot device</button>
+    <p id="sys-reboot-msg" style="color:#555;font-size:14px"></p>
+  </fieldset>
+  <fieldset>
+    <legend>Firmware Update</legend>
+    <form method="POST" action="/update" enctype="multipart/form-data">
+      <input type="file" name="update">
+      <input type="submit" value="Update">
+    </form>
+  </fieldset>
 </div>
 
 <div id="Sensors" class="tabcontent">
@@ -673,24 +682,13 @@ function uploadFile() {
         .catch(err => alert('Request failed: ' + err));
 }
 
-// ── Config tab ───────────────────────────────────────────────────────────────
-function scanTV() {
-    document.getElementById('tv-list').innerHTML = '<li>Scanning...</li>';
-    fetch('/api/scan', {method:'POST'}).then(() => setTimeout(loadDiscovery, 3000))
-        .catch(err => { document.getElementById('tv-list').innerHTML = '<li style="color:#f44336">Scan failed: ' + err + '</li>'; });
-}
-function loadDiscovery() {
-    fetch('/api/discovery').then(r => r.json()).then(data => {
-        const list = document.getElementById('tv-list');
-        list.innerHTML = '';
-        data.forEach(tv => {
-            const li = document.createElement('li');
-            li.innerHTML = '<b>' + tv.name + '</b> (' + tv.ip + ') - ' + tv.model;
-            list.appendChild(li);
-        });
-    }).catch(err => {
-        document.getElementById('tv-list').innerHTML = '<li style="color:#f44336">Failed to load: ' + err + '</li>';
-    });
+// ── System tab ──────────────────────────────────────────────────────────────
+function rebootDevice() {
+    if (!confirm('Reboot the device now?')) return;
+    const msg = document.getElementById('sys-reboot-msg');
+    fetch('/api/reboot', {method:'POST'})
+        .then(r => { msg.textContent = r.ok ? 'Rebooting\u2026 reload this page in about 20 seconds.' : 'Reboot request failed: HTTP ' + r.status; })
+        .catch(err => { msg.textContent = 'Request failed: ' + err; });
 }
 
 // ── Add Smart TV wizard ──────────────────────────────────────────────────────
@@ -1178,6 +1176,20 @@ document.getElementsByClassName('tablinks')[0].click();
         serializeJson(doc, response);
         request->send(200, "application/json", response);
       });
+
+  // POST /api/reboot — restarts after the response has been flushed
+  _server.on("/api/reboot", HTTP_POST, [](AsyncWebServerRequest* request) {
+    if (!request->authenticate(kSystemUsername, kSystemPassword)) {
+      return request->requestAuthentication();
+    }
+    xTaskCreate(
+        [](void*) {
+          vTaskDelay(pdMS_TO_TICKS(1000));
+          ESP.restart();
+        },
+        "reboot_task", 2048, NULL, 1, NULL);
+    request->send(202, "application/json", "{\"status\":\"rebooting\"}");
+  });
 
   // GET /api/tv/control — Samsung pairing state for the UI
   _server.on(
