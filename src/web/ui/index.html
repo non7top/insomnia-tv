@@ -1,0 +1,202 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>insomniaTV</title>
+    <style>@@STYLE@@    </style>
+</head>
+<body>
+
+<div class="tab">
+  <button class="tablinks" onclick="openTab(event,'Status')">Status</button>
+  <button class="tablinks" onclick="openTab(event,'Config')">Config</button>
+  <button class="tablinks" onclick="openTab(event,'Sensors')">Sensors</button>
+  <button class="tablinks" onclick="openTab(event,'Files')">Files</button>
+  <button class="tablinks" onclick="openTab(event,'System')">System</button>
+</div>
+
+<div id="Status" class="tabcontent">
+  <h3>System Status</h3>
+  <fieldset>
+    <legend>TV</legend>
+    <p><b>Power:</b> <span id="tv-power_state" class="state-badge">Loading...</span></p>
+    <p><b>Sensor votes:</b></p>
+    <div id="tv-contributions" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+  </fieldset>
+  <fieldset>
+    <legend>Sleep Controller</legend>
+    <p><b>State:</b> <span id="sys-sleepState" class="state-badge">Loading...</span></p>
+    <p><b>Idle for:</b> <span id="sys-lastActivity"></span></p>
+  </fieldset>
+  <fieldset>
+    <legend>System</legend>
+    <p><b>Status:</b> <span id="sys-status">Loading...</span></p>
+    <p><b>Version:</b> <span id="sys-version"></span></p>
+    <p><b>Chip ID:</b> <span id="sys-chipId"></span></p>
+    <p><b>Free Heap:</b> <span id="sys-freeHeap"></span></p>
+  </fieldset>
+  <fieldset>
+    <legend>Network</legend>
+    <p><b>IP Address:</b> <span id="sys-ip"></span></p>
+    <p><b>MAC:</b> <span id="sys-mac"></span></p>
+    <p><b>WiFi:</b> <span id="sys-wifiStatus"></span> (<span id="sys-ssid"></span>, <span id="sys-rssi"></span> dBm)</p>
+  </fieldset>
+</div>
+
+<div id="Config" class="tabcontent">
+  <h3>TV Power Control</h3>
+  <fieldset>
+    <legend>Samsung (network)</legend>
+    <p><b>Status:</b> <span id="tvc-status">Loading...</span></p>
+    <label>TV IP address:</label>
+    <input type="text" id="tvc-host" placeholder="e.g. 192.168.2.190" style="margin-bottom:8px">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button id="tvc-pair-btn" onclick="pairTv(document.getElementById('tvc-host').value.trim(), 'tvc-msg', 'tvc-pair-btn')">Pair</button>
+      <button class="btn-gray" id="tvc-off-btn" onclick="testPowerOff()">Test power-off</button>
+    </div>
+    <p id="tvc-msg" style="color:#555;font-size:14px"></p>
+  </fieldset>
+</div>
+
+<div id="System" class="tabcontent">
+  <h3>System</h3>
+  <fieldset>
+    <legend>Reboot</legend>
+    <button class="btn-gray" onclick="rebootDevice()">Reboot device</button>
+    <p id="sys-reboot-msg" style="color:#555;font-size:14px"></p>
+  </fieldset>
+  <fieldset>
+    <legend>Firmware Update</legend>
+    <form method="POST" action="/update" enctype="multipart/form-data">
+      <input type="file" name="update">
+      <input type="submit" value="Update">
+    </form>
+  </fieldset>
+</div>
+
+<div id="Sensors" class="tabcontent">
+  <h3>Sensor Registry</h3>
+  <div style="display:flex;gap:8px;margin-bottom:15px;flex-wrap:wrap;">
+    <button class="btn-tv" onclick="openWizard()">&#128250; Add Smart TV</button>
+    <button onclick="openModal()">+ Add Sensor</button>
+  </div>
+  <table>
+    <thead>
+      <tr><th>ID</th><th>Type</th><th>Value</th><th>Status</th><th>Actions</th></tr>
+    </thead>
+    <tbody id="sensor-table-body"></tbody>
+  </table>
+</div>
+
+<div id="Files" class="tabcontent">
+  <h3>File Manager</h3>
+  <fieldset>
+    <legend>Upload</legend>
+    <label>Target path:</label>
+    <input type="text" id="upload-path" placeholder="/config/insomnia_tv.json" style="margin-bottom:8px">
+    <input type="file" id="upload-file" style="margin-bottom:8px">
+    <button onclick="uploadFile()">Upload</button>
+  </fieldset>
+  <table>
+    <thead><tr><th>Path</th><th>Size</th><th>Actions</th></tr></thead>
+    <tbody id="files-table-body"></tbody>
+  </table>
+  <div id="file-editor" style="display:none;margin-top:20px;background:white;padding:15px;border-radius:5px;border:1px solid #ccc;">
+    <h4 id="editor-title" style="margin-top:0"></h4>
+    <textarea id="editor-content" style="width:100%;height:300px;font-family:monospace;font-size:13px;box-sizing:border-box;border:1px solid #ccc;border-radius:4px;padding:8px;"></textarea>
+    <div style="margin-top:10px;display:flex;gap:8px;">
+      <button id="editor-save-btn" onclick="saveFile()">Save</button>
+      <button class="btn-gray" onclick="closeEditor()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Add Sensor modal ─────────────────────────────────────────── -->
+<div id="sensorModal" class="modal">
+  <div class="modal-content">
+    <span onclick="closeModal()" class="close">&times;</span>
+    <h3>Add Sensor</h3>
+    <label>Unique ID:</label>
+    <input type="text" id="sensorId" placeholder="e.g., room_motion" required>
+    <label>Sensor Type:</label>
+    <select id="sensorType" onchange="updateFormFields()">
+      <option value="gpio_input">GPIO Input (Digital)</option>
+      <option value="gpio_analog">GPIO Analog (ADC)</option>
+      <option value="ping">Ping (ICMP)</option>
+      <option value="http">HTTP (GET)</option>
+      <option value="upnp">UPnP (Discovery)</option>
+      <option value="samsung_tv">Samsung TV power state</option>
+    </select>
+    <div id="dynamicFields"></div>
+    <button type="button" onclick="saveSensor()" style="margin-top:20px;width:100%;">Save Sensor</button>
+  </div>
+</div>
+
+<!-- ── Add Smart TV wizard ──────────────────────────────────────── -->
+<div id="tvWizardModal" class="modal">
+  <div class="modal-content wizard-modal">
+    <span onclick="closeWizard()" class="close">&times;</span>
+    <h3 style="margin-top:0">&#128250; Add Smart TV</h3>
+
+    <div class="wz-progress">
+      <div class="wz-dot active" id="wd1">1</div>
+      <div class="wz-line" id="wl1"></div>
+      <div class="wz-dot" id="wd2">2</div>
+      <div class="wz-line" id="wl2"></div>
+      <div class="wz-dot" id="wd3">3</div>
+      <div class="wz-line" id="wl3"></div>
+      <div class="wz-dot" id="wd4">&#10003;</div>
+    </div>
+
+    <!-- Step 1: intro / scan -->
+    <div id="wpage1">
+      <h4 style="margin-top:0">Scan Your Network</h4>
+      <p>Click <b>Start Scan</b> to search your network for smart TVs. Samsung, Sony, LG and other UPnP-enabled TVs will be detected automatically.</p>
+      <p style="color:#888;font-size:13px">Make sure your TV is powered on and connected to the same Wi-Fi network.</p>
+    </div>
+
+    <!-- Step 2: results -->
+    <div id="wpage2" style="display:none">
+      <h4 style="margin-top:0">Select Your TV</h4>
+      <div id="wz-scan-status"><span class="spinner"></span>Scanning network&hellip;</div>
+      <div id="wz-tv-list"></div>
+    </div>
+
+    <!-- Step 3: sensor preview -->
+    <div id="wpage3" style="display:none">
+      <h4 style="margin-top:0">Sensors to Create</h4>
+      <p style="color:#555;font-size:14px;margin-top:0">The following sensors will monitor your TV. Edit the IDs or uncheck any you don&apos;t need.</p>
+      <div id="wz-sensor-list"></div>
+    </div>
+
+    <!-- Step 4: done -->
+    <div id="wpage4" style="display:none;text-align:center;padding:10px 0 6px">
+      <span class="done-icon">&#9989;</span>
+      <h4 id="wz-done-title" style="margin:4px 0 8px"></h4>
+      <p id="wz-done-msg" style="color:#666;margin:0"></p>
+      <div style="margin-top:16px;text-align:left;border-top:1px solid #eee;padding-top:12px">
+        <p style="margin:0 0 8px">To let insomniaTV switch this TV off, pair it now. The TV will show an allow prompt.</p>
+        <button class="btn-tv" id="wz-pair-btn" onclick="pairTv(wzTv.ip, 'wz-pair-msg', 'wz-pair-btn')">Pair for power control</button>
+        <p id="wz-pair-msg" style="color:#555;font-size:14px;margin:8px 0 0"></p>
+      </div>
+    </div>
+
+    <div class="wz-footer">
+      <button id="wbtn-cancel" class="btn-gray" onclick="closeWizard()">Cancel</button>
+      <div class="wz-footer-right">
+        <button id="wbtn-back"   class="btn-gray" style="display:none" onclick="wzBack()">&#8592; Back</button>
+        <button id="wbtn-rescan" class="btn-tv"   style="display:none" onclick="wzStartScan()">&#8635; Rescan</button>
+        <button id="wbtn-scan"   class="btn-tv"   onclick="wzStartScan()">Start Scan</button>
+        <button id="wbtn-add"    class="btn-tv"   style="display:none" onclick="wzCreate()">Add to Sensors &#8594;</button>
+        <button id="wbtn-done"   style="display:none" onclick="closeWizard();loadSensors()">Done</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>@@SCRIPT@@</script>
+
+</body>
+</html>
