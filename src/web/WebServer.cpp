@@ -421,7 +421,11 @@ function loadStatus() {
     });
     fetch('/api/tv-config').then(r => r.json()).then(data => {
         const el = document.getElementById('tv-power_state');
-        if (el) setStateBadge(el, data.power_state, TV_STATE_COLORS);
+        if (el) {
+            setStateBadge(el, data.power_state, TV_STATE_COLORS);
+            const icon = {ON: '\uD83D\uDCFA', OFF: '\u26AB', TRANSITIONING: '\u23F3'}[data.power_state];
+            if (icon) el.textContent = icon + ' ' + el.textContent;
+        }
         const contribEl = document.getElementById('tv-contributions');
         if (contribEl) {
             contribEl.innerHTML = (data.contributions || []).map(c => {
