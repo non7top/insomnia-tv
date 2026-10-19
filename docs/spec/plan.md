@@ -10,7 +10,7 @@ sensors ──► SensorManager ──► TvStateMachine ──► SleepStateMac
  samsung_tv/gpio                 ON / OFF / UNKNOWN)   RAMPING -> VERIFYING)  or IR (stub)
                                                           ▲
                               activity (IR stub, phone ping) ┘
-ConfigManager (LittleFS JSON) ◄──► WebServer (REST + embedded UI), WifiSetup, OTA
+ConfigManager (LittleFS JSON) ◄──► WebServer (REST + embedded UI), WifiSetup + WifiWatchdog, OTA
 ```
 
 - Components expose their own typed callback or a direct getter (`TvStateMachine::subscribe`, `SensorManager::subscribeValueChange`, `getPowerState()`); there is no global event bus (an earlier EventBus design was removed).
@@ -20,8 +20,8 @@ ConfigManager (LittleFS JSON) ◄──► WebServer (REST + embedded UI), WifiS
 ## Milestones
 
 **1. Prove the core on the device**
-- Samsung pairing and power-off verified on hardware (fix in #92 pending).
-- One full natural cycle observed: idle, ramp, verify, power-off, back to MONITORING.
+- Done on the device: Samsung pairing, power-off, the volume ramp (27, 13, 6, 0 over UPnP) and a short-timer cycle ending in standby.
+- Still to watch: one natural cycle on the 60-minute default, the ramp-cancel fix, the LED pattern, and the WiFi rejoin under a real access-point failure.
 
 **2. Harden and secure (before calling it v1)**
 - #51 credentials and the unauthenticated `/update`.
@@ -36,7 +36,7 @@ ConfigManager (LittleFS JSON) ◄──► WebServer (REST + embedded UI), WifiS
 - #58 further power-off targets (relay, MQTT); the Samsung network target is done.
 
 **5. Structure and UX**
-- #44 / UI split out of `WebServer.cpp`; #55 remaining discovery-API work; #39 SSDP announcement.
+- #55 remaining discovery-API work; #39 SSDP announcement; UI fields for the behaviour settings (`typical_volume`, timeouts). The UI itself now lives in `src/web/ui/`.
 - #50 `SystemModeManager` / `ConnectivityManager`, only if the extra states earn their cost (`docs/new-state-machines.md`).
 
 ## Open decision: foundation (#80)
