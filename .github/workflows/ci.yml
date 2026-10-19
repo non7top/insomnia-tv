@@ -46,7 +46,6 @@ jobs:
           path: |
             ~/.platformio
             ~/.cache/pip
-            ${{ github.workspace }}/.pio
           key: ${{ runner.os }}-pio-${{ github.job }}-${{ hashFiles('**/platformio.ini', '.github/workflows/ci.yml') }}
           restore-keys: |
             ${{ runner.os }}-pio-${{ github.job }}-
@@ -57,20 +56,21 @@ jobs:
       - name: Run native tests
         run: pio test -e native
 
-      # Coverage reporting disabled — see #52 (stale .pio cache means gcov
-      # never finds .gcno files, so lcov always errors with no valid records).
-      # - name: Generate coverage report
-      #   run: |
-      #     sudo apt-get install -y lcov
-      #     lcov --capture --directory . --build-directory . --ignore-errors gcov --output-file .pio/build/native/coverage.info
-      #     lcov --remove .pio/build/native/coverage.info '*/test/*' '*/.pio/*' --ignore-errors unused --output-file .pio/build/native/coverage.info
-      #
-      # - name: Upload coverage artifact
-      #   if: always()
-      #   uses: actions/upload-artifact@v7
-      #   with:
-      #     name: coverage-report
-      #     path: .pio/build/native/coverage.info
+      # .pio/build is deliberately not cached for this job: a stale native
+      # build dir has no .gcno files, so lcov finds no records (#52).
+      - name: Generate coverage report
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lcov
+          lcov --capture --directory . --build-directory . --ignore-errors gcov --output-file .pio/build/native/coverage.info
+          lcov --remove .pio/build/native/coverage.info '*/test/*' '*/.pio/*' --ignore-errors unused --output-file .pio/build/native/coverage.info
+
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-report
+          path: .pio/build/native/coverage.info
 
   build-firmware:
     needs: [lint, unit-tests]
