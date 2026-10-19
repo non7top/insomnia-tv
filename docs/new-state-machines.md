@@ -1,3 +1,5 @@
+> **Proposal (#50), not built.** References to `MqttBridge` and the event bus below are historical: those components were removed. Current behaviour: `docs/spec/spec.md`; roadmap: `docs/spec/plan.md`.
+
 # Plan: Implementing Dual State Machines for System Management
 
 ## Objective
