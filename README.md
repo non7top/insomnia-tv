@@ -2,18 +2,18 @@
 
 > The cure for watching TV when you should be sleeping
 
-ESP32-based smart IR sleep controller that monitors remote activity, gradually decreases TV volume after inactivity, verifies TV availability, and sends a power-off sequence.
+ESP32-based sleep controller: after a period of inactivity it gradually lowers the TV volume, checks the TV is really on, and switches it off (over the network for Samsung TVs, via IR once that hardware exists).
 
 ## Quick Start
 
 ### Prerequisites
 - [PlatformIO](https://platformio.org/) CLI or VS Code extension
 - ESP32 development board
-- TSOP382 IR receiver + IR LED
+- Optional, not wired in firmware yet: TSOP382 IR receiver + IR LED
 
 ### Build Firmware
 ```bash
-pio run -e esp32dev
+pio run -e esp32c3
 ```
 
 ### Run Native Tests
@@ -23,33 +23,31 @@ pio test -e native
 
 ### Upload to ESP32
 ```bash
-pio run -e esp32dev -t upload
+pio run -e esp32c3 -t upload
 ```
 
 ## Architecture
 
 ```
-[IR Receiver] → ActivityTracker → SleepStateMachine → RampScheduler
-    → TvVerifier → PowerOffDb → ConfigManager ↔ AsyncWebServer / MQTT
+sensors (ping / http / upnp / samsung_tv / gpio) -> SensorManager
+    -> TvStateMachine (weighted fusion: TV ON / OFF / UNKNOWN)
+    -> SleepStateMachine (MONITORING -> RAMPING -> VERIFYING -> POWERING_OFF)
+    -> power-off: Samsung network command, or IR (not wired yet)
+ConfigManager (LittleFS JSON) <-> WebServer (dashboard, sensors, files, OTA)
 ```
 
-See `project.md` for full specification and phase delivery plan.
+- Sensors and the fusion weights are configured from the web UI (Add Smart TV wizard); see `docs/SENSORS.md`.
+- Network power-off for Samsung Tizen TVs: `docs/SAMSUNG_TV.md`.
+- IR transmit/receive is still a stub (no hardware attached yet, #48).
+- `project.md` is the original spec and phase plan; the code has since moved to the sensor-fusion design above (no `TvVerifier`, `PowerOffDb`, MQTT or Velxio/QEMU).
 
-## Phases
+## Status
 
-| Phase | Branch | Status |
-|-------|--------|--------|
-| 1. Foundation | `feature/phase-1-foundation` | 🚧 In Progress |
-| 2. IR Core | `feature/phase-2-ir-core` | Planned |
-| 3. Sleep Ramp | `feature/phase-3-sleep-ramp` | Planned |
-| 4. TV Verify | `feature/phase-4-tv-verify` | Planned |
-| 5. Web/MQTT | `feature/phase-5-web-mqtt` | Planned |
-| 6. Velxio/QEMU | `feature/phase-6-velxio-qemu` | Planned |
-| 7. Release v1.0 | `release/v1.0.0` | Planned |
+Work is tracked in GitHub issues rather than the old phase table. Open areas: IR actuation (#48), more sensor types (#60-#62), OTA rollback (#70), credentials (#51), and the ESPHome evaluation (#80).
 
 ## Configuration
 
-Edit `/config/insomnia_tv.json` on the device filesystem. Schema validation is in `config/insomnia_tv_schema.json`.
+The device config lives at `/config/insomnia_tv.json` on the device filesystem and is editable from the web UI's Files tab; changes to the sleep/ramp timeouts apply without a reboot. Schema: `config/insomnia_tv_schema.json`.
 
 ## License
 
