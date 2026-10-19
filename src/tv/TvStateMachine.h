@@ -71,6 +71,12 @@ public:
   // Called by SensorManager when a sensor value changes.
   void onSensorUpdate(const std::string& sensorId, bool value);
 
+  // Call once per sensor poll. Re-evaluates when no value changed since the
+  // last call, so hysteresis counts polls: without it the state could stick
+  // when sensors settle (all ON, still reporting OFF) because evaluation
+  // otherwise only runs on value changes.
+  void tick();
+
 private:
   // Returns true if the current state changed (caller must hold mutex_).
   bool evaluateState();
@@ -82,6 +88,7 @@ private:
   PowerState currentState_;
   int consecutiveVotes_;
   PowerState lastVote_;
+  bool updatedSinceTick_ = false;
 
   std::vector<SensorConfig> detectionSensors_;
   std::map<std::string, bool> sensorValues_;

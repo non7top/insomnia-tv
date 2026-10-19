@@ -28,10 +28,18 @@ public:
   std::vector<std::string> tokens;
   std::vector<uint32_t> timeouts;
   int infoCalls = 0;
+  int volume = -1;  // returned by getVolume; -1 = unreadable
+  std::vector<int> volumeSets;
+  bool setVolumeOk = true;
 
   std::string fetchDeviceInfo(const std::string&) override {
     infoCalls++;
     return info;
+  }
+  int getVolume(const std::string&) override { return volume; }
+  bool setVolume(const std::string&, int v) override {
+    volumeSets.push_back(v);
+    return setVolumeOk;
   }
   SamsungWsResult sendKey(const std::string&, const std::string& token,
                           const std::string& key, uint32_t timeoutMs) override {
@@ -308,6 +316,144 @@ void test_query_power(void) {
                     static_cast<int>(tv.queryPower()));
 }
 
+void test_volume_down_presses_the_key_once_per_step(void) {
+  MockTransport t;
+  t.ws.status = SamsungWsResult::Status::Ok;
+  SamsungTvController tv(t);
+  tv.configure("192.168.2.190", "tok", "");
+
+  TEST_ASSERT_TRUE(tv.volumeDown(3));
+  TEST_ASSERT_EQUAL_INT(3, static_cast<int>(t.keys.size()));
+  for (size_t i = 0; i < t.keys.size(); i++) {
+    TEST_ASSERT_EQUAL_STRING("KEY_VOLDOWN", t.keys[i].c_str());
+    TEST_ASSERT_EQUAL_STRING("tok", t.tokens[i].c_str());
+  }
+}
+
+void test_volume_down_not_paired_sends_nothing(void) {
+  MockTransport t;
+  SamsungTvController tv(t);
+  TEST_ASSERT_FALSE(tv.volumeDown(1));
+  TEST_ASSERT_EQUAL_INT(0, static_cast<int>(t.keys.size()));
+}
+
+void test_volume_down_stops_at_the_first_failed_press(void) {
+  MockTransport t;
+  t.ws.status = SamsungWsResult::Status::Unreachable;
+  SamsungTvController tv(t);
+  tv.configure("192.168.2.190", "tok", "");
+
+  TEST_ASSERT_FALSE(tv.volumeDown(5));
+  TEST_ASSERT_EQUAL_INT(1, static_cast<int>(t.keys.size()));
+}
+
+void test_power_off_still_works_after_volume_steps(void) {
+  MockTransport t;
+  t.info = kInfoOn;
+  t.ws.status = SamsungWsResult::Status::Ok;
+  SamsungTvController tv(t);
+  tv.configure("192.168.2.190", "tok", "");
+
+  TEST_ASSERT_TRUE(tv.volumeDown(2));
+  TEST_ASSERT_EQUAL(static_cast<int>(PowerOffResult::Sent),
+                    static_cast<int>(tv.powerOff()));
+  TEST_ASSERT_EQUAL_STRING("KEY_POWER", t.keys.back().c_str());
+}
+
+void test_volume_soap_get_has_no_desired_volume(void) {
+  std::string x = InsomniaTV::samsungVolumeSoap("GetVolume", 7);
+  TEST_ASSERT_TRUE(x.find("<u:GetVolume ") != std::string::npos);
+  TEST_ASSERT_TRUE(x.find("RenderingControl:1") != std::string::npos);
+  TEST_ASSERT_TRUE(x.find("<Channel>Master</Channel>") != std::string::npos);
+  TEST_ASSERT_TRUE(x.find("DesiredVolume") == std::string::npos);
+}
+
+void test_volume_soap_set_carries_the_volume(void) {
+  std::string x = InsomniaTV::samsungVolumeSoap("SetVolume", 12);
+  TEST_ASSERT_TRUE(x.find("<u:SetVolume ") != std::string::npos);
+  TEST_ASSERT_TRUE(x.find("<DesiredVolume>12</DesiredVolume>") !=
+                   std::string::npos);
+  TEST_ASSERT_TRUE(x.find("</u:SetVolume>") != std::string::npos);
+}
+
+void test_parse_volume(void) {
+  TEST_ASSERT_EQUAL_INT(
+      28, InsomniaTV::parseSamsungVolume(
+              "<u:GetVolumeResponse><CurrentVolume>28</CurrentVolume>"
+              "</u:GetVolumeResponse>"));
+  TEST_ASSERT_EQUAL_INT(
+      0, InsomniaTV::parseSamsungVolume("<CurrentVolume>0</CurrentVolume>"));
+  TEST_ASSERT_EQUAL_INT(-1, InsomniaTV::parseSamsungVolume(""));
+  TEST_ASSERT_EQUAL_INT(
+      -1, InsomniaTV::parseSamsungVolume("<CurrentVolume>x</CurrentVolume>"));
+  TEST_ASSERT_EQUAL_INT(
+      -1, InsomniaTV::parseSamsungVolume("<CurrentVolume></CurrentVolume>"));
+}
+
+void test_ramp_sets_exact_volumes_ending_at_zero(void) {
+  MockTransport t;
+  t.volume = 30;
+  SamsungTvController tv(t);
+  tv.configure("192.168.2.190", "tok", "");
+
+  for (uint8_t step = 1; step <= 3; step++) {
+    TEST_ASSERT_TRUE(tv.rampStep(step, 3, 25));
+  }
+  TEST_ASSERT_EQUAL_INT(3, static_cast<int>(t.volumeSets.size()));
+  TEST_ASSERT_EQUAL_INT(20, t.volumeSets[0]);
+  TEST_ASSERT_EQUAL_INT(10, t.volumeSets[1]);
+  TEST_ASSERT_EQUAL_INT(0, t.volumeSets[2]);
+  TEST_ASSERT_EQUAL_INT(0, static_cast<int>(t.keys.size()));
+}
+
+void test_ramp_rereads_the_volume_on_each_new_ramp(void) {
+  MockTransport t;
+  SamsungTvController tv(t);
+  tv.configure("192.168.2.190", "tok", "");
+
+  t.volume = 20;
+  tv.rampStep(1, 2, 25);
+  t.volume = 40;
+  tv.rampStep(1, 2, 25);
+  TEST_ASSERT_EQUAL_INT(10, t.volumeSets[0]);
+  TEST_ASSERT_EQUAL_INT(20, t.volumeSets[1]);
+}
+
+void test_ramp_falls_back_to_spread_key_presses(void) {
+  MockTransport t;
+  t.volume = -1;
+  t.ws.status = SamsungWsResult::Status::Ok;
+  SamsungTvController tv(t);
+  tv.configure("192.168.2.190", "tok", "");
+
+  // 25 clicks over 3 steps: 8 + 8 + 9, plus a margin on the last step.
+  TEST_ASSERT_TRUE(tv.rampStep(1, 3, 25));
+  TEST_ASSERT_EQUAL_INT(8, static_cast<int>(t.keys.size()));
+  TEST_ASSERT_TRUE(tv.rampStep(2, 3, 25));
+  TEST_ASSERT_EQUAL_INT(16, static_cast<int>(t.keys.size()));
+  TEST_ASSERT_TRUE(tv.rampStep(3, 3, 25));
+  TEST_ASSERT_EQUAL_INT(25 + SamsungTvController::kLastStepExtraPresses,
+                        static_cast<int>(t.keys.size()));
+  TEST_ASSERT_EQUAL_INT(0, static_cast<int>(t.volumeSets.size()));
+}
+
+void test_ramp_not_paired_does_nothing(void) {
+  MockTransport t;
+  t.volume = 30;
+  SamsungTvController tv(t);
+  TEST_ASSERT_FALSE(tv.rampStep(1, 3, 25));
+  TEST_ASSERT_EQUAL_INT(0, static_cast<int>(t.volumeSets.size()));
+}
+
+void test_ramp_reports_a_failed_set(void) {
+  MockTransport t;
+  t.volume = 30;
+  t.setVolumeOk = false;
+  SamsungTvController tv(t);
+  tv.configure("192.168.2.190", "tok", "");
+  TEST_ASSERT_FALSE(tv.rampStep(1, 3, 25));
+}
+
 int runUnityTests(void) {
   UNITY_BEGIN();
   RUN_TEST(test_base64_known_vectors);
@@ -336,6 +482,18 @@ int runUnityTests(void) {
   RUN_TEST(test_power_off_rejected_token);
   RUN_TEST(test_power_off_websocket_failure);
   RUN_TEST(test_query_power);
+  RUN_TEST(test_volume_down_presses_the_key_once_per_step);
+  RUN_TEST(test_volume_down_not_paired_sends_nothing);
+  RUN_TEST(test_volume_down_stops_at_the_first_failed_press);
+  RUN_TEST(test_power_off_still_works_after_volume_steps);
+  RUN_TEST(test_volume_soap_get_has_no_desired_volume);
+  RUN_TEST(test_volume_soap_set_carries_the_volume);
+  RUN_TEST(test_parse_volume);
+  RUN_TEST(test_ramp_sets_exact_volumes_ending_at_zero);
+  RUN_TEST(test_ramp_rereads_the_volume_on_each_new_ramp);
+  RUN_TEST(test_ramp_falls_back_to_spread_key_presses);
+  RUN_TEST(test_ramp_not_paired_does_nothing);
+  RUN_TEST(test_ramp_reports_a_failed_set);
   return UNITY_END();
 }
 

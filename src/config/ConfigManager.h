@@ -40,6 +40,9 @@ struct Config {
   uint32_t rampIntervalMin;
   uint8_t maxRampStepsBeforePoweroff;
   bool stayAwake;
+  // Volume-down clicks from a typical listening level to 0; the ramp's
+  // fallback when the TV's volume can't be read.
+  uint8_t typicalVolume;
 
   // TV Verification
   std::string tvVerifyMethod;  // "ping" or "http"

@@ -137,6 +137,44 @@ void test_tv_sm_balanced_sensors_unknown() {
 // ---------------------------------------------------------------------------
 // Hysteresis: inconsistent readings prevent state change
 // ---------------------------------------------------------------------------
+// Sensors settle on "all ON" with the last change giving only one ON vote;
+// without a poll tick the state would stay OFF for good.
+void test_tv_sm_tick_settles_a_state_stuck_between_value_changes() {
+  SensorManager& mgr = SensorManager::instance();
+  mgr.clear();
+  TvStateMachine sm(mgr, /*hysteresis=*/2);
+  sm.begin(makeConfig(2, {{"a", 3, true}, {"b", 3, true}}));
+
+  sm.onSensorUpdate("a", false);
+  sm.onSensorUpdate("b", false);
+  TEST_ASSERT_EQUAL(TvStateMachine::PowerState::OFF, sm.getPowerState());
+
+  sm.onSensorUpdate("a", true);  // confidence 0 -> UNKNOWN vote
+  sm.onSensorUpdate("b", true);  // confidence +10 -> first ON vote
+  TEST_ASSERT_EQUAL(TvStateMachine::PowerState::OFF, sm.getPowerState());
+
+  sm.tick();  // this poll already evaluated on the value change
+  TEST_ASSERT_EQUAL(TvStateMachine::PowerState::OFF, sm.getPowerState());
+  sm.tick();  // steady state: second ON vote confirms
+  TEST_ASSERT_EQUAL(TvStateMachine::PowerState::ON, sm.getPowerState());
+}
+
+void test_tv_sm_tick_notifies_subscribers_once() {
+  SensorManager& mgr = SensorManager::instance();
+  mgr.clear();
+  TvStateMachine sm(mgr, /*hysteresis=*/2);
+  sm.begin(makeConfig(2, {{"a", 3, true}}));
+  int notified = 0;
+  sm.subscribe([&](TvStateMachine::PowerState) { notified++; });
+
+  sm.onSensorUpdate("a", true);
+  sm.tick();
+  sm.tick();
+  sm.tick();
+  TEST_ASSERT_EQUAL(TvStateMachine::PowerState::ON, sm.getPowerState());
+  TEST_ASSERT_EQUAL_INT(1, notified);
+}
+
 void test_tv_sm_hysteresis_prevents_flapping() {
   SensorManager& mgr = SensorManager::instance();
   mgr.clear();
@@ -385,6 +423,8 @@ int main() {
   RUN_TEST(test_tv_sm_weighted_fusion_on_wins);
   RUN_TEST(test_tv_sm_balanced_sensors_unknown);
   RUN_TEST(test_tv_sm_hysteresis_prevents_flapping);
+  RUN_TEST(test_tv_sm_tick_settles_a_state_stuck_between_value_changes);
+  RUN_TEST(test_tv_sm_tick_notifies_subscribers_once);
   RUN_TEST(test_tv_sm_subscriber_callback);
   RUN_TEST(test_tv_sm_get_contributions);
   RUN_TEST(test_tv_sm_send_power_command);

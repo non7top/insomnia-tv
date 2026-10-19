@@ -246,6 +246,65 @@ void test_state_machine_ms_since_reset_after_cycle() {
   TEST_ASSERT_EQUAL_UINT32(0, sm.msSinceReset());
 }
 
+void test_tv_powered_on_restarts_the_idle_clock() {
+  MockClock clk;
+  SleepStateMachine sm(clk, /*inactivityTimeoutMs=*/5000);
+  clk.advanceMs(4000);
+  sm.onTvPoweredOn();
+  clk.advanceMs(4000);
+  sm.tick();
+  TEST_ASSERT_EQUAL(State::MONITORING, sm.getCurrentState());
+  clk.advanceMs(1000);
+  sm.tick();
+  TEST_ASSERT_EQUAL(State::RAMPING, sm.getCurrentState());
+}
+
+void test_tv_powered_on_does_not_cancel_a_ramp() {
+  MockClock clk;
+  SleepStateMachine sm(clk, /*inactivityTimeoutMs=*/1000);
+  clk.advanceMs(1000);
+  sm.tick();
+  TEST_ASSERT_EQUAL(State::RAMPING, sm.getCurrentState());
+  sm.onTvPoweredOn();
+  TEST_ASSERT_EQUAL(State::RAMPING, sm.getCurrentState());
+}
+
+void test_activity_during_ramping_cancels_the_ramp_callback() {
+  MockClock clk;
+  SleepStateMachine sm(clk, /*inactivityTimeoutMs=*/1000);
+  int cancels = 0;
+  sm.setRampCancelCallback([&] { cancels++; });
+  clk.advanceMs(1000);
+  sm.tick();
+  TEST_ASSERT_EQUAL(State::RAMPING, sm.getCurrentState());
+
+  sm.onIrActivity();
+  TEST_ASSERT_EQUAL_INT(1, cancels);
+  TEST_ASSERT_EQUAL(State::MONITORING, sm.getCurrentState());
+}
+
+void test_activity_outside_ramping_does_not_cancel() {
+  MockClock clk;
+  SleepStateMachine sm(clk, /*inactivityTimeoutMs=*/1000);
+  int cancels = 0;
+  sm.setRampCancelCallback([&] { cancels++; });
+  sm.onIrActivity();
+  TEST_ASSERT_EQUAL_INT(0, cancels);
+}
+
+void test_finished_cycle_does_not_fire_the_cancel_callback() {
+  MockClock clk;
+  SleepStateMachine sm(clk, /*inactivityTimeoutMs=*/1000);
+  int cancels = 0;
+  sm.setRampCancelCallback([&] { cancels++; });
+  clk.advanceMs(1000);
+  sm.tick();  // RAMPING
+  sm.onRampComplete();
+  sm.tick();  // VERIFYING -> power-off -> MONITORING
+  TEST_ASSERT_EQUAL(State::MONITORING, sm.getCurrentState());
+  TEST_ASSERT_EQUAL_INT(0, cancels);
+}
+
 int main() {
   UNITY_BEGIN();
   RUN_TEST(test_state_machine_initial_state);
@@ -259,6 +318,11 @@ int main() {
   RUN_TEST(test_ramp_scheduler_fires_step_at_interval);
   RUN_TEST(test_ramp_scheduler_completes_after_max_steps);
   RUN_TEST(test_ramp_scheduler_stop_cancels);
+  RUN_TEST(test_activity_during_ramping_cancels_the_ramp_callback);
+  RUN_TEST(test_activity_outside_ramping_does_not_cancel);
+  RUN_TEST(test_finished_cycle_does_not_fire_the_cancel_callback);
+  RUN_TEST(test_tv_powered_on_restarts_the_idle_clock);
+  RUN_TEST(test_tv_powered_on_does_not_cancel_a_ramp);
   RUN_TEST(test_state_machine_timeout_change_applies);
   RUN_TEST(test_ramp_scheduler_config_change_applies);
   RUN_TEST(test_state_machine_ms_since_reset);

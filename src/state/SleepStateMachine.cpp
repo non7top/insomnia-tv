@@ -71,6 +71,12 @@ void SleepStateMachine::onIrActivity() {
   resetToMonitoring();
 }
 
+void SleepStateMachine::onTvPoweredOn() {
+  if (current_ == State::MONITORING) {
+    lastActivityMs_ = clock_.nowMs();
+  }
+}
+
 void SleepStateMachine::onRampComplete() {
   if (current_ == State::RAMPING) {
     current_ = State::VERIFYING;
@@ -97,7 +103,14 @@ void SleepStateMachine::setRampStartCallback(std::function<void()> callback) {
   rampStartCallback_ = callback;
 }
 
+void SleepStateMachine::setRampCancelCallback(std::function<void()> callback) {
+  rampCancelCallback_ = callback;
+}
+
 void SleepStateMachine::resetToMonitoring() {
+  if (current_ == State::RAMPING && rampCancelCallback_) {
+    rampCancelCallback_();
+  }
   current_ = State::MONITORING;
   lastActivityMs_ = clock_.nowMs();
 }

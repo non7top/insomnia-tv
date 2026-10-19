@@ -75,12 +75,23 @@ void updatePortalBlinkLed() {
   ledcWrite(STATUS_LED_PIN, on ? 0 : 255);  // active-low
 }
 
+// Double blip once a second while the sleep sequence is running (ramping,
+// verifying, powering off); distinct from the portal's fast even blink.
+void updateSequenceBlinkLed() {
+  uint32_t t = millis() % 1000;
+  bool on = t < 100 || (t >= 200 && t < 300);
+  ledcWrite(STATUS_LED_PIN, on ? 0 : 255);  // active-low
+}
+
 // Runs on its own task so the LED stays responsive even when loop() stalls
 // on blocking sensor I/O (e.g. HttpSensor's 5s timeout).
 void statusLedTask(void*) {
   for (;;) {
     if (wifiSetup.isPortalActive()) {
       updatePortalBlinkLed();
+    } else if (sleepSm != nullptr &&
+               sleepSm->getCurrentState() != InsomniaTV::State::MONITORING) {
+      updateSequenceBlinkLed();
     } else {
       updateStatusLed();
     }
@@ -94,6 +105,9 @@ void statusLedTask(void*) {
 void sensorPollTask(void*) {
   for (;;) {
     InsomniaTV::SensorManager::instance().tick();
+    if (tvSm != nullptr) {
+      tvSm->tick();
+    }
     vTaskDelay(pdMS_TO_TICKS(1000));
   }
 }
@@ -104,6 +118,18 @@ void samsungPowerOffTask(void*) {
   InsomniaTV::PowerOffResult r = samsungTv.powerOff();
   Serial.printf("[insomniaTV] Samsung power-off result: %d\n",
                 static_cast<int>(r));
+  vTaskDelete(NULL);
+}
+
+// One ramp step over the network; short-lived task so loop() isn't blocked
+// by the TLS handshake.
+void samsungVolumeDownTask(void* arg) {
+  const auto& cfg = configMgr.get();
+  uint8_t step = static_cast<uint8_t>(reinterpret_cast<uintptr_t>(arg));
+  bool ok = samsungTv.rampStep(step, cfg.maxRampStepsBeforePoweroff,
+                               cfg.typicalVolume);
+  Serial.printf("[insomniaTV] Samsung ramp step %u/%u: %s\n", step,
+                cfg.maxRampStepsBeforePoweroff, ok ? "ok" : "failed");
   vTaskDelete(NULL);
 }
 
@@ -210,6 +236,11 @@ void setup() {
       static_cast<uint32_t>(configMgr.get().inactivityTimeoutMin) * 60000UL;
   sleepSm = new InsomniaTV::SleepStateMachine(systemClock, timeoutMs);
   sleepSm->setTvStateMachine(tvSm);
+  tvSm->subscribe([](InsomniaTV::TvStateMachine::PowerState state) {
+    if (state == InsomniaTV::TvStateMachine::PowerState::ON) {
+      sleepSm->onTvPoweredOn();
+    }
+  });
 
   // IR — begin() is a no-op until real hardware exists (see #48); safe to
   // wire the call sites now so nothing else needs to change once it's real.
@@ -224,6 +255,13 @@ void setup() {
         systemClock, cfg.rampIntervalMin * 60000UL,
         cfg.maxRampStepsBeforePoweroff,
         [] {
+          if (samsungTv.isPaired()) {
+            // The scheduler counts a step after this callback returns.
+            uintptr_t step = rampScheduler->stepCount() + 1;
+            xTaskCreate(samsungVolumeDownTask, "tv_voldown", 10240,
+                        reinterpret_cast<void*>(step), 1, NULL);
+            return;
+          }
           const auto& c = configMgr.get();
           irDriver.send(c.irVolumeDownProtocol, c.irVolumeDownCode,
                         c.irVolumeDownBits);
@@ -231,6 +269,7 @@ void setup() {
         [] { sleepSm->onRampComplete(); });
   }
   sleepSm->setRampStartCallback([] { rampScheduler->start(); });
+  sleepSm->setRampCancelCallback([] { rampScheduler->stop(); });
   sleepSm->setPowerOffCallback([] {
     if (samsungTv.isPaired()) {
       xTaskCreate(samsungPowerOffTask, "tv_poweroff", 10240, NULL, 1, NULL);

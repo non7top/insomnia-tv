@@ -37,6 +37,11 @@ public:
   void onIrActivity();
   void onRampComplete();
 
+  // The TV just came on: restart the idle clock so the timeout counts from
+  // the moment it started being watched (there is no IR activity to do that).
+  // Ignored mid-ramp so a flapping TV state cannot cancel a ramp.
+  void onTvPoweredOn();
+
   State getCurrentState() const;
 
   // Applies a changed inactivity timeout from config; takes effect on the
@@ -56,6 +61,11 @@ public:
   // Callback invoked on entering RAMPING (starts the ramp sequence).
   void setRampStartCallback(std::function<void()> callback);
 
+  // Callback invoked when a ramp is abandoned: activity (or any reset) while
+  // RAMPING. Without it the ramp scheduler keeps stepping the volume down
+  // after the state machine has returned to MONITORING.
+  void setRampCancelCallback(std::function<void()> callback);
+
 private:
   void resetToMonitoring();
 
@@ -67,6 +77,7 @@ private:
   TvStateMachine* tvStateMachine_;
   std::function<void()> powerOffCallback_;
   std::function<void()> rampStartCallback_;
+  std::function<void()> rampCancelCallback_;
 };
 
 }  // namespace InsomniaTV

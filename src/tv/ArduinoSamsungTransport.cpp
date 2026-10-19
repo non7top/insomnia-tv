@@ -15,6 +15,7 @@ namespace InsomniaTV {
 static const char kClientName[] = "insomniaTV";
 static const uint16_t kRestPort = 8001;
 static const uint16_t kWsPort = 8002;
+static const uint16_t kUpnpPort = 9197;
 static const uint32_t kHttpTimeoutMs = 3000;
 // Gives the key frame time to leave the socket before we close it.
 static const uint32_t kFlushMs = 300;
@@ -35,6 +36,37 @@ std::string ArduinoSamsungTransport::fetchDeviceInfo(const std::string& host) {
   return body;
 }
 
+// UPnP RenderingControl on the TV's media renderer; POSTs one SOAP action and
+// returns the response body (empty on failure).
+static std::string volumeSoap(const std::string& host,
+                              const std::string& action, int volume) {
+  HTTPClient http;
+  http.setTimeout(kHttpTimeoutMs);
+  std::string url = "http://" + host + ":" + std::to_string(kUpnpPort) +
+                    "/upnp/control/RenderingControl1";
+  if (!http.begin(url.c_str())) {
+    return "";
+  }
+  http.addHeader("Content-Type", "text/xml; charset=\"utf-8\"");
+  std::string soapAction =
+      "\"urn:schemas-upnp-org:service:RenderingControl:1#" + action + "\"";
+  http.addHeader("SOAPACTION", soapAction.c_str());
+  std::string body;
+  if (http.POST(samsungVolumeSoap(action, volume).c_str()) == 200) {
+    body = http.getString().c_str();
+  }
+  http.end();
+  return body;
+}
+
+int ArduinoSamsungTransport::getVolume(const std::string& host) {
+  return parseSamsungVolume(volumeSoap(host, "GetVolume", 0));
+}
+
+bool ArduinoSamsungTransport::setVolume(const std::string& host, int volume) {
+  return !volumeSoap(host, "SetVolume", volume).empty();
+}
+
 SamsungWsResult ArduinoSamsungTransport::sendKey(const std::string& host,
                                                  const std::string& token,
                                                  const std::string& key,
@@ -53,11 +85,14 @@ SamsungWsResult ArduinoSamsungTransport::sendKey(const std::string& host,
               std::string(reinterpret_cast<char*>(payload), length), ev)) {
         return;
       }
+      Serial.printf("[SamsungTv] ws event %s\n", ev.event.c_str());
       if (ev.event == "ms.channel.connect") {
         result.status = SamsungWsResult::Status::Ok;
         result.token = ev.token;
         if (!key.empty()) {
-          ws.sendTXT(samsungKeyPayload(key).c_str());
+          bool sent = ws.sendTXT(samsungKeyPayload(key).c_str());
+          Serial.printf("[SamsungTv] sent %s: %s\n", key.c_str(),
+                        sent ? "ok" : "failed");
         }
         done = true;
       } else if (ev.event == "ms.channel.unauthorized") {
