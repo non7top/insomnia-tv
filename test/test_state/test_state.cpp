@@ -246,6 +246,29 @@ void test_state_machine_ms_since_reset_after_cycle() {
   TEST_ASSERT_EQUAL_UINT32(0, sm.msSinceReset());
 }
 
+void test_tv_powered_on_restarts_the_idle_clock() {
+  MockClock clk;
+  SleepStateMachine sm(clk, /*inactivityTimeoutMs=*/5000);
+  clk.advanceMs(4000);
+  sm.onTvPoweredOn();
+  clk.advanceMs(4000);
+  sm.tick();
+  TEST_ASSERT_EQUAL(State::MONITORING, sm.getCurrentState());
+  clk.advanceMs(1000);
+  sm.tick();
+  TEST_ASSERT_EQUAL(State::RAMPING, sm.getCurrentState());
+}
+
+void test_tv_powered_on_does_not_cancel_a_ramp() {
+  MockClock clk;
+  SleepStateMachine sm(clk, /*inactivityTimeoutMs=*/1000);
+  clk.advanceMs(1000);
+  sm.tick();
+  TEST_ASSERT_EQUAL(State::RAMPING, sm.getCurrentState());
+  sm.onTvPoweredOn();
+  TEST_ASSERT_EQUAL(State::RAMPING, sm.getCurrentState());
+}
+
 int main() {
   UNITY_BEGIN();
   RUN_TEST(test_state_machine_initial_state);
@@ -259,6 +282,8 @@ int main() {
   RUN_TEST(test_ramp_scheduler_fires_step_at_interval);
   RUN_TEST(test_ramp_scheduler_completes_after_max_steps);
   RUN_TEST(test_ramp_scheduler_stop_cancels);
+  RUN_TEST(test_tv_powered_on_restarts_the_idle_clock);
+  RUN_TEST(test_tv_powered_on_does_not_cancel_a_ramp);
   RUN_TEST(test_state_machine_timeout_change_applies);
   RUN_TEST(test_ramp_scheduler_config_change_applies);
   RUN_TEST(test_state_machine_ms_since_reset);

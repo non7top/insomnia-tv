@@ -27,6 +27,10 @@ public:
   // Body of GET http://<host>:8001/api/v2/, empty if unreachable.
   virtual std::string fetchDeviceInfo(const std::string& host) = 0;
 
+  // TV volume via UPnP RenderingControl, or -1 if it can't be read.
+  virtual int getVolume(const std::string& host) = 0;
+  virtual bool setVolume(const std::string& host, int volume) = 0;
+
   // Opens the remote-control WebSocket on 8002, waits up to `timeoutMs` for
   // the TV to accept the connection (a first connection shows an allow
   // prompt on screen), then presses `key` if non-empty.
@@ -57,6 +61,7 @@ public:
 
   static constexpr uint32_t kPairTimeoutMs = 30000;
   static constexpr uint32_t kKeyTimeoutMs = 10000;
+  static constexpr uint8_t kLastStepExtraPresses = 5;
 
   explicit SamsungTvController(ISamsungTvTransport& transport);
 
@@ -81,16 +86,25 @@ public:
   // press failed.
   bool volumeDown(uint8_t steps);
 
+  // Blocking; one ramp step (1-based, of `totalSteps`) that lowers the volume
+  // so it reaches 0 on the last step. The starting volume is read on step 1
+  // and set exactly; if it can't be read, `typicalVolume` KEY_VOLDOWN presses
+  // are spread across the steps, with a margin on the last one.
+  bool rampStep(uint8_t step, uint8_t totalSteps, uint8_t typicalVolume);
+
   // Blocking; Unknown if the TV can't be reached.
   SamsungPower queryPower();
 
 private:
   void setPairResult(PairState state, const std::string& error);
+  bool pressVolumeDown(const std::string& host, const std::string& token,
+                       uint8_t steps);
 
   ISamsungTvTransport& transport_;
   mutable std::mutex mutex_;
-  std::atomic<bool> busy_;  // pairing in progress
-  std::mutex opMutex_;      // serializes TV key operations
+  std::atomic<bool> busy_;    // pairing in progress
+  std::mutex opMutex_;        // serializes TV key operations
+  int rampStartVolume_ = -1;  // read on ramp step 1; -1 if unknown
   std::string host_;
   std::string token_;
   std::string mac_;

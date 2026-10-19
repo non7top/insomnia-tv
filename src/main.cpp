@@ -109,11 +109,13 @@ void samsungPowerOffTask(void*) {
 
 // One ramp step over the network; short-lived task so loop() isn't blocked
 // by the TLS handshake.
-void samsungVolumeDownTask(void*) {
-  uint8_t steps = configMgr.get().volumeStepPerRamp;
-  bool ok = samsungTv.volumeDown(steps);
-  Serial.printf("[insomniaTV] Samsung volume-down x%u: %s\n", steps,
-                ok ? "ok" : "failed");
+void samsungVolumeDownTask(void* arg) {
+  const auto& cfg = configMgr.get();
+  uint8_t step = static_cast<uint8_t>(reinterpret_cast<uintptr_t>(arg));
+  bool ok = samsungTv.rampStep(step, cfg.maxRampStepsBeforePoweroff,
+                               cfg.typicalVolume);
+  Serial.printf("[insomniaTV] Samsung ramp step %u/%u: %s\n", step,
+                cfg.maxRampStepsBeforePoweroff, ok ? "ok" : "failed");
   vTaskDelete(NULL);
 }
 
@@ -217,6 +219,11 @@ void setup() {
       static_cast<uint32_t>(configMgr.get().inactivityTimeoutMin) * 60000UL;
   sleepSm = new InsomniaTV::SleepStateMachine(systemClock, timeoutMs);
   sleepSm->setTvStateMachine(tvSm);
+  tvSm->subscribe([](InsomniaTV::TvStateMachine::PowerState state) {
+    if (state == InsomniaTV::TvStateMachine::PowerState::ON) {
+      sleepSm->onTvPoweredOn();
+    }
+  });
 
   // IR — begin() is a no-op until real hardware exists (see #48); safe to
   // wire the call sites now so nothing else needs to change once it's real.
@@ -232,8 +239,10 @@ void setup() {
         cfg.maxRampStepsBeforePoweroff,
         [] {
           if (samsungTv.isPaired()) {
-            xTaskCreate(samsungVolumeDownTask, "tv_voldown", 10240, NULL, 1,
-                        NULL);
+            // The scheduler counts a step after this callback returns.
+            uintptr_t step = rampScheduler->stepCount() + 1;
+            xTaskCreate(samsungVolumeDownTask, "tv_voldown", 10240,
+                        reinterpret_cast<void*>(step), 1, NULL);
             return;
           }
           const auto& c = configMgr.get();

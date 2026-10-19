@@ -16,7 +16,7 @@ void test_config_defaults(void) {
 
   TEST_ASSERT_FALSE(cfg.mqttEnabled == false);
   TEST_ASSERT_EQUAL_UINT16(1883, cfg.mqttPort);
-  TEST_ASSERT_EQUAL_UINT32(15, cfg.inactivityTimeoutMin);
+  TEST_ASSERT_EQUAL_UINT32(60, cfg.inactivityTimeoutMin);
   TEST_ASSERT_EQUAL_UINT8(1, cfg.volumeStepPerRamp);
   TEST_ASSERT_EQUAL_UINT32(2, cfg.rampIntervalMin);
   TEST_ASSERT_EQUAL_UINT8(10, cfg.maxRampStepsBeforePoweroff);
@@ -178,7 +178,7 @@ void test_config_change_callback(void) {
   mgr.set(modified);
 
   TEST_ASSERT_TRUE(callbackInvoked);
-  TEST_ASSERT_EQUAL_UINT32(15, capturedOld.inactivityTimeoutMin);
+  TEST_ASSERT_EQUAL_UINT32(60, capturedOld.inactivityTimeoutMin);
   TEST_ASSERT_EQUAL_UINT32(30, capturedNew.inactivityTimeoutMin);
 }
 
@@ -473,7 +473,7 @@ void test_config_repair_invalid_resets_only_bad_fields(void) {
 
   std::string err;
   TEST_ASSERT_TRUE(InsomniaTV::ConfigManager::validate(cfg, err));
-  TEST_ASSERT_EQUAL_UINT32(15, cfg.inactivityTimeoutMin);
+  TEST_ASSERT_EQUAL_UINT32(60, cfg.inactivityTimeoutMin);
   TEST_ASSERT_EQUAL_STRING("ping", cfg.tvVerifyMethod.c_str());
   TEST_ASSERT_EQUAL_UINT32(7, cfg.rampIntervalMin);
   TEST_ASSERT_EQUAL_STRING("[{\"id\":\"keep\"}]", cfg.sensorsJson.c_str());
@@ -483,6 +483,26 @@ void test_config_repair_valid_is_noop(void) {
   InsomniaTV::ConfigManager mgr;
   InsomniaTV::Config cfg = mgr.get();
   TEST_ASSERT_FALSE(InsomniaTV::ConfigManager::repairInvalid(cfg));
+}
+
+void test_config_typical_volume_default_roundtrip_and_validation(void) {
+  TestConfigManager mgr;
+  mgr.resetToDefaults();
+  TEST_ASSERT_EQUAL_UINT8(25, mgr.get().typicalVolume);
+
+  InsomniaTV::Config cfg = mgr.get();
+  cfg.typicalVolume = 40;
+  InsomniaTV::Config parsed = mgr.get();
+  TEST_ASSERT_TRUE(mgr.testParseJson(mgr.testToJson(cfg), parsed));
+  TEST_ASSERT_EQUAL_UINT8(40, parsed.typicalVolume);
+
+  std::string err;
+  cfg.typicalVolume = 0;
+  TEST_ASSERT_FALSE(InsomniaTV::ConfigManager::validate(cfg, err));
+  cfg.typicalVolume = 101;
+  TEST_ASSERT_FALSE(InsomniaTV::ConfigManager::validate(cfg, err));
+  TEST_ASSERT_TRUE(InsomniaTV::ConfigManager::repairInvalid(cfg));
+  TEST_ASSERT_EQUAL_UINT8(25, cfg.typicalVolume);
 }
 
 int runUnityTests(void) {
@@ -511,6 +531,7 @@ int runUnityTests(void) {
   RUN_TEST(test_config_partial_json_preserves_seeded_values);
   RUN_TEST(test_config_tv_control_roundtrip);
   RUN_TEST(test_config_tv_control_defaults_empty);
+  RUN_TEST(test_config_typical_volume_default_roundtrip_and_validation);
   RUN_TEST(test_config_repair_invalid_resets_only_bad_fields);
   RUN_TEST(test_config_repair_valid_is_noop);
   return UNITY_END();

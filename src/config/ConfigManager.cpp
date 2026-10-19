@@ -125,6 +125,10 @@ bool ConfigManager::validate(const Config& cfg, std::string& outError) {
     outError = "max_ramp_steps_before_poweroff must be between 1 and 50";
     return false;
   }
+  if (cfg.typicalVolume < 1 || cfg.typicalVolume > 100) {
+    outError = "typical_volume must be between 1 and 100";
+    return false;
+  }
   if (cfg.tvVerifyTimeoutMs < 500 || cfg.tvVerifyTimeoutMs > 10000) {
     outError = "tv_verify timeout_ms must be between 500 and 10000";
     return false;
@@ -161,6 +165,10 @@ bool ConfigManager::repairInvalid(Config& cfg) {
     cfg.maxRampStepsBeforePoweroff = d.maxRampStepsBeforePoweroff;
     changed = true;
   }
+  if (cfg.typicalVolume < 1 || cfg.typicalVolume > 100) {
+    cfg.typicalVolume = d.typicalVolume;
+    changed = true;
+  }
   if (cfg.tvVerifyTimeoutMs < 500 || cfg.tvVerifyTimeoutMs > 10000) {
     cfg.tvVerifyTimeoutMs = d.tvVerifyTimeoutMs;
     changed = true;
@@ -185,11 +193,12 @@ void ConfigManager::resetToDefaults() {
   d.mqttTopicRoot = "home/insomnia_tv";
   d.mqttUser = "";
   d.mqttPassword = "";
-  d.inactivityTimeoutMin = 15;
+  d.inactivityTimeoutMin = 60;
   d.volumeStepPerRamp = 1;
   d.rampIntervalMin = 2;
   d.maxRampStepsBeforePoweroff = 10;
   d.stayAwake = true;
+  d.typicalVolume = 25;
   d.tvVerifyMethod = "ping";
   d.tvVerifyTarget = "";
   d.tvVerifyTimeoutMs = 1000;
@@ -231,12 +240,13 @@ bool ConfigManager::parseJson_(const std::string& json, Config& out) {
   }
 
   if (doc["behavior"].is<JsonObject>()) {
-    out.inactivityTimeoutMin = doc["behavior"]["inactivity_timeout_min"] | 15;
+    out.inactivityTimeoutMin = doc["behavior"]["inactivity_timeout_min"] | 60;
     out.volumeStepPerRamp = doc["behavior"]["volume_step_per_ramp"] | 1;
     out.rampIntervalMin = doc["behavior"]["ramp_interval_min"] | 2;
     out.maxRampStepsBeforePoweroff =
         doc["behavior"]["max_ramp_steps_before_poweroff"] | 10;
     out.stayAwake = doc["behavior"]["stay_awake"] | true;
+    out.typicalVolume = doc["behavior"]["typical_volume"] | 25;
   }
 
   if (doc["tv_verification"].is<JsonObject>()) {
@@ -307,6 +317,7 @@ std::string ConfigManager::toJson_(const Config& cfg) {
   behavior["ramp_interval_min"] = cfg.rampIntervalMin;
   behavior["max_ramp_steps_before_poweroff"] = cfg.maxRampStepsBeforePoweroff;
   behavior["stay_awake"] = cfg.stayAwake;
+  behavior["typical_volume"] = cfg.typicalVolume;
 
   JsonObject tv = doc["tv_verification"].to<JsonObject>();
   tv["method"] = cfg.tvVerifyMethod;

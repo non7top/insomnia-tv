@@ -32,6 +32,13 @@ std::string samsungKeyPayload(const std::string& key);
 // "event" field.
 bool parseSamsungWsEvent(const std::string& json, SamsungWsEvent& out);
 
+// SOAP envelope for a UPnP RenderingControl volume action on the master
+// channel: "GetVolume" or "SetVolume" (desiredVolume is used for SetVolume).
+std::string samsungVolumeSoap(const std::string& action, int desiredVolume);
+
+// Value of <CurrentVolume> in a GetVolume response, or -1 if absent.
+int parseSamsungVolume(const std::string& xml);
+
 // Reads device.PowerState from the GET /api/v2/ response.
 SamsungPower parseSamsungPower(const std::string& json);
 

@@ -37,6 +37,11 @@ public:
   void onIrActivity();
   void onRampComplete();
 
+  // The TV just came on: restart the idle clock so the timeout counts from
+  // the moment it started being watched (there is no IR activity to do that).
+  // Ignored mid-ramp so a flapping TV state cannot cancel a ramp.
+  void onTvPoweredOn();
+
   State getCurrentState() const;
 
   // Applies a changed inactivity timeout from config; takes effect on the

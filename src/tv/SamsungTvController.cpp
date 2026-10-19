@@ -100,6 +100,19 @@ SamsungPower SamsungTvController::queryPower() {
   return parseSamsungPower(transport_.fetchDeviceInfo(host()));
 }
 
+bool SamsungTvController::pressVolumeDown(const std::string& host,
+                                          const std::string& token,
+                                          uint8_t steps) {
+  for (uint8_t i = 0; i < steps; i++) {
+    SamsungWsResult ws =
+        transport_.sendKey(host, token, "KEY_VOLDOWN", kKeyTimeoutMs);
+    if (ws.status != SamsungWsResult::Status::Ok) {
+      return false;
+    }
+  }
+  return true;
+}
+
 bool SamsungTvController::volumeDown(uint8_t steps) {
   std::lock_guard<std::mutex> op(opMutex_);
   std::string host;
@@ -112,14 +125,38 @@ bool SamsungTvController::volumeDown(uint8_t steps) {
   if (host.empty() || token.empty()) {
     return false;
   }
-  for (uint8_t i = 0; i < steps; i++) {
-    SamsungWsResult ws =
-        transport_.sendKey(host, token, "KEY_VOLDOWN", kKeyTimeoutMs);
-    if (ws.status != SamsungWsResult::Status::Ok) {
-      return false;
-    }
+  return pressVolumeDown(host, token, steps);
+}
+
+bool SamsungTvController::rampStep(uint8_t step, uint8_t totalSteps,
+                                   uint8_t typicalVolume) {
+  std::lock_guard<std::mutex> op(opMutex_);
+  std::string host;
+  std::string token;
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    host = host_;
+    token = token_;
   }
-  return true;
+  if (host.empty() || token.empty() || totalSteps == 0) {
+    return false;
+  }
+  if (step <= 1) {
+    rampStartVolume_ = transport_.getVolume(host);
+  }
+  if (step > totalSteps) {
+    step = totalSteps;
+  }
+  if (rampStartVolume_ < 0) {
+    int presses = typicalVolume * step / totalSteps -
+                  typicalVolume * (step - 1) / totalSteps;
+    if (step == totalSteps) {
+      presses += kLastStepExtraPresses;
+    }
+    return pressVolumeDown(host, token, static_cast<uint8_t>(presses));
+  }
+  int target = rampStartVolume_ * (totalSteps - step) / totalSteps;
+  return transport_.setVolume(host, target);
 }
 
 PowerOffResult SamsungTvController::powerOff() {

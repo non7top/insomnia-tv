@@ -104,6 +104,44 @@ bool parseSamsungWsEvent(const std::string& json, SamsungWsEvent& out) {
   return true;
 }
 
+std::string samsungVolumeSoap(const std::string& action, int desiredVolume) {
+  std::string body =
+      "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+      "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" "
+      "s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\">"
+      "<s:Body><u:" +
+      action +
+      " xmlns:u=\"urn:schemas-upnp-org:service:RenderingControl:1\">"
+      "<InstanceID>0</InstanceID><Channel>Master</Channel>";
+  if (action == "SetVolume") {
+    body +=
+        "<DesiredVolume>" + std::to_string(desiredVolume) + "</DesiredVolume>";
+  }
+  body += "</u:" + action + "></s:Body></s:Envelope>";
+  return body;
+}
+
+int parseSamsungVolume(const std::string& xml) {
+  const std::string open = "<CurrentVolume>";
+  size_t start = xml.find(open);
+  if (start == std::string::npos) {
+    return -1;
+  }
+  start += open.size();
+  size_t end = xml.find('<', start);
+  if (end == std::string::npos || end == start) {
+    return -1;
+  }
+  int value = 0;
+  for (size_t i = start; i < end; i++) {
+    if (xml[i] < '0' || xml[i] > '9') {
+      return -1;
+    }
+    value = value * 10 + (xml[i] - '0');
+  }
+  return value;
+}
+
 SamsungPower parseSamsungPower(const std::string& json) {
   JsonDocument doc;
   if (deserializeJson(doc, json)) {

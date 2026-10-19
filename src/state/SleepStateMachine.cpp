@@ -71,6 +71,12 @@ void SleepStateMachine::onIrActivity() {
   resetToMonitoring();
 }
 
+void SleepStateMachine::onTvPoweredOn() {
+  if (current_ == State::MONITORING) {
+    lastActivityMs_ = clock_.nowMs();
+  }
+}
+
 void SleepStateMachine::onRampComplete() {
   if (current_ == State::RAMPING) {
     current_ = State::VERIFYING;

@@ -14,6 +14,8 @@ namespace InsomniaTV {
 class ArduinoSamsungTransport : public ISamsungTvTransport {
 public:
   std::string fetchDeviceInfo(const std::string& host) override;
+  int getVolume(const std::string& host) override;
+  bool setVolume(const std::string& host, int volume) override;
   SamsungWsResult sendKey(const std::string& host, const std::string& token,
                           const std::string& key, uint32_t timeoutMs) override;
 };
