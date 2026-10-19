@@ -4,6 +4,8 @@
 #define SRC_NETWORK_WIFIWATCHDOG_H_
 
 #include <cstdint>
+#include <string>
+#include <vector>
 
 namespace InsomniaTV {
 
@@ -34,6 +36,19 @@ private:
   uint8_t rejoins_;
   bool everReachable_;
 };
+
+// One access point seen in a WiFi scan.
+struct ApCandidate {
+  std::string ssid;
+  uint8_t bssid[6];
+  int32_t rssi;
+  uint8_t channel;
+};
+
+// Index of the strongest access point broadcasting `ssid` whose BSSID differs
+// from `avoid` (the one that just failed), or -1 if there is none.
+int selectAccessPoint(const std::vector<ApCandidate>& aps,
+                      const std::string& ssid, const uint8_t avoid[6]);
 
 }  // namespace InsomniaTV
 

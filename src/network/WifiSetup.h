@@ -43,6 +43,7 @@ public:
   void checkConnectivity();
 
 private:
+  void rejoinAvoidingCurrentAp();
   WifiWatchdog _watchdog;
   std::string getChipId();
   uint32_t _buttonPressStart;

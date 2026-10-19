@@ -2,6 +2,10 @@
 
 #include "WifiWatchdog.h"
 
+#include <cstring>
+#include <string>
+#include <vector>
+
 namespace InsomniaTV {
 
 WifiWatchdog::WifiWatchdog(uint8_t rejoinAfter, uint8_t restartAfterRejoins)
@@ -29,6 +33,20 @@ WifiWatchdog::Action WifiWatchdog::onCheck(bool reachable) {
     return Action::Restart;
   }
   return Action::Rejoin;
+}
+
+int selectAccessPoint(const std::vector<ApCandidate>& aps,
+                      const std::string& ssid, const uint8_t avoid[6]) {
+  int best = -1;
+  for (size_t i = 0; i < aps.size(); i++) {
+    if (aps[i].ssid != ssid || std::memcmp(aps[i].bssid, avoid, 6) == 0) {
+      continue;
+    }
+    if (best < 0 || aps[i].rssi > aps[best].rssi) {
+      best = static_cast<int>(i);
+    }
+  }
+  return best;
 }
 
 }  // namespace InsomniaTV

@@ -3,7 +3,9 @@
 #include "WifiSetup.h"
 
 #include <cstdio>
+#include <cstring>
 #include <string>
+#include <vector>
 
 #include "../config/SystemCredentials.h"
 
@@ -23,6 +25,37 @@ static const int RESET_BUTTON_PIN = 9;
 
 WifiSetup::WifiSetup() : _buttonPressStart(0), _isButtonPressed(false) {}
 
+void WifiSetup::rejoinAvoidingCurrentAp() {
+#if defined(ARDUINO)
+  std::string ssid = WiFi.SSID().c_str();
+  uint8_t failed[6] = {0};
+  if (const uint8_t* current = WiFi.BSSID()) {
+    std::memcpy(failed, current, sizeof(failed));
+  }
+  WiFi.disconnect();
+
+  std::vector<ApCandidate> aps;
+  int found = WiFi.scanNetworks();
+  for (int i = 0; i < found; i++) {
+    ApCandidate ap;
+    ap.ssid = WiFi.SSID(i).c_str();
+    std::memcpy(ap.bssid, WiFi.BSSID(i), sizeof(ap.bssid));
+    ap.rssi = WiFi.RSSI(i);
+    ap.channel = static_cast<uint8_t>(WiFi.channel(i));
+    aps.push_back(ap);
+  }
+  WiFi.scanDelete();
+
+  int pick = selectAccessPoint(aps, ssid, failed);
+  if (pick >= 0) {
+    WiFi.begin(ssid.c_str(), WiFi.psk().c_str(), aps[pick].channel,
+               aps[pick].bssid);
+  } else {
+    WiFi.begin();
+  }
+#endif
+}
+
 void WifiSetup::checkConnectivity() {
 #if defined(ARDUINO)
   if (_portalActive) {
@@ -33,8 +66,7 @@ void WifiSetup::checkConnectivity() {
   switch (_watchdog.onCheck(reachable)) {
     case WifiWatchdog::Action::Rejoin:
       Serial.println("[insomniaTV] Gateway unreachable, rejoining WiFi");
-      WiFi.disconnect();
-      WiFi.begin();
+      rejoinAvoidingCurrentAp();
       break;
     case WifiWatchdog::Action::Restart:
       Serial.println("[insomniaTV] WiFi did not recover, restarting");
