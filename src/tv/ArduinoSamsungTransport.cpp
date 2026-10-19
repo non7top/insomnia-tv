@@ -72,9 +72,11 @@ SamsungWsResult ArduinoSamsungTransport::sendKey(const std::string& host,
   // The lib retries a failed connection on its own; one attempt per call.
   ws.setReconnectInterval(timeoutMs + kFlushMs);
   // Tizen presents a self-signed certificate; the lib skips verification
-  // when no fingerprint or CA is given.
+  // when no fingerprint or CA is given. The TV drops the connection if the
+  // lib's default "Sec-WebSocket-Protocol: arduino" header is sent, so the
+  // protocol is empty (the header is then omitted).
   ws.beginSSL(host.c_str(), kWsPort,
-              samsungRemotePath(kClientName, token).c_str(), "");
+              samsungRemotePath(kClientName, token).c_str(), "", "");
 
   uint32_t deadline = millis() + timeoutMs;
   while (!done && static_cast<int32_t>(deadline - millis()) > 0) {
