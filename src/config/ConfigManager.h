@@ -106,6 +106,11 @@ public:
   // Validate configuration against schema rules
   static bool validate(const Config& cfg, std::string& outError);
 
+  // Replaces each out-of-range field with its factory default, leaving
+  // valid fields (sensors, pairing, WiFi-related settings) untouched.
+  // Returns true if anything was changed.
+  static bool repairInvalid(Config& cfg);
+
   // Reset all fields to factory defaults
   void resetToDefaults();
 
