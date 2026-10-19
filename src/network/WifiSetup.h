@@ -8,6 +8,8 @@
 #include <atomic>
 #include <string>
 
+#include "WifiWatchdog.h"
+
 namespace InsomniaTV {
 
 /**
@@ -33,7 +35,16 @@ public:
    */
   bool isPortalActive() const;
 
+  /**
+   * @brief One watchdog check; call about every 30 s from its own task.
+   *        Pings the gateway and rejoins WiFi (or restarts) when the link is
+   *        silently dead. No-op while the config portal is active.
+   */
+  void checkConnectivity();
+
 private:
+  void rejoinAvoidingCurrentAp();
+  WifiWatchdog _watchdog;
   std::string getChipId();
   uint32_t _buttonPressStart;
   bool _isButtonPressed;

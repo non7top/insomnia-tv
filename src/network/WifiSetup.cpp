@@ -3,12 +3,15 @@
 #include "WifiSetup.h"
 
 #include <cstdio>
+#include <cstring>
 #include <string>
+#include <vector>
 
 #include "../config/SystemCredentials.h"
 
 #if defined(ARDUINO)
 #include <ArduinoOTA.h>
+#include <ESP32Ping.h>
 #include <WiFi.h>
 #include <WiFiManager.h>
 #endif
@@ -22,8 +25,67 @@ static const int RESET_BUTTON_PIN = 9;
 
 WifiSetup::WifiSetup() : _buttonPressStart(0), _isButtonPressed(false) {}
 
+void WifiSetup::rejoinAvoidingCurrentAp() {
+#if defined(ARDUINO)
+  std::string ssid = WiFi.SSID().c_str();
+  uint8_t failed[6] = {0};
+  if (const uint8_t* current = WiFi.BSSID()) {
+    std::memcpy(failed, current, sizeof(failed));
+  }
+  WiFi.disconnect();
+
+  std::vector<ApCandidate> aps;
+  int found = WiFi.scanNetworks();
+  for (int i = 0; i < found; i++) {
+    ApCandidate ap;
+    ap.ssid = WiFi.SSID(i).c_str();
+    std::memcpy(ap.bssid, WiFi.BSSID(i), sizeof(ap.bssid));
+    ap.rssi = WiFi.RSSI(i);
+    ap.channel = static_cast<uint8_t>(WiFi.channel(i));
+    aps.push_back(ap);
+  }
+  WiFi.scanDelete();
+
+  int pick = selectAccessPoint(aps, ssid, failed);
+  if (pick >= 0) {
+    WiFi.begin(ssid.c_str(), WiFi.psk().c_str(), aps[pick].channel,
+               aps[pick].bssid);
+  } else {
+    WiFi.begin();
+  }
+#endif
+}
+
+void WifiSetup::checkConnectivity() {
+#if defined(ARDUINO)
+  if (_portalActive) {
+    return;
+  }
+  bool reachable = WiFi.status() == WL_CONNECTED &&
+                   Ping.ping(WiFi.gatewayIP().toString().c_str(), 1);
+  switch (_watchdog.onCheck(reachable)) {
+    case WifiWatchdog::Action::Rejoin:
+      Serial.println("[insomniaTV] Gateway unreachable, rejoining WiFi");
+      rejoinAvoidingCurrentAp();
+      break;
+    case WifiWatchdog::Action::Restart:
+      Serial.println("[insomniaTV] WiFi did not recover, restarting");
+      ESP.restart();
+      break;
+    case WifiWatchdog::Action::None:
+      break;
+  }
+#endif
+}
+
 void WifiSetup::begin() {
 #if defined(ARDUINO)
+  // Join the strongest access point with this SSID; the default takes the
+  // first match, which can be a node that accepts the device but passes
+  // nothing.
+  WiFi.setScanMethod(WIFI_ALL_CHANNEL_SCAN);
+  WiFi.setSortMethod(WIFI_CONNECT_AP_BY_SIGNAL);
+
   WiFiManager wm;
   wm.setAPCallback([this](WiFiManager*) { _portalActive = true; });
 

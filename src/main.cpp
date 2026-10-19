@@ -133,6 +133,13 @@ void samsungVolumeDownTask(void* arg) {
   vTaskDelete(NULL);
 }
 
+void wifiWatchdogTask(void*) {
+  for (;;) {
+    vTaskDelay(pdMS_TO_TICKS(30000));
+    wifiSetup.checkConnectivity();
+  }
+}
+
 void setup() {
   // Lower power draw (less heat through the onboard 5V regulator); this
   // workload is nowhere near CPU-bound.
@@ -151,6 +158,7 @@ void setup() {
   ledcWrite(STATUS_LED_PIN, 255);  // start off
   xTaskCreate(statusLedTask, "status_led", 2048, NULL, 1, NULL);
   xTaskCreate(sensorPollTask, "sensor_tick", 4096, NULL, 1, NULL);
+  xTaskCreate(wifiWatchdogTask, "wifi_watchdog", 4096, NULL, 1, NULL);
 
   // Filesystem — must be mounted before any config or file-manager access
   if (!LittleFS.begin(true)) {
