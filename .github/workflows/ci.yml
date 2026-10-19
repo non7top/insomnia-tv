@@ -31,6 +31,9 @@ jobs:
       - name: Run clang-format check
         run: clang-format --style=file --dry-run --Werror src/**/*.cpp test/**/*.cpp
 
+      - name: Check web UI script syntax
+        run: node --check src/web/ui/app.js
+
   unit-tests:
     strategy:
       fail-fast: true
