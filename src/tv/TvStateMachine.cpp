@@ -94,12 +94,31 @@ TvStateMachine::getContributions() const {
   return result;
 }
 
+void TvStateMachine::tick() {
+  PowerState newState;
+  bool changed = false;
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (updatedSinceTick_) {
+      updatedSinceTick_ = false;
+      return;
+    }
+    changed = evaluateState();
+    newState = currentState_;
+  }
+  if (changed) {
+    for (auto& cb : subscribers_)
+      cb(newState);
+  }
+}
+
 void TvStateMachine::onSensorUpdate(const std::string& sensorId, bool value) {
   PowerState newState;
   bool changed = false;
   {
     std::lock_guard<std::mutex> lock(mutex_);
     sensorValues_[sensorId] = value;
+    updatedSinceTick_ = true;
     changed = evaluateState();
     newState = currentState_;
   }

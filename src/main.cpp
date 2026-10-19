@@ -91,6 +91,9 @@ void statusLedTask(void*) {
 void sensorPollTask(void*) {
   for (;;) {
     InsomniaTV::SensorManager::instance().tick();
+    if (tvSm != nullptr) {
+      tvSm->tick();
+    }
     vTaskDelay(pdMS_TO_TICKS(1000));
   }
 }
