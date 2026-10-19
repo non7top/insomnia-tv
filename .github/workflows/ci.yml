@@ -35,8 +35,6 @@ jobs:
     strategy:
       fail-fast: true
     runs-on: ubuntu-latest
-    env:
-      PLATFORMIO_BUILD_CACHE_DIR: /home/runner/.platformio/cache/
     steps:
       - uses: actions/checkout@v7
 
@@ -56,8 +54,8 @@ jobs:
       - name: Run native tests
         run: pio test -e native
 
-      # .pio/build is deliberately not cached for this job: a stale native
-      # build dir has no .gcno files, so lcov finds no records (#52).
+      # No .pio cache and no PLATFORMIO_BUILD_CACHE_DIR in this job: a build
+      # restored from either has no .gcno files, so lcov finds no records (#52).
       - name: Generate coverage report
         run: |
           sudo apt-get update
