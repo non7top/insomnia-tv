@@ -58,6 +58,20 @@
     </div>
     <p id="tvc-msg" style="color:#555;font-size:14px"></p>
   </fieldset>
+  <h3>Sleep Sequence</h3>
+  <fieldset>
+    <legend>Timing and volume</legend>
+    <label>Idle time before the volume starts dropping (minutes, 1-120):</label>
+    <input type="number" id="bh-inactivity" min="1" max="120" style="margin-bottom:8px">
+    <label>Time between volume steps (minutes, 1-30):</label>
+    <input type="number" id="bh-interval" min="1" max="30" style="margin-bottom:8px">
+    <label>Volume steps before power-off (1-50):</label>
+    <input type="number" id="bh-steps" min="1" max="50" style="margin-bottom:8px">
+    <label>Typical volume: volume-down clicks from your usual level to 0 (1-100):</label>
+    <input type="number" id="bh-volume" min="1" max="100" style="margin-bottom:8px">
+    <button id="bh-save-btn" onclick="saveBehavior()">Save</button>
+    <p id="bh-msg" style="color:#555;font-size:14px"></p>
+  </fieldset>
 </div>
 
 <div id="System" class="tabcontent">

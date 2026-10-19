@@ -4,6 +4,7 @@
 
 #include <ArduinoJson.h>
 
+#include <algorithm>
 #include <cstdio>
 #include <functional>
 #include <string>
@@ -489,6 +490,62 @@ void WebServer::setupRoutes() {
             "tv_poweroff", 10240, _samsungTv, 1, NULL);
         request->send(202, "application/json", "{\"status\":\"sent\"}");
       });
+
+  // GET /api/behavior — the sleep-sequence settings the Config tab edits
+  _server.on("/api/behavior", HTTP_GET, [this](AsyncWebServerRequest* request) {
+    if (!request->authenticate(kSystemUsername, kSystemPassword)) {
+      return request->requestAuthentication();
+    }
+    const Config& cfg = _configMgr.get();
+    JsonDocument doc;
+    doc["inactivity_timeout_min"] = cfg.inactivityTimeoutMin;
+    doc["ramp_interval_min"] = cfg.rampIntervalMin;
+    doc["max_ramp_steps_before_poweroff"] = cfg.maxRampStepsBeforePoweroff;
+    doc["typical_volume"] = cfg.typicalVolume;
+    String response;
+    serializeJson(doc, response);
+    request->send(200, "application/json", response);
+  });
+
+  // POST /api/behavior — any subset of the fields above; rejected as a whole
+  // if one is out of range.
+  _server.on("/api/behavior", HTTP_POST,
+             [this](AsyncWebServerRequest* request, JsonVariant& json) {
+               if (!request->authenticate(kSystemUsername, kSystemPassword)) {
+                 return request->requestAuthentication();
+               }
+               // Clamped into the field's type so validate() rejects an
+               // out-of-range value instead of the read silently falling back
+               // to the old one.
+               auto field = [&json](const char* key, uint32_t current,
+                                    int32_t maxValue) {
+                 int32_t v = json[key] | static_cast<int32_t>(current);
+                 return static_cast<uint32_t>(
+                     std::min<int32_t>(std::max<int32_t>(v, 0), maxValue));
+               };
+               Config cfg = _configMgr.get();
+               cfg.inactivityTimeoutMin = field(
+                   "inactivity_timeout_min", cfg.inactivityTimeoutMin, 100000);
+               cfg.rampIntervalMin =
+                   field("ramp_interval_min", cfg.rampIntervalMin, 100000);
+               cfg.maxRampStepsBeforePoweroff = static_cast<uint8_t>(
+                   field("max_ramp_steps_before_poweroff",
+                         cfg.maxRampStepsBeforePoweroff, 255));
+               cfg.typicalVolume = static_cast<uint8_t>(
+                   field("typical_volume", cfg.typicalVolume, 255));
+               std::string error;
+               if (!ConfigManager::validate(cfg, error)) {
+                 JsonDocument doc;
+                 doc["error"] = error;
+                 String response;
+                 serializeJson(doc, response);
+                 request->send(400, "application/json", response);
+                 return;
+               }
+               _configMgr.set(cfg);
+               _configMgr.save();
+               request->send(200, "application/json", "{\"status\":\"ok\"}");
+             });
 
   // GET /api/files/download?path=<path>
   // NOTE: specific sub-routes must be registered before GET /api/files because
