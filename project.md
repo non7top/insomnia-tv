@@ -1,4 +1,4 @@
-> **Superseded in part.** This is the original specification and phase plan. The implemented design differs (sensor fusion via `TvStateMachine`, Samsung network power-off, no MQTT/Velxio yet); see `README.md` and `docs/` for the current state.
+> **Superseded in part.** This is the original specification and phase plan. The implemented design differs (sensor fusion via `TvStateMachine`, Samsung network power-off, no MQTT/Velxio yet); see `README.md` and `docs/spec/` for the current state.
 
 # 📺 insomniaTV - ESP32 Smart IR Sleep Controller
 

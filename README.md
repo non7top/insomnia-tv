@@ -36,6 +36,7 @@ sensors (ping / http / upnp / samsung_tv / gpio) -> SensorManager
 ConfigManager (LittleFS JSON) <-> WebServer (dashboard, sensors, files, OTA)
 ```
 
+- What is built, stubbed and planned: `docs/spec/spec.md`; roadmap: `docs/spec/plan.md`; working principles: `docs/spec/constitution.md`.
 - Sensors and the fusion weights are configured from the web UI (Add Smart TV wizard); see `docs/SENSORS.md`.
 - Network power-off for Samsung Tizen TVs: `docs/SAMSUNG_TV.md`.
 - IR transmit/receive is still a stub (no hardware attached yet, #48).
