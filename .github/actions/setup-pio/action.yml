@@ -1,0 +1,38 @@
+name: Set up PlatformIO
+description: Restore the PlatformIO/pip caches and install a pinned PlatformIO.
+
+inputs:
+  cache-pio-dir:
+    description: Also cache the project's .pio build directory.
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Restore PlatformIO cache
+      if: inputs.cache-pio-dir != 'true'
+      uses: actions/cache@v6
+      with:
+        path: |
+          ~/.platformio
+          ~/.cache/pip
+        key: ${{ runner.os }}-pio-${{ github.job }}-${{ hashFiles('**/platformio.ini') }}
+        restore-keys: |
+          ${{ runner.os }}-pio-${{ github.job }}-
+
+    - name: Restore PlatformIO cache (with .pio)
+      if: inputs.cache-pio-dir == 'true'
+      uses: actions/cache@v6
+      with:
+        path: |
+          ~/.platformio
+          ~/.cache/pip
+          ${{ github.workspace }}/.pio
+        key: ${{ runner.os }}-pio-${{ github.job }}-${{ hashFiles('**/platformio.ini') }}
+        restore-keys: |
+          ${{ runner.os }}-pio-${{ github.job }}-
+
+    # 6.2.0 breaks the build (SCons.Tool.FortranCommon import error).
+    - name: Install PlatformIO
+      shell: bash
+      run: pip install "platformio<6.2"

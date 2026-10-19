@@ -5,11 +5,17 @@ on:
     branches: [master]
   pull_request:
     branches: [master]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+
+# A new push to a PR supersedes its running checks; master runs always finish.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   lint:
-    strategy:
-      fail-fast: true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -18,12 +24,12 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('.github/workflows/ci.yml') }}
+          key: ${{ runner.os }}-pip-lint
           restore-keys: |
             ${{ runner.os }}-pip-
 
       - name: Install lint tools
-        run: pip install clang-format clang-tidy cpplint
+        run: pip install clang-format cpplint
 
       - name: Run cpplint
         run: cpplint --recursive src/ test/
@@ -32,24 +38,11 @@ jobs:
         run: clang-format --style=file --dry-run --Werror src/**/*.cpp test/**/*.cpp
 
   unit-tests:
-    strategy:
-      fail-fast: true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
 
-      - name: Setup PlatformIO cache
-        uses: actions/cache@v6
-        with:
-          path: |
-            ~/.platformio
-            ~/.cache/pip
-          key: ${{ runner.os }}-pio-${{ github.job }}-${{ hashFiles('**/platformio.ini', '.github/workflows/ci.yml') }}
-          restore-keys: |
-            ${{ runner.os }}-pio-${{ github.job }}-
-
-      - name: Set up PlatformIO
-        run: pip install "platformio<6.2"
+      - uses: ./.github/actions/setup-pio
 
       - name: Run native tests
         run: pio test -e native
@@ -70,39 +63,31 @@ jobs:
           name: coverage-report
           path: .pio/build/native/coverage.info
 
+  # Runs alongside lint and unit-tests rather than after them. Pull requests
+  # build only the deployed board; master also builds the other targets.
   build-firmware:
-    needs: [lint, unit-tests]
-    strategy:
-      fail-fast: true
     runs-on: ubuntu-latest
     env:
       PLATFORMIO_BUILD_CACHE_DIR: /home/runner/.platformio/cache/
     steps:
       - uses: actions/checkout@v7
 
-      - name: Setup PlatformIO cache
-        uses: actions/cache@v6
+      - uses: ./.github/actions/setup-pio
         with:
-          path: |
-            ~/.platformio
-            ~/.cache/pip
-            ${{ github.workspace }}/.pio
-          key: ${{ runner.os }}-pio-${{ github.job }}-${{ hashFiles('**/platformio.ini', '.github/workflows/ci.yml') }}
-          restore-keys: |
-            ${{ runner.os }}-pio-${{ github.job }}-
+          cache-pio-dir: "true"
 
-      - name: Set up PlatformIO
-        run: pip install "platformio<6.2"
+      - name: Build ESP32-C3 firmware
+        run: pio run -e esp32c3
 
-      - name: Build all ESP32 firmware
-        run: pio run -e esp32c3 -e esp32dev -e qemu-esp32
+      - name: Build other targets
+        if: github.event_name == 'push'
+        run: pio run -e esp32dev -e qemu-esp32
 
       - name: Upload ESP32-C3 firmware artifact
         uses: actions/upload-artifact@v7
         with:
           name: firmware-esp32c3
           path: .pio/build/esp32c3/firmware.bin
-
 #  velxio-integration:
 #    needs: [build-firmware]
 #    runs-on: ubuntu-latest
