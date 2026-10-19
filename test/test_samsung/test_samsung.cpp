@@ -308,6 +308,50 @@ void test_query_power(void) {
                     static_cast<int>(tv.queryPower()));
 }
 
+void test_volume_down_presses_the_key_once_per_step(void) {
+  MockTransport t;
+  t.ws.status = SamsungWsResult::Status::Ok;
+  SamsungTvController tv(t);
+  tv.configure("192.168.2.190", "tok", "");
+
+  TEST_ASSERT_TRUE(tv.volumeDown(3));
+  TEST_ASSERT_EQUAL_INT(3, static_cast<int>(t.keys.size()));
+  for (size_t i = 0; i < t.keys.size(); i++) {
+    TEST_ASSERT_EQUAL_STRING("KEY_VOLDOWN", t.keys[i].c_str());
+    TEST_ASSERT_EQUAL_STRING("tok", t.tokens[i].c_str());
+  }
+}
+
+void test_volume_down_not_paired_sends_nothing(void) {
+  MockTransport t;
+  SamsungTvController tv(t);
+  TEST_ASSERT_FALSE(tv.volumeDown(1));
+  TEST_ASSERT_EQUAL_INT(0, static_cast<int>(t.keys.size()));
+}
+
+void test_volume_down_stops_at_the_first_failed_press(void) {
+  MockTransport t;
+  t.ws.status = SamsungWsResult::Status::Unreachable;
+  SamsungTvController tv(t);
+  tv.configure("192.168.2.190", "tok", "");
+
+  TEST_ASSERT_FALSE(tv.volumeDown(5));
+  TEST_ASSERT_EQUAL_INT(1, static_cast<int>(t.keys.size()));
+}
+
+void test_power_off_still_works_after_volume_steps(void) {
+  MockTransport t;
+  t.info = kInfoOn;
+  t.ws.status = SamsungWsResult::Status::Ok;
+  SamsungTvController tv(t);
+  tv.configure("192.168.2.190", "tok", "");
+
+  TEST_ASSERT_TRUE(tv.volumeDown(2));
+  TEST_ASSERT_EQUAL(static_cast<int>(PowerOffResult::Sent),
+                    static_cast<int>(tv.powerOff()));
+  TEST_ASSERT_EQUAL_STRING("KEY_POWER", t.keys.back().c_str());
+}
+
 int runUnityTests(void) {
   UNITY_BEGIN();
   RUN_TEST(test_base64_known_vectors);
@@ -336,6 +380,10 @@ int runUnityTests(void) {
   RUN_TEST(test_power_off_rejected_token);
   RUN_TEST(test_power_off_websocket_failure);
   RUN_TEST(test_query_power);
+  RUN_TEST(test_volume_down_presses_the_key_once_per_step);
+  RUN_TEST(test_volume_down_not_paired_sends_nothing);
+  RUN_TEST(test_volume_down_stops_at_the_first_failed_press);
+  RUN_TEST(test_power_off_still_works_after_volume_steps);
   return UNITY_END();
 }
 

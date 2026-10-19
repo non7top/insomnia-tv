@@ -104,6 +104,13 @@ void samsungPowerOffTask(void*) {
   vTaskDelete(NULL);
 }
 
+// One ramp step over the network; short-lived task so loop() isn't blocked
+// by the TLS handshake.
+void samsungVolumeDownTask(void*) {
+  samsungTv.volumeDown(configMgr.get().volumeStepPerRamp);
+  vTaskDelete(NULL);
+}
+
 void setup() {
   // Lower power draw (less heat through the onboard 5V regulator); this
   // workload is nowhere near CPU-bound.
@@ -218,6 +225,11 @@ void setup() {
         systemClock, cfg.rampIntervalMin * 60000UL,
         cfg.maxRampStepsBeforePoweroff,
         [] {
+          if (samsungTv.isPaired()) {
+            xTaskCreate(samsungVolumeDownTask, "tv_voldown", 10240, NULL, 1,
+                        NULL);
+            return;
+          }
           const auto& c = configMgr.get();
           irDriver.send(c.irVolumeDownProtocol, c.irVolumeDownCode,
                         c.irVolumeDownBits);

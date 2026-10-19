@@ -100,10 +100,30 @@ SamsungPower SamsungTvController::queryPower() {
   return parseSamsungPower(transport_.fetchDeviceInfo(host()));
 }
 
-PowerOffResult SamsungTvController::powerOff() {
-  if (busy_.exchange(true)) {
-    return PowerOffResult::Busy;
+bool SamsungTvController::volumeDown(uint8_t steps) {
+  std::lock_guard<std::mutex> op(opMutex_);
+  std::string host;
+  std::string token;
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    host = host_;
+    token = token_;
   }
+  if (host.empty() || token.empty()) {
+    return false;
+  }
+  for (uint8_t i = 0; i < steps; i++) {
+    SamsungWsResult ws =
+        transport_.sendKey(host, token, "KEY_VOLDOWN", kKeyTimeoutMs);
+    if (ws.status != SamsungWsResult::Status::Ok) {
+      return false;
+    }
+  }
+  return true;
+}
+
+PowerOffResult SamsungTvController::powerOff() {
+  std::lock_guard<std::mutex> op(opMutex_);
   PowerOffResult result;
   std::string host;
   std::string token;
@@ -136,7 +156,6 @@ PowerOffResult SamsungTvController::powerOff() {
       }
     }
   }
-  busy_ = false;
   return result;
 }
 

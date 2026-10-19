@@ -42,8 +42,7 @@ enum class PowerOffResult {
   NotPaired,
   Unreachable,
   StateUnknown,
-  Rejected,
-  Busy
+  Rejected
 };
 
 enum class PairState { Idle, Waiting, Paired, Failed };
@@ -74,8 +73,13 @@ public:
   // Blocking; the TV needs its allow prompt accepted within kPairTimeoutMs.
   bool pair(const std::string& host);
 
-  // Blocking.
+  // Blocking; waits for any other TV operation in flight (a ramp step must
+  // not make the final power-off fail).
   PowerOffResult powerOff();
+
+  // Blocking; presses KEY_VOLDOWN `steps` times. False if not paired or a
+  // press failed.
+  bool volumeDown(uint8_t steps);
 
   // Blocking; Unknown if the TV can't be reached.
   SamsungPower queryPower();
@@ -85,7 +89,8 @@ private:
 
   ISamsungTvTransport& transport_;
   mutable std::mutex mutex_;
-  std::atomic<bool> busy_;
+  std::atomic<bool> busy_;  // pairing in progress
+  std::mutex opMutex_;      // serializes TV key operations
   std::string host_;
   std::string token_;
   std::string mac_;
