@@ -768,6 +768,9 @@ function wzSelectTv(tv, card) {
     card.classList.add('selected');
     setTimeout(() => { wzBuildSensors(tv); wzShowPage(3); }, 250);
 }
+function wzDeviceId(tv) {
+    return tv.name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').substring(0, 24) || 'tv';
+}
 function wzBuildSensors(tv) {
     const slug = tv.name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').substring(0, 16) || 'tv';
     wzSensors = [
@@ -805,7 +808,7 @@ async function wzCreate() {
     let created = 0;
     try {
         for (const s of toCreate) {
-            const p = {id: s.id.trim(), type: s.type};
+            const p = {id: s.id.trim(), type: s.type, device_id: wzDeviceId(wzTv)};
             if (s.type === 'ping') p.target_ip   = s.target_ip;
             if (s.type === 'upnp') p.target_name = s.target_name;
             if (s.type === 'http') p.url         = s.url;
@@ -923,6 +926,7 @@ document.getElementsByClassName('tablinks')[0].click();
       obj["id"] = sensor->getId();
       obj["type"] = sensor->getType();
       obj["available"] = sensor->isAvailable();
+      obj["device_id"] = sensor->getDeviceId();
       obj["value"] = SensorManager::instance().getCachedValue(sensor->getId());
       JsonDocument cfg = sensor->getConfig();
       for (JsonPair kv : cfg.as<JsonObject>()) {
