@@ -1,0 +1,8 @@
+repos:
+  - repo: local
+    hooks:
+      - id: ripsecrets
+        name: ripsecrets
+        entry: scripts/check_secrets.sh
+        language: system
+        types: [text]
