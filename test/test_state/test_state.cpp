@@ -220,6 +220,32 @@ void test_ramp_scheduler_config_change_applies() {
   TEST_ASSERT_EQUAL_INT(1, completed);
 }
 
+// ---------------------------------------------------------------------------
+// Idle time reflects the sleep cycle, not just IR activity (#74)
+// ---------------------------------------------------------------------------
+void test_state_machine_ms_since_reset() {
+  MockClock clk;
+  SleepStateMachine sm(clk, /*inactivityTimeoutMs=*/5000);
+  clk.advanceMs(3000);
+  TEST_ASSERT_EQUAL_UINT32(3000, sm.msSinceReset());
+
+  sm.onIrActivity();
+  TEST_ASSERT_EQUAL_UINT32(0, sm.msSinceReset());
+}
+
+void test_state_machine_ms_since_reset_after_cycle() {
+  MockClock clk;
+  SleepStateMachine sm(clk, /*inactivityTimeoutMs=*/1000);
+  clk.advanceMs(1000);
+  sm.tick();  // RAMPING
+  sm.onRampComplete();
+  clk.advanceMs(500);
+  sm.tick();  // VERIFYING -> POWERING_OFF
+  sm.tick();  // POWERING_OFF -> MONITORING, idle clock restarts
+  TEST_ASSERT_EQUAL(State::MONITORING, sm.getCurrentState());
+  TEST_ASSERT_EQUAL_UINT32(0, sm.msSinceReset());
+}
+
 int main() {
   UNITY_BEGIN();
   RUN_TEST(test_state_machine_initial_state);
@@ -235,5 +261,7 @@ int main() {
   RUN_TEST(test_ramp_scheduler_stop_cancels);
   RUN_TEST(test_state_machine_timeout_change_applies);
   RUN_TEST(test_ramp_scheduler_config_change_applies);
+  RUN_TEST(test_state_machine_ms_since_reset);
+  RUN_TEST(test_state_machine_ms_since_reset_after_cycle);
   return UNITY_END();
 }

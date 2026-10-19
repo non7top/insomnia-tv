@@ -77,6 +77,10 @@ void SleepStateMachine::onRampComplete() {
   }
 }
 
+uint32_t SleepStateMachine::msSinceReset() const {
+  return clock_.nowMs() - lastActivityMs_;
+}
+
 State SleepStateMachine::getCurrentState() const {
   return current_;
 }

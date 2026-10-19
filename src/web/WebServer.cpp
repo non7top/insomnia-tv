@@ -192,7 +192,7 @@ void WebServer::setupRoutes() {
   <fieldset>
     <legend>Sleep Controller</legend>
     <p><b>State:</b> <span id="sys-sleepState" class="state-badge">Loading...</span></p>
-    <p><b>Last activity:</b> <span id="sys-lastActivity"></span></p>
+    <p><b>Idle for:</b> <span id="sys-lastActivity"></span></p>
   </fieldset>
   <fieldset>
     <legend>System</legend>
@@ -404,7 +404,7 @@ function formatDuration(ms) {
 function loadStatus() {
     fetch('/api/status').then(r => r.json()).then(data => {
         for (const [k, v] of Object.entries(data)) {
-            if (k === 'sleepState' || k === 'msSinceLastActivity') continue;
+            if (k === 'sleepState' || k === 'msSinceSleepReset' || k === 'msSinceLastIrActivity') continue;
             const el = document.getElementById('sys-' + k);
             if (el) el.textContent = v;
         }
@@ -412,8 +412,8 @@ function loadStatus() {
         if (stateEl) setStateBadge(stateEl, data.sleepState, SLEEP_STATE_COLORS);
         const lastActEl = document.getElementById('sys-lastActivity');
         if (lastActEl) {
-            lastActEl.textContent = data.msSinceLastActivity != null ?
-                formatDuration(data.msSinceLastActivity) : 'unknown';
+            lastActEl.textContent = data.msSinceSleepReset != null ?
+                formatDuration(data.msSinceSleepReset) : 'unknown';
         }
     }).catch(() => {
         const el = document.getElementById('sys-status');
@@ -912,9 +912,10 @@ document.getElementsByClassName('tablinks')[0].click();
                                    "POWERING_OFF", "FALLBACK_OFF"};
       int ss = static_cast<int>(_sleepSm->getCurrentState());
       doc["sleepState"] = sleepStates[ss];
+      doc["msSinceSleepReset"] = _sleepSm->msSinceReset();
     }
     if (_activityTracker != nullptr) {
-      doc["msSinceLastActivity"] = _activityTracker->msSinceLastActivity();
+      doc["msSinceLastIrActivity"] = _activityTracker->msSinceLastActivity();
     }
 
     String response;
