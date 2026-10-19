@@ -72,12 +72,23 @@ void updatePortalBlinkLed() {
   ledcWrite(STATUS_LED_PIN, on ? 0 : 255);  // active-low
 }
 
+// Double blip once a second while the sleep sequence is running (ramping,
+// verifying, powering off); distinct from the portal's fast even blink.
+void updateSequenceBlinkLed() {
+  uint32_t t = millis() % 1000;
+  bool on = t < 100 || (t >= 200 && t < 300);
+  ledcWrite(STATUS_LED_PIN, on ? 0 : 255);  // active-low
+}
+
 // Runs on its own task so the LED stays responsive even when loop() stalls
 // on blocking sensor I/O (e.g. HttpSensor's 5s timeout).
 void statusLedTask(void*) {
   for (;;) {
     if (wifiSetup.isPortalActive()) {
       updatePortalBlinkLed();
+    } else if (sleepSm != nullptr &&
+               sleepSm->getCurrentState() != InsomniaTV::State::MONITORING) {
+      updateSequenceBlinkLed();
     } else {
       updateStatusLed();
     }
