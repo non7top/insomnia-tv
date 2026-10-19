@@ -22,6 +22,12 @@ void SleepStateMachine::tick() {
   switch (current_) {
     case State::MONITORING:
       if (clock_.nowMs() - lastActivityMs_ >= inactivityTimeoutMs_) {
+        if (tvStateMachine_ && tvStateMachine_->getPowerState() ==
+                                   TvStateMachine::PowerState::OFF) {
+          // Nothing to switch off; look again after another idle period.
+          lastActivityMs_ = clock_.nowMs();
+          break;
+        }
         current_ = State::RAMPING;
         if (rampStartCallback_)
           rampStartCallback_();

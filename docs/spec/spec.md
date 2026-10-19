@@ -14,8 +14,8 @@ An ESP32 that stops a TV from staying on all night. After a period with no activ
 
 | State | Entered when | Leaves when |
 |-------|--------------|-------------|
-| MONITORING | boot, any activity, the TV turning on, end of a cycle | idle time reaches `inactivity_timeout_min` (default 60) |
-| RAMPING | idle timeout | ramp finishes (`onRampComplete`), or activity |
+| MONITORING | boot, any activity, the TV turning on, end of a cycle | idle time reaches `inactivity_timeout_min` (default 60) and the TV is not OFF; if it is OFF, the idle clock restarts and nothing runs |
+| RAMPING | idle timeout with the TV ON, TRANSITIONING or UNKNOWN | ramp finishes (`onRampComplete`), or activity |
 | VERIFYING | ramp finished | the next tick, by TV state (below) |
 | POWERING_OFF / FALLBACK_OFF | VERIFYING with TV ON/TRANSITIONING (or no TV state machine) / UNKNOWN | immediately: the power-off callback fires and the machine returns to MONITORING in the same tick, so a poll never observes them |
 
