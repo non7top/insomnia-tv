@@ -346,9 +346,45 @@ void test_sleep_sm_verifying_tv_on_fires_poweroff() {
 }
 
 // ---------------------------------------------------------------------------
-// SleepStateMachine: VERIFYING with TV already OFF → no power-off sent
+// SleepStateMachine: TV turns OFF during the ramp → VERIFYING sends nothing
 // ---------------------------------------------------------------------------
 void test_sleep_sm_verifying_tv_already_off() {
+  SensorManager& mgr = SensorManager::instance();
+  mgr.clear();
+  TvStateMachine tvSm(mgr, 1);
+
+  JsonDocument cfg = makeConfig(1, {{"s1", 5, true}});
+  tvSm.begin(cfg);
+  tvSm.onSensorUpdate("s1", true);  // TV is ON when the idle timeout fires
+
+  class SimpleClock : public IClock {
+  public:
+    uint32_t nowMs() const override { return ms_; }
+    void advanceMs(uint32_t ms) override { ms_ += ms; }
+    uint32_t ms_ = 0;
+  } clk;
+
+  SleepStateMachine sleepSm(clk, 1000);
+  sleepSm.setTvStateMachine(&tvSm);
+
+  int powerOffCalls = 0;
+  sleepSm.setPowerOffCallback([&] { powerOffCalls++; });
+
+  clk.advanceMs(2000);
+  sleepSm.tick();
+  TEST_ASSERT_EQUAL(InsomniaTV::State::RAMPING, sleepSm.getCurrentState());
+  tvSm.onSensorUpdate("s1", false);  // switched off by hand mid-ramp
+  sleepSm.onRampComplete();
+  sleepSm.tick();  // VERIFYING → TV already OFF → MONITORING, no power-off
+
+  TEST_ASSERT_EQUAL(0, powerOffCalls);
+  TEST_ASSERT_EQUAL(InsomniaTV::State::MONITORING, sleepSm.getCurrentState());
+}
+
+// ---------------------------------------------------------------------------
+// SleepStateMachine: TV already OFF when the idle timeout fires → no ramp
+// ---------------------------------------------------------------------------
+void test_sleep_sm_tv_off_at_timeout_does_not_ramp() {
   SensorManager& mgr = SensorManager::instance();
   mgr.clear();
   TvStateMachine tvSm(mgr, 1);
@@ -367,16 +403,50 @@ void test_sleep_sm_verifying_tv_already_off() {
   SleepStateMachine sleepSm(clk, 1000);
   sleepSm.setTvStateMachine(&tvSm);
 
-  int powerOffCalls = 0;
-  sleepSm.setPowerOffCallback([&] { powerOffCalls++; });
+  int rampStarts = 0;
+  sleepSm.setRampStartCallback([&] { rampStarts++; });
 
   clk.advanceMs(2000);
   sleepSm.tick();
-  sleepSm.onRampComplete();
-  sleepSm.tick();  // VERIFYING → TV already OFF → MONITORING, no power-off
 
-  TEST_ASSERT_EQUAL(0, powerOffCalls);
+  TEST_ASSERT_EQUAL(0, rampStarts);
   TEST_ASSERT_EQUAL(InsomniaTV::State::MONITORING, sleepSm.getCurrentState());
+  TEST_ASSERT_EQUAL_UINT32(0, sleepSm.msSinceReset());
+
+  clk.advanceMs(2000);
+  sleepSm.tick();  // still off after another idle period
+  TEST_ASSERT_EQUAL(0, rampStarts);
+}
+
+// ---------------------------------------------------------------------------
+// SleepStateMachine: TV UNKNOWN when the idle timeout fires → still ramps
+// ---------------------------------------------------------------------------
+void test_sleep_sm_tv_unknown_at_timeout_still_ramps() {
+  SensorManager& mgr = SensorManager::instance();
+  mgr.clear();
+  TvStateMachine tvSm(mgr, 99);  // hysteresis so high it stays UNKNOWN
+
+  JsonDocument cfg = makeConfig(99, {{"s1", 5, true}});
+  tvSm.begin(cfg);
+
+  class SimpleClock : public IClock {
+  public:
+    uint32_t nowMs() const override { return ms_; }
+    void advanceMs(uint32_t ms) override { ms_ += ms; }
+    uint32_t ms_ = 0;
+  } clk;
+
+  SleepStateMachine sleepSm(clk, 1000);
+  sleepSm.setTvStateMachine(&tvSm);
+
+  int rampStarts = 0;
+  sleepSm.setRampStartCallback([&] { rampStarts++; });
+
+  clk.advanceMs(2000);
+  sleepSm.tick();
+
+  TEST_ASSERT_EQUAL(1, rampStarts);
+  TEST_ASSERT_EQUAL(InsomniaTV::State::RAMPING, sleepSm.getCurrentState());
 }
 
 // ---------------------------------------------------------------------------
@@ -432,6 +502,8 @@ int main() {
   RUN_TEST(test_tv_sm_disabled_sensor_excluded);
   RUN_TEST(test_sleep_sm_verifying_tv_on_fires_poweroff);
   RUN_TEST(test_sleep_sm_verifying_tv_already_off);
+  RUN_TEST(test_sleep_sm_tv_off_at_timeout_does_not_ramp);
+  RUN_TEST(test_sleep_sm_tv_unknown_at_timeout_still_ramps);
   RUN_TEST(test_sleep_sm_verifying_tv_unknown_fallback);
   return UNITY_END();
 }
