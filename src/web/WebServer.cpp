@@ -160,6 +160,8 @@ void WebServer::setupRoutes() {
         .wz-srow-id { font-size:11px; color:#aaa; margin-top:2px; font-family:monospace; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         .spinner { display:inline-block; width:18px; height:18px; border:3px solid #ddd; border-top-color:#4CAF50; border-radius:50%; animation:spin .7s linear infinite; vertical-align:middle; margin-right:8px; }
         @keyframes spin { to { transform:rotate(360deg); } }
+        @keyframes pulse { 50% { opacity:0.35; } }
+        .state-badge.pulse { animation: pulse 1s ease-in-out infinite; }
         .btn-tv { background:#1565c0; }
         .btn-gray { background:#757575; }
         .done-icon { font-size:52px; display:block; text-align:center; margin:10px 0 6px; }
@@ -360,7 +362,10 @@ source.addEventListener('sensor_update', function(e) {
 }, false);
 
 // ── Tab routing ─────────────────────────────────────────────────────────────
+let statusTimer = null;
 function openTab(evt, name) {
+    if (statusTimer) { clearInterval(statusTimer); statusTimer = null; }
+    if (name === 'Status') statusTimer = setInterval(loadStatus, 3000);
     document.querySelectorAll('.tabcontent').forEach(t => t.style.display = 'none');
     document.querySelectorAll('.tablinks').forEach(b => b.classList.remove('active'));
     document.getElementById(name).style.display = 'block';
@@ -379,7 +384,9 @@ const SLEEP_STATE_COLORS = {
 const TV_STATE_COLORS = {
     ON: '#4CAF50', OFF: '#757575', TRANSITIONING: '#ff9800', UNKNOWN: '#999',
 };
+const TRANSITIONAL_STATES = ['TRANSITIONING', 'RAMPING', 'VERIFYING', 'POWERING_OFF', 'FALLBACK_OFF'];
 function setStateBadge(el, state, colors) {
+    el.classList.toggle('pulse', TRANSITIONAL_STATES.includes(state));
     el.textContent = state || 'unknown';
     el.style.background = (colors && colors[state]) || '#999';
     el.style.color = '#fff';
