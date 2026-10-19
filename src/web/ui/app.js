@@ -19,7 +19,7 @@ function openTab(evt, name) {
     if (name === 'Status')  loadStatus();
     if (name === 'Sensors') loadSensors();
     if (name === 'Files')   loadFiles();
-    if (name === 'Config')  loadTvControl();
+    if (name === 'Config')  { loadTvControl(); loadBehavior(); }
 }
 
 // ── Status ──────────────────────────────────────────────────────────────────
@@ -511,6 +511,29 @@ function testPowerOff() {
     fetch('/api/tv/power-off', {method:'POST'})
         .then(r => r.json().then(d => { msg.textContent = r.ok ? 'Power-off sent (only if the TV was on).' : (d.error || 'Failed'); }))
         .catch(err => { msg.textContent = 'Request failed: ' + err; });
+}
+
+// ── Sleep sequence settings ─────────────────────────────────────────────────
+const BEHAVIOR_FIELDS = {
+    inactivity_timeout_min: 'bh-inactivity',
+    ramp_interval_min: 'bh-interval',
+    max_ramp_steps_before_poweroff: 'bh-steps',
+    typical_volume: 'bh-volume',
+};
+function loadBehavior() {
+    fetch('/api/behavior').then(r => r.json()).then(d => {
+        for (const key in BEHAVIOR_FIELDS) document.getElementById(BEHAVIOR_FIELDS[key]).value = d[key];
+    }).catch(err => { document.getElementById('bh-msg').textContent = 'Failed to load: ' + err; });
+}
+function saveBehavior() {
+    const msg = document.getElementById('bh-msg'), btn = document.getElementById('bh-save-btn');
+    const body = {};
+    for (const key in BEHAVIOR_FIELDS) body[key] = parseInt(document.getElementById(BEHAVIOR_FIELDS[key]).value, 10);
+    btn.disabled = true;
+    fetch('/api/behavior', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)})
+        .then(r => r.json().then(d => { msg.textContent = r.ok ? 'Saved.' : (d.error || 'Failed'); }))
+        .catch(err => { msg.textContent = 'Request failed: ' + err; })
+        .finally(() => { btn.disabled = false; });
 }
 
 document.getElementsByClassName('tablinks')[0].click();
