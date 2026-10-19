@@ -61,6 +61,11 @@ public:
   // Callback invoked on entering RAMPING (starts the ramp sequence).
   void setRampStartCallback(std::function<void()> callback);
 
+  // Callback invoked when a ramp is abandoned: activity (or any reset) while
+  // RAMPING. Without it the ramp scheduler keeps stepping the volume down
+  // after the state machine has returned to MONITORING.
+  void setRampCancelCallback(std::function<void()> callback);
+
 private:
   void resetToMonitoring();
 
@@ -72,6 +77,7 @@ private:
   TvStateMachine* tvStateMachine_;
   std::function<void()> powerOffCallback_;
   std::function<void()> rampStartCallback_;
+  std::function<void()> rampCancelCallback_;
 };
 
 }  // namespace InsomniaTV

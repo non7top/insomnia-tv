@@ -252,6 +252,7 @@ void setup() {
         [] { sleepSm->onRampComplete(); });
   }
   sleepSm->setRampStartCallback([] { rampScheduler->start(); });
+  sleepSm->setRampCancelCallback([] { rampScheduler->stop(); });
   sleepSm->setPowerOffCallback([] {
     if (samsungTv.isPaired()) {
       xTaskCreate(samsungPowerOffTask, "tv_poweroff", 10240, NULL, 1, NULL);
