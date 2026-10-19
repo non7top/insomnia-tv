@@ -110,7 +110,10 @@ void samsungPowerOffTask(void*) {
 // One ramp step over the network; short-lived task so loop() isn't blocked
 // by the TLS handshake.
 void samsungVolumeDownTask(void*) {
-  samsungTv.volumeDown(configMgr.get().volumeStepPerRamp);
+  uint8_t steps = configMgr.get().volumeStepPerRamp;
+  bool ok = samsungTv.volumeDown(steps);
+  Serial.printf("[insomniaTV] Samsung volume-down x%u: %s\n", steps,
+                ok ? "ok" : "failed");
   vTaskDelete(NULL);
 }
 

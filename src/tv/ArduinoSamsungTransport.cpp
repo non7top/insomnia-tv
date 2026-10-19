@@ -53,11 +53,14 @@ SamsungWsResult ArduinoSamsungTransport::sendKey(const std::string& host,
               std::string(reinterpret_cast<char*>(payload), length), ev)) {
         return;
       }
+      Serial.printf("[SamsungTv] ws event %s\n", ev.event.c_str());
       if (ev.event == "ms.channel.connect") {
         result.status = SamsungWsResult::Status::Ok;
         result.token = ev.token;
         if (!key.empty()) {
-          ws.sendTXT(samsungKeyPayload(key).c_str());
+          bool sent = ws.sendTXT(samsungKeyPayload(key).c_str());
+          Serial.printf("[SamsungTv] sent %s: %s\n", key.c_str(),
+                        sent ? "ok" : "failed");
         }
         done = true;
       } else if (ev.event == "ms.channel.unauthorized") {
